@@ -1,7 +1,6 @@
-use std::io;
-use std::io::Read;
-
+use crossterm;
 use crossterm::terminal;
+use crossterm::event::{self, Event, KeyCode, KeyEvent};
 
 struct Finalize;
 
@@ -11,20 +10,25 @@ impl Drop for Finalize {
   }
 }
 
-fn main() {
+fn main() -> crossterm::Result<()> {
   let _cleanup = Finalize{};
-  terminal::enable_raw_mode().expect("Could not initialize terminal");
+  terminal::enable_raw_mode()?;
   
-  let mut buf = [0; 1];
-  while io::stdin().read(&mut buf).expect("Failed to read line") == 1 {
-    if buf[0] == b'q' {
-      break;
-    }
-    let c = buf[0] as char;
-    if c.is_control() {
-      println!("{}\r", c as u8);
-    }else{
-      println!("{}\r", c);
+  loop {
+    if let Event::Key(event) = event::read()? {
+      match event {
+        KeyEvent{
+          code: KeyCode::Char('q'),
+          modifiers: event::KeyModifiers::NONE,
+          ..
+        } => break,
+        _ => {
+          
+        }
+      };
+      println!("{:?}\r", event);
     }
   }
+  
+  Ok(())
 }
