@@ -1,8 +1,10 @@
 use std::time;
+use std::io::{self, Write};
 use std::io::stdout;
 
 use crossterm;
 use crossterm::event;
+use crossterm::queue;
 use crossterm::cursor;
 use crossterm::execute;
 use crossterm::terminal;
@@ -43,7 +45,7 @@ impl Editor {
     }
   }
   
-  fn keystroke(&self) -> crossterm::Result<bool> {
+  fn keystroke(&mut self) -> crossterm::Result<bool> {
     match self.reader.read_key()? {
       event::KeyEvent{
         code: event::KeyCode::Char('d'),
@@ -54,14 +56,58 @@ impl Editor {
     }
   }
   
-  fn step(&self) -> crossterm::Result<bool> {
+  fn step(&mut self) -> crossterm::Result<bool> {
     self.writer.refresh()?;
     self.keystroke()
   }
 }
 
+struct Buffer {
+  data: String,
+}
+
+impl Buffer {
+  fn new() -> Self {
+    Buffer{
+      data: String::new(),
+    }
+  }
+  
+  fn push(&mut self, c: char) {
+    self.data.push(c);
+  }
+  
+  fn push_str(&mut self, s: &str) {
+    self.data.push_str(s);
+  }
+  
+  fn clear(&mut self) {
+    self.data.clear();
+  }
+}
+
+impl io::Write for Buffer {
+  fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+    match std::str::from_utf8(buf) {
+      Ok(v) => {
+        self.push_str(v);
+        Ok(v.len())
+      },
+      Err(_) => Err(io::ErrorKind::WriteZero.into()),
+    }
+  }
+  
+  fn flush(&mut self) -> io::Result<()> {
+    let out = write!(stdout(), "{}", self.data);
+    stdout().flush()?;
+    self.data.clear();
+    out
+  }
+}
+
 struct Writer {
   term_size: (usize, usize),
+  buffer: Buffer,
 }
 
 impl Writer {
@@ -69,6 +115,7 @@ impl Writer {
     let size = terminal::size().map(|(x, y)| (x as usize, y as usize)).unwrap();
     Self{
       term_size: size,
+      buffer: Buffer::new(),
     }
   }
   
@@ -82,22 +129,22 @@ impl Writer {
     execute!(stdout(), cursor::MoveTo(x, y))
   }
   
-  fn draw_gutter(&self) -> crossterm::Result<()> {
+  fn draw_gutter(&mut self) -> crossterm::Result<()> {
     let rows = self.term_size.1;
     for i in 0..rows {
-      print!("~");
+      self.buffer.push('~');
       if i < rows - 1 {
-        println!("\r");
+        self.buffer.push_str("\r\n");
       }
     }
     Ok(())
   }
   
-  fn refresh(&self) -> crossterm::Result<()> {
-    Self::clear()?;
+  fn refresh(&mut self) -> crossterm::Result<()> {
+    queue!(self.buffer, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     self.draw_gutter()?;
-    Self::move_cursor(0, 0)?;
-    Ok(())
+    queue!(self.buffer, cursor::MoveTo(0, 0), cursor::Show)?;
+    self.buffer.flush()
   }
 }
 
@@ -105,7 +152,7 @@ fn main() -> crossterm::Result<()> {
   let _cleanup = Finalize{};
   terminal::enable_raw_mode()?;
   
-  let editor = Editor::new();
+  let mut editor = Editor::new();
   loop {
     if !editor.step()? {
       break;
