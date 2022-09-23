@@ -133,6 +133,9 @@ impl Writer {
     let rows = self.term_size.1;
     for i in 0..rows {
       self.buffer.push('~');
+      if i == 2 {
+        self.buffer.push_str(" RESOLVER. The 'Soulver' in your terminal.");
+      }
       if i < rows - 1 {
         self.buffer.push_str("\r\n");
       }
