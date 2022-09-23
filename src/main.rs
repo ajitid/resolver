@@ -1,6 +1,7 @@
 use std::time;
 use std::io::{self, Write};
 use std::io::stdout;
+use std::cmp::min;
 
 use crossterm;
 use crossterm::event;
@@ -9,12 +10,29 @@ use crossterm::cursor;
 use crossterm::execute;
 use crossterm::terminal;
 
-struct Finalize;
+use clap::Parser;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Parser, Debug, Clone)]
+#[clap(author, version, about, long_about = None)]
+pub struct Options {
+  #[clap(long)]
+  debug: bool,
+  #[clap(long)]
+  verbose: bool,
+}
+
+struct Finalize {
+  opts: Options,
+}
 
 impl Drop for Finalize {
   fn drop(&mut self) {
     terminal::disable_raw_mode().expect("Could not finalize terminal (good luck)");
-    Writer::clear().expect("Could not clear screen");
+    if !self.opts.debug {
+      Writer::clear().expect("Could not clear screen");
+    }
   }
 }
 
@@ -35,30 +53,50 @@ impl Reader {
 struct Editor {
   reader: Reader,
   writer: Writer,
+  cursor: Cursor,
 }
 
 impl Editor {
   fn new() -> Self {
+    let size = terminal::size().unwrap();
     Editor{
       reader: Reader,
-      writer: Writer::new(),
+      writer: Writer::new(size),
+      cursor: Cursor::new(size),
     }
   }
   
-  fn keystroke(&mut self) -> crossterm::Result<bool> {
+  fn key(&mut self) -> crossterm::Result<bool> {
     match self.reader.read_key()? {
       event::KeyEvent{
         code: event::KeyCode::Char('d'),
         modifiers: event::KeyModifiers::CONTROL,
         ..
-      } => Ok(false),
-      _ => Ok(true),
-    }
+      } => return Ok(false),
+      event::KeyEvent{
+        code: event::KeyCode::Char(v @ ('h' | 'j' | 'k' | 'l')),
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_hjkl(v),
+      event::KeyEvent{
+        code: v @ (event::KeyCode::Up | event::KeyCode::Down | event::KeyCode::Left | event::KeyCode::Right | event::KeyCode::Home | event::KeyCode::End),
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_arrow(v),
+      _ => {},
+    };
+    Ok(true)
+  }
+  
+  fn draw(&mut self) -> crossterm::Result<bool> {
+    self.writer.refresh(&self.cursor)?;
+    Ok(true)
   }
   
   fn step(&mut self) -> crossterm::Result<bool> {
-    self.writer.refresh()?;
-    self.keystroke()
+    let res = self.key()?;
+    self.draw()?;
+    Ok(res)
   }
 }
 
@@ -105,14 +143,51 @@ impl io::Write for Buffer {
   }
 }
 
+struct Cursor {
+  x: u16,
+  y: u16,
+  size: (u16, u16),
+}
+
+impl Cursor {
+  fn new(size: (u16, u16)) -> Cursor {
+    Cursor{
+      x: 0,
+      y: 0,
+      size: size,
+    }
+  }
+  
+  fn move_hjkl(&mut self, dir: char) {
+    match dir {
+      'h' => self.x = if self.x > 0 { self.x - 1 } else { 0 },
+      'j' => self.y = min(self.size.0, self.y + 1),
+      'k' => self.y = if self.y > 0 { self.y - 1 } else { 0 },
+      'l' => self.x = min(self.size.1, self.x + 1),
+      _   => unimplemented!(),
+    }
+  }
+  
+  fn move_arrow(&mut self, dir: event::KeyCode) {
+    match dir {
+      event::KeyCode::Left  => self.x = if self.x > 0 { self.x - 1 } else { 0 },
+      event::KeyCode::Down  => self.y = min(self.size.1 - 1, self.y + 1),
+      event::KeyCode::Up    => self.y = if self.y > 0 { self.y - 1 } else { 0 },
+      event::KeyCode::Right => self.x = min(self.size.0 - 1, self.x + 1),
+      event::KeyCode::Home  => self.x = 0,
+      event::KeyCode::End   => self.x = self.size.0,
+      _ => unimplemented!(),
+    }
+  }
+}
+
 struct Writer {
-  term_size: (usize, usize),
+  term_size: (u16, u16),
   buffer: Buffer,
 }
 
 impl Writer {
-  fn new() -> Self {
-    let size = terminal::size().map(|(x, y)| (x as usize, y as usize)).unwrap();
+  fn new(size: (u16, u16)) -> Self {
     Self{
       term_size: size,
       buffer: Buffer::new(),
@@ -135,6 +210,8 @@ impl Writer {
       self.buffer.push('~');
       if i == 2 {
         self.buffer.push_str(" RESOLVER. The 'Soulver' in your terminal.");
+      }else if i == 3 {
+        self.buffer.push_str(&format!(" v{}", VERSION));
       }
       if i < rows - 1 {
         self.buffer.push_str("\r\n");
@@ -143,19 +220,22 @@ impl Writer {
     Ok(())
   }
   
-  fn refresh(&mut self) -> crossterm::Result<()> {
+  fn refresh(&mut self, cursor: &Cursor) -> crossterm::Result<()> {
     queue!(self.buffer, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     self.draw_gutter()?;
-    queue!(self.buffer, cursor::MoveTo(0, 0), cursor::Show)?;
+    queue!(self.buffer, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
     self.buffer.flush()
   }
 }
 
 fn main() -> crossterm::Result<()> {
-  let _cleanup = Finalize{};
+  let opts = Options::parse();
+  let _cleanup = Finalize{opts: opts.clone()};
   terminal::enable_raw_mode()?;
   
   let mut editor = Editor::new();
+  editor.draw()?;
+  
   loop {
     if !editor.step()? {
       break;
