@@ -74,15 +74,10 @@ impl Editor {
         ..
       } => return Ok(false),
       event::KeyEvent{
-        code: event::KeyCode::Char(v @ ('h' | 'j' | 'k' | 'l')),
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.cursor.move_hjkl(v),
-      event::KeyEvent{
         code: v @ (event::KeyCode::Up | event::KeyCode::Down | event::KeyCode::Left | event::KeyCode::Right | event::KeyCode::Home | event::KeyCode::End),
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.cursor.move_arrow(v),
+      } => self.cursor.move_dir(v),
       _ => {},
     };
     Ok(true)
@@ -158,17 +153,7 @@ impl Cursor {
     }
   }
   
-  fn move_hjkl(&mut self, dir: char) {
-    match dir {
-      'h' => self.x = if self.x > 0 { self.x - 1 } else { 0 },
-      'j' => self.y = min(self.size.0, self.y + 1),
-      'k' => self.y = if self.y > 0 { self.y - 1 } else { 0 },
-      'l' => self.x = min(self.size.1, self.x + 1),
-      _   => unimplemented!(),
-    }
-  }
-  
-  fn move_arrow(&mut self, dir: event::KeyCode) {
+  fn move_dir(&mut self, dir: event::KeyCode) {
     match dir {
       event::KeyCode::Left  => self.x = if self.x > 0 { self.x - 1 } else { 0 },
       event::KeyCode::Down  => self.y = min(self.size.1 - 1, self.y + 1),
