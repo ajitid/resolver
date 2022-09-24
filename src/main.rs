@@ -1,3 +1,5 @@
+mod content;
+
 use std::time;
 use std::io::{self, Write};
 use std::io::stdout;
@@ -11,6 +13,8 @@ use crossterm::execute;
 use crossterm::terminal;
 
 use clap::Parser;
+
+use content::{Content, Pos};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -127,7 +131,7 @@ impl Buffer {
   }
   
   fn fill(&mut self, c: &Content) {
-    for l in c.text.lines() {
+    for l in c.lines() {
       self.data.push_str(l);
       self.data.push_str("\r\n");
     }
@@ -183,70 +187,10 @@ impl Cursor {
       _ => unimplemented!(),
     }
   }
-
+  
   fn move_abs(&mut self, pos: Pos) {
     self.x = pos.x as u16;
     self.y = pos.y as u16;
-  }
-}
-
-struct Pos {
-  x: usize,
-  y: usize,
-  index: usize,
-}
-
-struct Content {
-  text: String,
-  width: usize,
-  cursor: usize,
-}
-
-impl Content {
-  fn new(width: usize) -> Content {
-    Content{
-      text: String::new(),
-      width: width,
-      cursor: 0,
-    }
-  }
-  
-  fn pos(&mut self, idx: usize) -> Pos {
-    let mut i: usize = 0;
-    let mut x: usize = 0;
-    let mut y: usize = 0;
-    for c in self.text.chars() {
-      if c != '\n' && x + 1 < self.width {
-        x = x + 1;
-      }else{
-        x = 0;
-        y = y + 1;
-      }
-      i = i + 1;
-      if i > idx {
-        break;
-      }
-    }
-    Pos{x: x, y: y, index: idx}
-  }
-  
-  fn insert(&mut self, idx: usize, c: char) -> Pos {
-    let l = self.text.len();
-    let idx = if idx > l { l } else { idx };
-    self.text.insert(idx, c);
-    return self.pos(idx + 1);
-  }
-  
-  fn insert_rel(&mut self, c: char) -> Pos {
-    self.cursor += 1;
-    self.insert(self.cursor, c)
-  }
-  
-  fn insert_ctl(&mut self, k: event::KeyCode) -> Pos {
-    match k {
-      event::KeyCode::Enter => self.insert_rel('\n'),
-      _ => unimplemented!(),
-    }
   }
 }
 
@@ -291,8 +235,11 @@ impl Writer {
   
   fn refresh(&mut self, cursor: &Cursor, content: &Content) -> crossterm::Result<()> {
     queue!(self.buffer, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    // self.draw(content)?;
-    self.buffer.fill(content);
+    if content.len() > 0 {
+      self.buffer.fill(content);
+    }else{
+      self.draw(content)?;
+    }
     queue!(self.buffer, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
     self.buffer.flush()
   }
