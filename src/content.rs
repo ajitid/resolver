@@ -60,10 +60,6 @@ impl Content {
     self.text.lines()
   }
   
-  pub fn _cursor(&self) -> usize {
-    self.loc
-  }
-  
   pub fn fill(&self, b: &mut Buffer) {
     for l in &self.lines {
       let s = &self.text[l.index..l.upper()];
