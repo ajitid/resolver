@@ -54,6 +54,7 @@ struct Editor {
   reader: Reader,
   writer: Writer,
   cursor: Cursor,
+  content: Content,
 }
 
 impl Editor {
@@ -63,6 +64,7 @@ impl Editor {
       reader: Reader,
       writer: Writer::new(size),
       cursor: Cursor::new(size),
+      content: Content::new(size.0 as usize),
     }
   }
   
@@ -78,13 +80,23 @@ impl Editor {
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.cursor.move_dir(v),
+      event::KeyEvent{
+        code: event::KeyCode::Char(v),
+        modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
+        ..
+      } => self.cursor.move_rel(self.content.insert_rel(v)),
+      event::KeyEvent{
+        code: v @ event::KeyCode::Enter,
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_rel(self.content.insert_ctl(v)),
       _ => {},
     };
     Ok(true)
   }
   
   fn draw(&mut self) -> crossterm::Result<bool> {
-    self.writer.refresh(&self.cursor)?;
+    self.writer.refresh(&self.cursor, &self.content)?;
     Ok(true)
   }
   
@@ -112,6 +124,10 @@ impl Buffer {
   
   fn push_str(&mut self, s: &str) {
     self.data.push_str(s);
+  }
+  
+  fn content(&mut self, c: &Content) {
+    self.data.push_str(&c.text);
   }
   
   fn clear(&mut self) {
@@ -164,6 +180,99 @@ impl Cursor {
       _ => unimplemented!(),
     }
   }
+
+  fn move_rel(&mut self, mvt: Movement) {
+    let (x, y) = mvt.apply((self.x as usize, self.y as usize));
+    self.x = x as u16;
+    self.y = y as u16;
+  }
+}
+
+struct Stride {
+  n: usize,
+  abs: bool,
+}
+
+impl Stride {
+  fn abs(v: usize) -> Stride {
+    Stride{
+      n: v,
+      abs: true,
+    }
+  }
+  
+  fn rel(v: usize) -> Stride {
+    Stride{
+      n: v,
+      abs: false,
+    }
+  }
+  
+  fn apply(&self, v: usize) -> usize {
+    if self.abs {
+      self.n
+    }else{
+      self.n + v
+    }
+  }
+}
+
+struct Movement {
+  x: Stride,
+  y: Stride,
+}
+
+impl Movement {
+  fn apply(&self, c: (usize, usize)) -> (usize, usize) {
+    (self.x.apply(c.0), self.y.apply(c.1))
+  }
+}
+
+struct Content {
+  text: String,
+  width: usize,
+  cursor: usize,
+  lines: Vec<String>,
+}
+
+impl Content {
+  fn new(width: usize) -> Content {
+    Content{
+      text: String::new(),
+      width: width,
+      cursor: 0,
+      lines: Vec::new(),
+    }
+  }
+  
+  fn insert(&mut self, idx: usize, c: char) -> Movement {
+    let l = self.text.len();
+    let idx = if idx > l { l } else { idx };
+    self.text.insert(idx, c);
+    if c == '\n' {
+      Movement{x: Stride::abs(0), y: Stride::rel(1)}
+    }else{
+      Movement{x: Stride::rel(1), y: Stride::rel(0)}
+    }
+  }
+  
+  fn insert_rel(&mut self, c: char) -> Movement {
+    self.cursor += 1;
+    self.insert(self.cursor, c)
+  }
+  
+  fn insert_ctl(&mut self, k: event::KeyCode) -> Movement {
+    match k {
+      event::KeyCode::Enter => self.insert_rel('\n'),
+      _ => unimplemented!(),
+    }
+  }
+  
+  fn insert_str(&mut self, idx: usize, text: &str) {
+    let l = self.text.len();
+    let idx = if idx > l { l } else { idx };
+    self.text.insert_str(idx, text);
+  }
 }
 
 struct Writer {
@@ -189,7 +298,7 @@ impl Writer {
     execute!(stdout(), cursor::MoveTo(x, y))
   }
   
-  fn draw_gutter(&mut self) -> crossterm::Result<()> {
+  fn draw(&mut self, _: &Content) -> crossterm::Result<()> {
     let rows = self.term_size.1;
     for i in 0..rows {
       self.buffer.push('~');
@@ -205,9 +314,10 @@ impl Writer {
     Ok(())
   }
   
-  fn refresh(&mut self, cursor: &Cursor) -> crossterm::Result<()> {
+  fn refresh(&mut self, cursor: &Cursor, content: &Content) -> crossterm::Result<()> {
     queue!(self.buffer, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    self.draw_gutter()?;
+    // self.draw(content)?;
+    self.buffer.content(content);
     queue!(self.buffer, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
     self.buffer.flush()
   }
