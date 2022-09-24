@@ -227,7 +227,6 @@ impl Content {
   }
   
   pub fn insert(&mut self, idx: usize, c: char) -> Pos {
-    let l = self.text.len();
     self.text.insert(idx, c);
     return self.reflow().index(idx + 1);
   }

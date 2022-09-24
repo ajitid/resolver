@@ -149,7 +149,7 @@ struct Cursor {
 }
 
 impl Cursor {
-  fn new(size: (u16, u16)) -> Cursor {
+  fn new(_size: (u16, u16)) -> Cursor {
     Cursor{
       x: 0,
       y: 0,

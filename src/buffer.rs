@@ -1,5 +1,5 @@
+use std::io;
 use std::io::stdout;
-use std::io::{self, Write};
 
 pub struct Buffer {
   data: String,
