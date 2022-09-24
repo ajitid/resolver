@@ -75,15 +75,25 @@ impl Editor {
   fn key(&mut self) -> crossterm::Result<bool> {
     match self.reader.read_key()? {
       event::KeyEvent{
-        code: event::KeyCode::Char('d'),
+        code: event::KeyCode::Char('c' | 'd'),
         modifiers: event::KeyModifiers::CONTROL,
         ..
       } => return Ok(false),
       event::KeyEvent{
-        code: v @ (event::KeyCode::Up | event::KeyCode::Down | event::KeyCode::Left | event::KeyCode::Right | event::KeyCode::Home | event::KeyCode::End),
+        code: v @ event::KeyCode::Left,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.cursor.move_dir(v),
+      } => self.cursor.move_abs(self.content.left_rel()),
+      event::KeyEvent{
+        code: v @ event::KeyCode::Right,
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_abs(self.content.right_rel()),
+      event::KeyEvent{
+        code: v @ (event::KeyCode::Up | event::KeyCode::Down | event::KeyCode::Home | event::KeyCode::End),
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_abs(self.content.left_rel()),
       event::KeyEvent{
         code: event::KeyCode::Char(v),
         modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
@@ -93,7 +103,7 @@ impl Editor {
         code: v @ event::KeyCode::Enter,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.cursor.move_abs(self.content.insert_ctl(v)),
+      } => self.cursor.move_abs(self.content.insert_rel('\n')),
       _ => {},
     };
     Ok(true)

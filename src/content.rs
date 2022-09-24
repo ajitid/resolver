@@ -1,8 +1,11 @@
 use std::str;
+use std::cmp::min;
 
 use crossterm::event;
 
-#[derive(Debug, Eq, PartialEq)]
+const ZERO_POS: Pos = Pos{x: 0, y: 0, index: 0};
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Pos {
   index: usize,
   pub x: usize,
@@ -16,11 +19,17 @@ pub struct Line {
   length: usize,
 }
 
+impl Line {
+  pub fn upper(&self) -> usize {
+    self.index + self.length
+  }
+}
+
 pub struct Content {
   text: String,
   width: usize,
-  input: usize,
   lines: Vec<Line>,
+  loc: usize,
 }
 
 impl Content {
@@ -28,8 +37,8 @@ impl Content {
     Content{
       text: String::new(),
       width: width,
-      input: 0,
       lines: Vec::new(),
+      loc: 0,
     }
   }
   
@@ -37,8 +46,8 @@ impl Content {
     let mut c = Content{
       text: text.to_owned(),
       width: width,
-      input: 0,
       lines: Vec::new(),
+      loc: 0,
     };
     c.reflow();
     c
@@ -50,6 +59,10 @@ impl Content {
   
   pub fn lines(&self) -> str::Lines {
     self.text.lines()
+  }
+  
+  pub fn cursor(&self) -> usize {
+    self.loc
   }
   
   fn reflow(&mut self) -> &mut Self {
@@ -81,9 +94,50 @@ impl Content {
     self
   }
   
+  pub fn up(&mut self, idx: usize) -> Pos {
+    let pos = self.index(idx);
+    if pos.y == 0 {
+      return ZERO_POS;
+    }
+    if self.lines.len() < pos.y { // index is not valid
+      return ZERO_POS;
+    }
+    let n = pos.y - 1;
+    let line = &self.lines[n];
+    if line.length >= pos.x {
+      Pos{x: pos.x, y: n, index: line.index + pos.x}
+    }else{
+      Pos{x: line.length, y: n, index: line.upper()}
+    }
+  }
+  
+  pub fn left(&mut self, idx: usize) -> Pos {
+    if idx > 0 {
+      self.index(idx - 1)
+    }else{
+      ZERO_POS
+    }
+  }
+  
+  pub fn left_rel(&mut self) -> Pos {
+    let pos = self.left(self.loc);
+    self.loc = pos.index;
+    pos
+  }
+  
+  pub fn right(&mut self, idx: usize) -> Pos {
+    self.index(idx + 1)
+  }
+  
+  pub fn right_rel(&mut self) -> Pos {
+    let pos = self.right(self.loc);
+    self.loc = pos.index;
+    pos
+  }
+  
   pub fn index(&mut self, idx: usize) -> Pos {
     if idx == 0 {
-      return Pos{x: 0, y: 0, index: 0};
+      return ZERO_POS;
     }
     let mut x: usize = 0;
     let mut y: usize = 0;
@@ -119,16 +173,9 @@ impl Content {
   }
   
   pub fn insert_rel(&mut self, c: char) -> Pos {
-    let pos = self.insert(self.input, c);
-    self.input += 1;
+    let pos = self.insert(self.loc, c);
+    self.loc += 1;
     pos
-  }
-  
-  pub fn insert_ctl(&mut self, k: event::KeyCode) -> Pos {
-    match k {
-      event::KeyCode::Enter => self.insert_rel('\n'),
-      _ => unimplemented!(),
-    }
   }
 }
 
