@@ -184,15 +184,16 @@ impl Cursor {
     }
   }
 
-  fn move_abs(&mut self, mvt: Movement) {
-    self.x = mvt.x as u16;
-    self.y = mvt.y as u16;
+  fn move_abs(&mut self, pos: Pos) {
+    self.x = pos.x as u16;
+    self.y = pos.y as u16;
   }
 }
 
-struct Movement {
+struct Pos {
   x: usize,
   y: usize,
+  index: usize,
 }
 
 struct Content {
@@ -210,45 +211,42 @@ impl Content {
     }
   }
   
-  fn pos(&mut self, idx: usize) -> Movement {
+  fn pos(&mut self, idx: usize) -> Pos {
     let mut i: usize = 0;
     let mut x: usize = 0;
     let mut y: usize = 0;
     for c in self.text.chars() {
-      i = i + 1;
       if c != '\n' && x + 1 < self.width {
         x = x + 1;
       }else{
         x = 0;
         y = y + 1;
       }
+      i = i + 1;
+      if i > idx {
+        break;
+      }
     }
-    Movement{x: x, y: y}
+    Pos{x: x, y: y, index: idx}
   }
   
-  fn insert(&mut self, idx: usize, c: char) -> Movement {
+  fn insert(&mut self, idx: usize, c: char) -> Pos {
     let l = self.text.len();
     let idx = if idx > l { l } else { idx };
     self.text.insert(idx, c);
     return self.pos(idx + 1);
   }
   
-  fn insert_rel(&mut self, c: char) -> Movement {
+  fn insert_rel(&mut self, c: char) -> Pos {
     self.cursor += 1;
     self.insert(self.cursor, c)
   }
   
-  fn insert_ctl(&mut self, k: event::KeyCode) -> Movement {
+  fn insert_ctl(&mut self, k: event::KeyCode) -> Pos {
     match k {
       event::KeyCode::Enter => self.insert_rel('\n'),
       _ => unimplemented!(),
     }
-  }
-  
-  fn insert_str(&mut self, idx: usize, text: &str) {
-    let l = self.text.len();
-    let idx = if idx > l { l } else { idx };
-    self.text.insert_str(idx, text);
   }
 }
 
