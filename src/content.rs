@@ -15,6 +15,7 @@ pub struct Pos {
 pub struct Line {
   num: usize,
   index: usize,
+  chars: usize,
   length: usize,
 }
 
@@ -74,27 +75,33 @@ impl Content {
   
   fn reflow(&mut self) -> &mut Self {
     let mut f: usize = 0;
+    let mut i: usize = 0;
     let mut x: usize = 0;
     let mut y: usize = 0;
     let mut l: Vec<Line> = Vec::new();
     for c in self.text.chars() {
-      x = x + 1;
+      i = i + 1;
       if c == '\n' || x >= self.width {
         l.push(Line{
           num: y,
           index: f,
-          length: x,
+          chars: x,
+          length: i,
         });
-        f = f + x;
+        f = f + i;
         x = 0;
+        i = 0;
         y = y + 1;
+      }else{
+        x += 1;
       }
     }
-    if x > 0 {
+    if i > 0 {
       l.push(Line{
         num: y,
         index: f,
-        length: x,
+        chars: x,
+        length: i,
       });
     }
     self.lines = l;
@@ -126,7 +133,7 @@ impl Content {
     let n = pos.y + 1;
     if n >= self.lines.len() {
       let line = &self.lines[pos.y];
-      return Pos{x: line.length, y: pos.y, index: line.upper() - 1};
+      return Pos{x: line.length, y: pos.y, index: line.upper()};
     }
     let line = &self.lines[n];
     if line.length > pos.x {
@@ -181,7 +188,7 @@ impl Content {
   pub fn end(&mut self, idx: usize) -> Pos {
     let pos = self.index(idx);
     let line = &self.lines[pos.y];
-    Pos{x: line.length, y: pos.y, index: line.upper()}
+    Pos{x: line.chars, y: pos.y, index: line.upper()}
   }
   
   pub fn end_rel(&mut self) -> Pos {
