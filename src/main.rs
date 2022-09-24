@@ -3,7 +3,6 @@ mod content;
 use std::time;
 use std::io::{self, Write};
 use std::io::stdout;
-use std::cmp::min;
 
 use crossterm;
 use crossterm::event;
@@ -80,27 +79,43 @@ impl Editor {
         ..
       } => return Ok(false),
       event::KeyEvent{
-        code: v @ event::KeyCode::Left,
+        code: event::KeyCode::Left,
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.cursor.move_abs(self.content.left_rel()),
       event::KeyEvent{
-        code: v @ event::KeyCode::Right,
+        code: event::KeyCode::Right,
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.cursor.move_abs(self.content.right_rel()),
       event::KeyEvent{
-        code: v @ (event::KeyCode::Up | event::KeyCode::Down | event::KeyCode::Home | event::KeyCode::End),
+        code: event::KeyCode::Up,
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_abs(self.content.up_rel()),
+      event::KeyEvent{
+        code: event::KeyCode::Down,
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_abs(self.content.down_rel()),
+      event::KeyEvent{
+        code: event::KeyCode::Home | event::KeyCode::End,
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.cursor.move_abs(self.content.left_rel()),
+      event::KeyEvent{
+        code: event::KeyCode::Backspace,
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_abs(self.content.backspace_rel()),
+      //
       event::KeyEvent{
         code: event::KeyCode::Char(v),
         modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
         ..
       } => self.cursor.move_abs(self.content.insert_rel(v)),
       event::KeyEvent{
-        code: v @ event::KeyCode::Enter,
+        code: event::KeyCode::Enter,
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.cursor.move_abs(self.content.insert_rel('\n')),
@@ -174,7 +189,6 @@ impl io::Write for Buffer {
 struct Cursor {
   x: u16,
   y: u16,
-  size: (u16, u16),
 }
 
 impl Cursor {
@@ -182,19 +196,6 @@ impl Cursor {
     Cursor{
       x: 0,
       y: 0,
-      size: size,
-    }
-  }
-  
-  fn move_dir(&mut self, dir: event::KeyCode) {
-    match dir {
-      event::KeyCode::Left  => self.x = if self.x > 0 { self.x - 1 } else { 0 },
-      event::KeyCode::Down  => self.y = min(self.size.1 - 1, self.y + 1),
-      event::KeyCode::Up    => self.y = if self.y > 0 { self.y - 1 } else { 0 },
-      event::KeyCode::Right => self.x = min(self.size.0 - 1, self.x + 1),
-      event::KeyCode::Home  => self.x = 0,
-      event::KeyCode::End   => self.x = self.size.0,
-      _ => unimplemented!(),
     }
   }
   

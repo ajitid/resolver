@@ -1,7 +1,4 @@
 use std::str;
-use std::cmp::min;
-
-use crossterm::event;
 
 const ZERO_POS: Pos = Pos{x: 0, y: 0, index: 0};
 
@@ -61,7 +58,7 @@ impl Content {
     self.text.lines()
   }
   
-  pub fn cursor(&self) -> usize {
+  pub fn _cursor(&self) -> usize {
     self.loc
   }
   
@@ -99,16 +96,40 @@ impl Content {
     if pos.y == 0 {
       return ZERO_POS;
     }
-    if self.lines.len() < pos.y { // index is not valid
-      return ZERO_POS;
-    }
     let n = pos.y - 1;
     let line = &self.lines[n];
-    if line.length >= pos.x {
+    if line.length > pos.x {
       Pos{x: pos.x, y: n, index: line.index + pos.x}
     }else{
-      Pos{x: line.length, y: n, index: line.upper()}
+      Pos{x: line.length - 1, y: n, index: line.upper() - 1}
     }
+  }
+  
+  pub fn up_rel(&mut self) -> Pos {
+    let pos = self.up(self.loc);
+    self.loc = pos.index;
+    pos
+  }
+  
+  pub fn down(&mut self, idx: usize) -> Pos {
+    let pos = self.index(idx);
+    let n = pos.y + 1;
+    if n >= self.lines.len() {
+      let line = &self.lines[pos.y];
+      return Pos{x: line.length, y: pos.y, index: line.upper() - 1};
+    }
+    let line = &self.lines[n];
+    if line.length > pos.x {
+      Pos{x: pos.x, y: n, index: line.index + pos.x}
+    }else{
+      Pos{x: line.length - 1, y: n, index: line.upper() - 1}
+    }
+  }
+  
+  pub fn down_rel(&mut self) -> Pos {
+    let pos = self.down(self.loc);
+    self.loc = pos.index;
+    pos
   }
   
   pub fn left(&mut self, idx: usize) -> Pos {
@@ -169,7 +190,6 @@ impl Content {
   
   pub fn insert(&mut self, idx: usize, c: char) -> Pos {
     let l = self.text.len();
-    let idx = if idx > l { l } else { idx };
     self.text.insert(idx, c);
     return self.reflow().index(idx + 1);
   }
@@ -178,6 +198,22 @@ impl Content {
     let pos = self.insert(self.loc, c);
     self.loc += 1;
     pos
+  }
+  
+  pub fn backspace(&mut self, idx: usize) -> Pos {
+    let l = self.text.len();
+    if l == 0 { // nothing to delete
+      return ZERO_POS;
+    }
+    self.text.remove(idx);
+    return self.reflow().index(idx);
+  }
+  
+  pub fn backspace_rel(&mut self) -> Pos {
+    if self.loc > 0 {
+      self.loc -= 1;
+    }
+    self.backspace(self.loc)
   }
 }
 
@@ -216,10 +252,29 @@ mod tests {
     assert_eq!(Pos{index: 6, x: 3, y: 1}, Content::new_with_text(100, "Hi\nTim").index(6));
     assert_eq!(Pos{index: 7, x: 0, y: 2}, Content::new_with_text(100, "Hi\nTim\n").index(7));
     assert_eq!(Pos{index: 8, x: 1, y: 2}, Content::new_with_text(100, "Hi\nTim\n!").index(8));
-    
+    //
     assert_eq!(Pos{index: 4, x: 4, y: 0}, Content::new_with_text(100, "Hello").index(4));
     assert_eq!(Pos{index: 6, x: 6, y: 0}, Content::new_with_text(100, "Hello!\n").index(6));
     assert_eq!(Pos{index: 7, x: 0, y: 1}, Content::new_with_text(100, "Hello!\n").index(7));
+  }
+  
+  #[test]
+  fn test_movement() {
+    assert_eq!(Pos{index: 6, x: 6, y: 0}, Content::new_with_text(100, "Hello.").right(5));
+    assert_eq!(Pos{index: 6, x: 6, y: 0}, Content::new_with_text(100, "Hello.").right(100));
+    assert_eq!(Pos{index: 7, x: 0, y: 1}, Content::new_with_text(100, "Hello,\nthere").right(6));
+    
+    assert_eq!(Pos{index: 4, x: 4, y: 0}, Content::new_with_text(100, "Hello.").left(5));
+    assert_eq!(Pos{index: 0, x: 0, y: 0}, Content::new_with_text(100, "Hello.").left(0));
+    assert_eq!(Pos{index: 6, x: 6, y: 0}, Content::new_with_text(100, "Hello,\nthere").left(7));
+    
+    assert_eq!(Pos{index: 0, x: 0, y: 0}, Content::new_with_text(100, "Hello,\nto\nyourself").up(7));
+    assert_eq!(Pos{index: 1, x: 1, y: 0}, Content::new_with_text(100, "Hello,\nto\nyourself").up(8));
+    assert_eq!(Pos{index: 9, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").up(13));
+    assert_eq!(Pos{index: 9, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").up(16));
+
+    assert_eq!(Pos{index: 9, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").down(2));
+    assert_eq!(Pos{index: 9, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").down(6));
   }
   
 }
