@@ -139,6 +139,8 @@ impl Content {
     if idx == 0 {
       return ZERO_POS;
     }
+    let l = self.len();
+    let idx = if idx > l { l } else { idx };
     let mut x: usize = 0;
     let mut y: usize = 0;
     let mut nl: bool = false;
