@@ -1,5 +1,7 @@
 use std::str;
 
+use crate::buffer::Buffer;
+
 const ZERO_POS: Pos = Pos{x: 0, y: 0, index: 0};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -60,6 +62,18 @@ impl Content {
   
   pub fn _cursor(&self) -> usize {
     self.loc
+  }
+  
+  pub fn fill(&self, b: &mut Buffer) {
+    for l in &self.lines {
+      let s = &self.text[l.index..l.upper()];
+      b.push_str(if s.ends_with("\n") {
+        &s[..s.len()-1]
+      }else{
+        s
+      });
+      b.push_str("\r\n");
+    }
   }
   
   fn reflow(&mut self) -> &mut Self {
@@ -152,6 +166,30 @@ impl Content {
   
   pub fn right_rel(&mut self) -> Pos {
     let pos = self.right(self.loc);
+    self.loc = pos.index;
+    pos
+  }
+  
+  pub fn home(&mut self, idx: usize) -> Pos {
+    let pos = self.index(idx);
+    let line = &self.lines[pos.y];
+    Pos{x: 0, y: pos.y, index: line.index}
+  }
+  
+  pub fn home_rel(&mut self) -> Pos {
+    let pos = self.home(self.loc);
+    self.loc = pos.index;
+    pos
+  }
+  
+  pub fn end(&mut self, idx: usize) -> Pos {
+    let pos = self.index(idx);
+    let line = &self.lines[pos.y];
+    Pos{x: line.length, y: pos.y, index: line.upper()}
+  }
+  
+  pub fn end_rel(&mut self) -> Pos {
+    let pos = self.end(self.loc);
     self.loc = pos.index;
     pos
   }

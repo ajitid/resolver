@@ -1,8 +1,9 @@
+mod buffer;
 mod content;
 
 use std::time;
-use std::io::{self, Write};
 use std::io::stdout;
+use std::io::Write;
 
 use crossterm;
 use crossterm::event;
@@ -13,6 +14,7 @@ use crossterm::terminal;
 
 use clap::Parser;
 
+use buffer::Buffer;
 use content::{Content, Pos};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -67,7 +69,8 @@ impl Editor {
       reader: Reader,
       writer: Writer::new(size),
       cursor: Cursor::new(size),
-      content: Content::new(size.0 as usize),
+      // content: Content::new(size.0 as usize),
+      content: Content::new(40),
     }
   }
   
@@ -99,16 +102,20 @@ impl Editor {
         ..
       } => self.cursor.move_abs(self.content.down_rel()),
       event::KeyEvent{
-        code: event::KeyCode::Home | event::KeyCode::End,
+        code: event::KeyCode::Home,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.cursor.move_abs(self.content.left_rel()),
+      } => self.cursor.move_abs(self.content.home_rel()),
+      event::KeyEvent{
+        code: event::KeyCode::End,
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.cursor.move_abs(self.content.end_rel()),
       event::KeyEvent{
         code: event::KeyCode::Backspace,
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.cursor.move_abs(self.content.backspace_rel()),
-      //
       event::KeyEvent{
         code: event::KeyCode::Char(v),
         modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
@@ -133,56 +140,6 @@ impl Editor {
     let res = self.key()?;
     self.draw()?;
     Ok(res)
-  }
-}
-
-struct Buffer {
-  data: String,
-}
-
-impl Buffer {
-  fn new() -> Self {
-    Buffer{
-      data: String::new(),
-    }
-  }
-  
-  fn push(&mut self, c: char) {
-    self.data.push(c);
-  }
-  
-  fn push_str(&mut self, s: &str) {
-    self.data.push_str(s);
-  }
-  
-  fn fill(&mut self, c: &Content) {
-    for l in c.lines() {
-      self.data.push_str(l);
-      self.data.push_str("\r\n");
-    }
-  }
-  
-  fn clear(&mut self) {
-    self.data.clear();
-  }
-}
-
-impl io::Write for Buffer {
-  fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-    match std::str::from_utf8(buf) {
-      Ok(v) => {
-        self.push_str(v);
-        Ok(v.len())
-      },
-      Err(_) => Err(io::ErrorKind::WriteZero.into()),
-    }
-  }
-  
-  fn flush(&mut self) -> io::Result<()> {
-    let out = write!(stdout(), "{}", self.data);
-    stdout().flush()?;
-    self.data.clear();
-    out
   }
 }
 
@@ -247,7 +204,7 @@ impl Writer {
   fn refresh(&mut self, cursor: &Cursor, content: &Content) -> crossterm::Result<()> {
     queue!(self.buffer, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     if content.len() > 0 {
-      self.buffer.fill(content);
+      content.fill(&mut self.buffer);
     }else{
       self.draw(content)?;
     }
