@@ -82,32 +82,30 @@ impl Content {
   }
   
   pub fn index(&mut self, idx: usize) -> Pos {
+    if idx == 0 {
+      return Pos{x: 0, y: 0, index: 0};
+    }
     let mut x: usize = 0;
     let mut y: usize = 0;
-    let mut nl: bool = true;
+    let mut nl: bool = false;
     for l in &self.lines {
       let ub = l.index + l.length;
-      if idx >= l.index && idx < ub {
+      y = l.num;
+      if idx >= l.index && idx <= ub {
         let slice = &self.text[l.index..ub];
         let eix = idx - l.index;
         nl = true;
-        for (i, _) in slice.chars().enumerate() {
+        for (i, c) in slice.chars().enumerate() {
           if i == eix {
-            println!("YEP {} >= {} > {}: {}\r", l.index, idx, ub, i);
             return Pos{x: i, y: l.num, index: idx};
-          }else{
-            println!("NOP {} >= {} >= {}: {} / {}\r", l.index, idx, ub, i, eix);
           }
           x = i;
-          nl = false;
+          nl = c == '\n';
         }
       }
-      y += 1;
     }
-    if x + 1 > self.width {
+    if nl || x + 1 > self.width {
       Pos{x: 0, y: y+1, index: idx}
-    }else if nl {
-      Pos{x: x, y: y, index: idx}
     }else{
       Pos{x: x+1, y: y, index: idx}
     }
