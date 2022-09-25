@@ -243,9 +243,10 @@ impl Content {
   }
   
   pub fn backspace_rel(&mut self) -> Pos {
-    if self.loc > 0 {
-      self.loc -= 1;
+    if self.loc == 0 { // nothing to delete
+      return ZERO_POS;
     }
+    self.loc -= 1;
     self.backspace(self.loc)
   }
 }
