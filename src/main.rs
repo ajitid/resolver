@@ -140,7 +140,7 @@ impl Writer {
       self.draw()?;
     }
     let gw = 3;
-    self.rows.push_gutter(gw as usize, self.term_size.1 as usize);
+    self.rows.push_gutter(gw as usize, (self.term_size.1 - 1) as usize);
     self.rows.push_col(self.doc.text());
     self.buf.push_rows(&self.rows);
     queue!(self.buf, cursor::MoveTo(cursor.x + ((gw + 1) as u16), cursor.y), cursor::Show)?;
