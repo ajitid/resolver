@@ -1,5 +1,6 @@
 use std::io;
 use std::io::stdout;
+use std::str;
 
 pub struct Buffer {
   data: String,
@@ -10,6 +11,24 @@ impl Buffer {
     Buffer{
       data: String::new(),
     }
+  }
+  
+  pub fn new_gutter(_w: usize, h: usize) -> Self {
+    let mut s = String::new();
+    for _ in 0..h {
+      s.push_str("   ┃\n");
+    }
+    Buffer{
+      data: s,
+    }
+  }
+  
+  pub fn text(&self) -> &str {
+    &self.data
+  }
+  
+  pub fn lines(&self) -> str::Lines {
+    self.data.lines()
   }
   
   pub fn push(&mut self, c: char) {

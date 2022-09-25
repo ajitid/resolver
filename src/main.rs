@@ -1,6 +1,7 @@
 mod buffer;
 mod content;
 mod editor;
+mod rows;
 
 use std::time;
 use std::io::stdout;
@@ -19,6 +20,7 @@ use clap::Parser;
 use buffer::Buffer;
 use content::{Content, Pos};
 use editor::Editor;
+use rows::Rows;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -83,6 +85,8 @@ struct Writer {
   term_size: (u16, u16),
   text_size: (u16, u16),
   buffer: Buffer,
+  gutter: Buffer,
+  rows: Rows,
 }
 
 impl Writer {
@@ -91,6 +95,8 @@ impl Writer {
       term_size: size,
       text_size: (size.0 / 3 * 2, size.1),
       buffer: Buffer::new(),
+      gutter: Buffer::new_gutter(3 as usize, size.1 as usize),
+      rows: Rows::new(),
     }
   }
   
@@ -117,14 +123,17 @@ impl Writer {
   }
   
   fn refresh(&mut self, cursor: &Cursor, content: &Content) -> crossterm::Result<()> {
-    queue!(self.buffer, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
+    queue!(self.rows, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     if content.len() > 0 {
       content.fill(&mut self.buffer);
     }else{
       self.draw()?;
     }
-    queue!(self.buffer, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
-    self.buffer.flush()
+    self.rows.push_col(self.gutter.text());
+    self.rows.push_col(self.buffer.text());
+    queue!(self.rows, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
+    self.buffer.clear();
+    self.rows.flush()
   }
 }
 
