@@ -15,6 +15,14 @@ impl Rows {
     }
   }
   
+  pub fn push_gutter(&mut self, _w: usize, h: usize) {
+    let mut s = String::new();
+    for _ in 0..h {
+      s.push_str("   │\r\n");
+    }
+    self.push_col(&s);
+  }
+  
   pub fn push_col(&mut self, text: &str) {
     for (i, l) in text.lines().enumerate() {
       if self.data.len() > i {
@@ -25,35 +33,16 @@ impl Rows {
     }
   }
   
-  fn render(&self) -> String {
+  pub fn render(&self) -> String {
     let mut s = String::new();
     for l in &self.data {
       s.push_str(&l);
-      s.push_str("\n\r");
+      s.push_str("\r\n");
     }
     s
   }
   
   pub fn clear(&mut self) {
     self.data.clear();
-  }
-}
-
-impl io::Write for Rows {
-  fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-    match std::str::from_utf8(buf) {
-      Ok(v) => {
-        self.push_col(v);
-        Ok(v.len())
-      },
-      Err(_) => Err(io::ErrorKind::WriteZero.into()),
-    }
-  }
-  
-  fn flush(&mut self) -> io::Result<()> {
-    let out = write!(stdout(), "{}", self.render());
-    stdout().flush()?;
-    self.clear();
-    out
   }
 }

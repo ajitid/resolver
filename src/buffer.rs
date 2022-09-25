@@ -2,6 +2,8 @@ use std::io;
 use std::io::stdout;
 use std::str;
 
+use crate::rows::Rows;
+
 pub struct Buffer {
   data: String,
 }
@@ -10,16 +12,6 @@ impl Buffer {
   pub fn new() -> Self {
     Buffer{
       data: String::new(),
-    }
-  }
-  
-  pub fn new_gutter(_w: usize, h: usize) -> Self {
-    let mut s = String::new();
-    for _ in 0..h {
-      s.push_str("   ┃\r\n");
-    }
-    Buffer{
-      data: s,
     }
   }
   
@@ -37,6 +29,10 @@ impl Buffer {
   
   pub fn push_str(&mut self, s: &str) {
     self.data.push_str(s);
+  }
+  
+  pub fn push_rows(&mut self, rows: &Rows) {
+    self.data.push_str(&rows.render());
   }
   
   pub fn clear(&mut self) {

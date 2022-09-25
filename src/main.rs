@@ -85,7 +85,7 @@ impl Cursor {
 struct Writer {
   term_size: (u16, u16),
   text_size: (u16, u16),
-  gutter: Buffer,
+  buf: Buffer,
   doc: Buffer,
   rows: Rows,
 }
@@ -94,8 +94,8 @@ impl Writer {
   fn new(size: (u16, u16)) -> Self {
     Self{
       term_size: size,
-      text_size: (size.0 / 3 * 2, size.1),
-      gutter: Buffer::new_gutter(3 as usize, size.1 as usize),
+      text_size: (size.0 / 3 * 2, size.1 - 1),
+      buf: Buffer::new(),
       doc: Buffer::new(),
       rows: Rows::new(),
     }
@@ -124,25 +124,29 @@ impl Writer {
   }
   
   fn refresh(&mut self, cursor: &Cursor, content: &Content) -> crossterm::Result<()> {
-    queue!(self.doc, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    if content.len() > 0 {
-      content.fill(&mut self.doc);
-    }else{
-      self.draw()?;
-    }
-    queue!(self.doc, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
-    self.doc.flush()
-    // queue!(self.rows, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
+    // queue!(self.doc, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     // if content.len() > 0 {
     //   content.fill(&mut self.doc);
     // }else{
     //   self.draw()?;
     // }
-    // self.rows.push_col(self.gutter.text());
-    // self.rows.push_col(self.doc.text());
-    // queue!(self.rows, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
-    // self.doc.clear();
-    // self.rows.flush()
+    // queue!(self.doc, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
+    // self.doc.flush()
+    
+    queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
+    if content.len() > 0 {
+      content.fill(&mut self.doc);
+    }else{
+      self.draw()?;
+    }
+    let gw = 3;
+    self.rows.push_gutter(gw as usize, self.term_size.1 as usize);
+    self.rows.push_col(self.doc.text());
+    self.buf.push_rows(&self.rows);
+    queue!(self.buf, cursor::MoveTo(cursor.x + ((gw + 1) as u16), cursor.y), cursor::Show)?;
+    self.doc.clear();
+    self.rows.clear();
+    self.buf.flush()
   }
 }
 
