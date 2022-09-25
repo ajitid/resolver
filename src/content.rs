@@ -213,8 +213,8 @@ impl Content {
     }
   }
   
-  pub fn set_text(&mut self, text: &str) {
-    self.text = text.to_owned();
+  pub fn set_text(&mut self, text: String) {
+    self.text = text;
     self.reflow();
   }
   

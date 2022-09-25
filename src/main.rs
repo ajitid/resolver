@@ -224,7 +224,7 @@ fn main() -> crossterm::Result<()> {
   let mut editor = Editor::new();
   if let Some(doc) = opts.doc {
     match fs::read_to_string(doc) {
-      Ok(text) => editor.content.set_text(&text),
+      Ok(text) => editor.content.set_text(text),
       Err(err) => return Err(err.into()),
     };
   }
