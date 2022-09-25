@@ -42,6 +42,7 @@ struct Finalize {
 impl Drop for Finalize {
   fn drop(&mut self) {
     terminal::disable_raw_mode().expect("Could not finalize terminal (good luck)");
+    execute!(stdout(), terminal::LeaveAlternateScreen).expect("Could not exit alternate screen");
     if !self.opts.debug {
       Writer::clear().expect("Could not clear screen");
     }
@@ -84,8 +85,8 @@ impl Cursor {
 struct Writer {
   term_size: (u16, u16),
   text_size: (u16, u16),
-  buffer: Buffer,
   gutter: Buffer,
+  doc: Buffer,
   rows: Rows,
 }
 
@@ -94,8 +95,8 @@ impl Writer {
     Self{
       term_size: size,
       text_size: (size.0 / 3 * 2, size.1),
-      buffer: Buffer::new(),
       gutter: Buffer::new_gutter(3 as usize, size.1 as usize),
+      doc: Buffer::new(),
       rows: Rows::new(),
     }
   }
@@ -109,37 +110,46 @@ impl Writer {
   fn draw(&mut self) -> crossterm::Result<()> {
     let rows = self.term_size.1;
     for i in 0..rows {
-      self.buffer.push('~');
+      self.doc.push('~');
       if i == 2 {
-        self.buffer.push_str(" RESOLVER. The 'Soulver' in your terminal.");
+        self.doc.push_str(" RESOLVER. The 'Soulver' in your terminal.");
       }else if i == 3 {
-        self.buffer.push_str(&format!(" v{}", VERSION));
+        self.doc.push_str(&format!(" v{}", VERSION));
       }
       if i < rows - 1 {
-        self.buffer.push_str("\r\n");
+        self.doc.push_str("\r\n");
       }
     }
     Ok(())
   }
   
   fn refresh(&mut self, cursor: &Cursor, content: &Content) -> crossterm::Result<()> {
-    queue!(self.rows, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
+    queue!(self.doc, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     if content.len() > 0 {
-      content.fill(&mut self.buffer);
+      content.fill(&mut self.doc);
     }else{
       self.draw()?;
     }
-    self.rows.push_col(self.gutter.text());
-    self.rows.push_col(self.buffer.text());
-    queue!(self.rows, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
-    self.buffer.clear();
-    self.rows.flush()
+    queue!(self.doc, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
+    self.doc.flush()
+    // queue!(self.rows, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
+    // if content.len() > 0 {
+    //   content.fill(&mut self.doc);
+    // }else{
+    //   self.draw()?;
+    // }
+    // self.rows.push_col(self.gutter.text());
+    // self.rows.push_col(self.doc.text());
+    // queue!(self.rows, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
+    // self.doc.clear();
+    // self.rows.flush()
   }
 }
 
 fn main() -> crossterm::Result<()> {
   let opts = Options::parse();
   let _cleanup = Finalize{opts: opts.clone()};
+  execute!(stdout(), terminal::EnterAlternateScreen)?;
   terminal::enable_raw_mode()?;
   
   let mut editor = Editor::new();

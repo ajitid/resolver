@@ -16,7 +16,7 @@ impl Buffer {
   pub fn new_gutter(_w: usize, h: usize) -> Self {
     let mut s = String::new();
     for _ in 0..h {
-      s.push_str("   ┃\n");
+      s.push_str("   ┃\r\n");
     }
     Buffer{
       data: s,
