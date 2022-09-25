@@ -213,6 +213,11 @@ impl Content {
     }
   }
   
+  pub fn set_text(&mut self, text: &str) {
+    self.text = text.to_owned();
+    self.reflow();
+  }
+  
   pub fn insert(&mut self, idx: usize, c: char) -> Pos {
     self.text.insert(idx, c);
     return self.reflow().index(idx + 1);

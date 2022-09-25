@@ -4,6 +4,7 @@ mod content;
 use std::time;
 use std::io::stdout;
 use std::io::Write;
+use std::fs;
 
 use crossterm;
 use crossterm::event;
@@ -26,6 +27,8 @@ pub struct Options {
   debug: bool,
   #[clap(long)]
   verbose: bool,
+  #[clap(help="Document to open")]
+  doc: Option<String>,
 }
 
 struct Finalize {
@@ -219,8 +222,14 @@ fn main() -> crossterm::Result<()> {
   terminal::enable_raw_mode()?;
   
   let mut editor = Editor::new();
-  editor.draw()?;
+  if let Some(doc) = opts.doc {
+    match fs::read_to_string(doc) {
+      Ok(text) => editor.content.set_text(&text),
+      Err(err) => return Err(err.into()),
+    };
+  }
   
+  editor.draw()?;
   loop {
     if !editor.step()? {
       break;
