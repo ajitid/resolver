@@ -81,6 +81,7 @@ impl Cursor {
 
 struct Writer {
   term_size: (u16, u16),
+  text_size: (u16, u16),
   buffer: Buffer,
 }
 
@@ -88,21 +89,18 @@ impl Writer {
   fn new(size: (u16, u16)) -> Self {
     Self{
       term_size: size,
+      text_size: (size.0 / 3 * 2, size.1),
       buffer: Buffer::new(),
     }
   }
   
   fn clear() -> crossterm::Result<()> {
     execute!(stdout(), terminal::Clear(terminal::ClearType::All))?;
-    Self::move_cursor(0, 0)?;
+    execute!(stdout(), cursor::MoveTo(0, 0))?;
     Ok(())
   }
   
-  fn move_cursor(x: u16, y: u16) -> crossterm::Result<()> {
-    execute!(stdout(), cursor::MoveTo(x, y))
-  }
-  
-  fn draw(&mut self, _: &Content) -> crossterm::Result<()> {
+  fn draw(&mut self) -> crossterm::Result<()> {
     let rows = self.term_size.1;
     for i in 0..rows {
       self.buffer.push('~');
@@ -123,7 +121,7 @@ impl Writer {
     if content.len() > 0 {
       content.fill(&mut self.buffer);
     }else{
-      self.draw(content)?;
+      self.draw()?;
     }
     queue!(self.buffer, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
     self.buffer.flush()
