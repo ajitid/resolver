@@ -64,12 +64,7 @@ impl Content {
   
   pub fn fill(&self, b: &mut Buffer) {
     for l in &self.lines {
-      let s = &self.text[l.offset..l.extent];
-      b.push_str(if s.ends_with("\n") {
-        &s[..s.len()-1]
-      }else{
-        s
-      });
+      b.push_str(l.text(&self.text));
       b.push_str("\r\n");
     }
   }
