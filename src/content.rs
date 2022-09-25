@@ -24,6 +24,10 @@ impl Line {
   pub fn text<'a>(&self, text: &'a str) -> &'a str {
     &text[self.offset..self.offset + self.bytes]
   }
+  
+  pub fn end(&self) -> usize {
+    self.offset + self.chars
+  }
 }
 
 pub struct Content {
@@ -80,10 +84,10 @@ impl Content {
       x += if c != '\n' { 1 } else { 0 };
       if c == '\n' || x >= self.width {
         l.push(Line{num: y, offset: f, extent: f + i, chars: x, bytes: x});
-        f = f + i;
-        x = 0;
-        i = 0;
-        y = y + 1;
+        f += i;
+        y += 1;
+        x  = 0;
+        i  = 0;
       }
     }
     if i > 0 {
@@ -103,7 +107,7 @@ impl Content {
     if line.chars > pos.x {
       Pos{x: pos.x, y: n, index: line.offset + pos.x}
     }else{
-      Pos{x: line.chars, y: n, index: line.extent}
+      Pos{x: line.chars, y: n, index: line.end()}
     }
   }
   
@@ -118,13 +122,13 @@ impl Content {
     let n = pos.y + 1;
     if n >= self.lines.len() {
       let line = &self.lines[pos.y];
-      return Pos{x: line.chars, y: pos.y, index: line.extent};
+      return Pos{x: line.chars, y: pos.y, index: line.end()};
     }
     let line = &self.lines[n];
     if line.chars > pos.x {
       Pos{x: pos.x, y: n, index: line.offset + pos.x}
     }else{
-      Pos{x: line.chars, y: n, index: line.extent}
+      Pos{x: line.chars, y: n, index: line.end()}
     }
   }
   
@@ -173,7 +177,7 @@ impl Content {
   pub fn end(&mut self, idx: usize) -> Pos {
     let pos = self.index(idx);
     let line = &self.lines[pos.y];
-    Pos{x: line.chars, y: pos.y, index: line.extent}
+    Pos{x: line.chars, y: pos.y, index: line.end()}
   }
   
   pub fn end_rel(&mut self) -> Pos {
