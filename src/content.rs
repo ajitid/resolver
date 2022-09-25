@@ -16,12 +16,16 @@ pub struct Line {
   num: usize,
   index: usize,
   chars: usize,
-  length: usize,
+  bytes: usize,
 }
 
 impl Line {
+  pub fn text<'a>(&self, text: &'a str) -> &'a str {
+    &text[self.index..self.index + self.chars]
+  }
+  
   pub fn upper(&self) -> usize {
-    self.index + self.length
+    self.index + self.bytes
   }
 }
 
@@ -80,29 +84,18 @@ impl Content {
     let mut y: usize = 0;
     let mut l: Vec<Line> = Vec::new();
     for c in self.text.chars() {
-      i = i + 1;
+      i += 1;
+      x += if c != '\n' { 1 } else { 0 };
       if c == '\n' || x >= self.width {
-        l.push(Line{
-          num: y,
-          index: f,
-          chars: x,
-          length: i,
-        });
+        l.push(Line{num: y, index: f, chars: x, bytes: i});
         f = f + i;
         x = 0;
         i = 0;
         y = y + 1;
-      }else{
-        x += 1;
       }
     }
     if i > 0 {
-      l.push(Line{
-        num: y,
-        index: f,
-        chars: x,
-        length: i,
-      });
+      l.push(Line{num: y, index: f, chars: x, bytes: i});
     }
     self.lines = l;
     self
@@ -115,10 +108,10 @@ impl Content {
     }
     let n = pos.y - 1;
     let line = &self.lines[n];
-    if line.length > pos.x {
+    if line.chars > pos.x {
       Pos{x: pos.x, y: n, index: line.index + pos.x}
     }else{
-      Pos{x: line.length - 1, y: n, index: line.upper() - 1}
+      Pos{x: line.chars, y: n, index: line.upper()}
     }
   }
   
@@ -133,13 +126,13 @@ impl Content {
     let n = pos.y + 1;
     if n >= self.lines.len() {
       let line = &self.lines[pos.y];
-      return Pos{x: line.length, y: pos.y, index: line.upper()};
+      return Pos{x: line.chars, y: pos.y, index: line.upper()};
     }
     let line = &self.lines[n];
-    if line.length > pos.x {
+    if line.chars > pos.x {
       Pos{x: pos.x, y: n, index: line.index + pos.x}
     }else{
-      Pos{x: line.length - 1, y: n, index: line.upper() - 1}
+      Pos{x: line.chars, y: n, index: line.upper()}
     }
   }
   
@@ -207,7 +200,7 @@ impl Content {
     let mut y: usize = 0;
     let mut nl: bool = false;
     for l in &self.lines {
-      let ub = l.index + l.length;
+      let ub = l.upper();
       y = l.num;
       if idx >= l.index && idx <= ub {
         let slice = &self.text[l.index..ub];
@@ -263,22 +256,45 @@ mod tests {
   
   #[test]
   fn test_reflow() {
+    let c = Content::new_with_text(100, "Hello");
     assert_eq!(vec![
-      Line{num: 0, index: 0, length: 5}
-    ], Content::new_with_text(100, "Hello").lines);
+      Line{num: 0, index: 0, chars: 5, bytes: 5}
+    ], c.lines);
     assert_eq!(vec![
-      Line{num: 0, index: 0, length: 6},
-      Line{num: 1, index: 6, length: 6}
-    ], Content::new_with_text(100, "Hello\nthere.").lines);
+      "Hello"
+    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    
+    let c = Content::new_with_text(100, "Hello\nthere.");
     assert_eq!(vec![
-      Line{num: 0, index: 0, length: 6},
-      Line{num: 1, index: 6, length: 7},
-    ], Content::new_with_text(100, "Hello\nthere.\n").lines);
+      Line{num: 0, index: 0, chars: 5, bytes: 6},
+      Line{num: 1, index: 6, chars: 6, bytes: 6}
+    ], c.lines);
     assert_eq!(vec![
-      Line{num: 0, index: 0,  length: 6},
-      Line{num: 1, index: 6,  length: 7},
-      Line{num: 2, index: 13, length: 1},
-    ], Content::new_with_text(100, "Hello\nthere.\n!").lines);
+      "Hello",
+      "there.",
+    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+
+    let c = Content::new_with_text(100, "Hello\nthere.\n");
+    assert_eq!(vec![
+      Line{num: 0, index: 0, chars: 5, bytes: 6},
+      Line{num: 1, index: 6, chars: 6, bytes: 7},
+    ], c.lines);
+    assert_eq!(vec![
+      "Hello",
+      "there.",
+    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+
+    let c = Content::new_with_text(100, "Hello\nthere.\n!");
+    assert_eq!(vec![
+      Line{num: 0, index: 0,  chars: 5, bytes: 6},
+      Line{num: 1, index: 6,  chars: 6, bytes: 7},
+      Line{num: 2, index: 13, chars: 1, bytes: 1},
+    ], c.lines);
+    assert_eq!(vec![
+      "Hello",
+      "there.",
+      "!"
+    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
   }
   
   #[test]
@@ -310,11 +326,11 @@ mod tests {
     
     assert_eq!(Pos{index: 0, x: 0, y: 0}, Content::new_with_text(100, "Hello,\nto\nyourself").up(7));
     assert_eq!(Pos{index: 1, x: 1, y: 0}, Content::new_with_text(100, "Hello,\nto\nyourself").up(8));
-    assert_eq!(Pos{index: 9, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").up(13));
-    assert_eq!(Pos{index: 9, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").up(16));
+    assert_eq!(Pos{index: 10, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").up(13));
+    assert_eq!(Pos{index: 10, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").up(16));
 
-    assert_eq!(Pos{index: 9, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").down(2));
-    assert_eq!(Pos{index: 9, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").down(6));
+    assert_eq!(Pos{index: 10, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").down(2));
+    assert_eq!(Pos{index: 10, x: 2, y: 1}, Content::new_with_text(100, "Hello,\nto\nyourself").down(6));
   }
   
 }
