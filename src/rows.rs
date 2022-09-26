@@ -15,20 +15,34 @@ impl Rows {
     }
   }
   
-  pub fn push_gutter(&mut self, _w: usize, h: usize) {
+  pub fn push_gutter(&mut self, width: usize, height: usize) {
     let mut s = String::new();
-    for _ in 0..h {
-      s.push_str("   │\r\n");
+    for _ in 0..height {
+      s.push_str(&format!("{}│\r\n", " ".repeat(width-1)));
     }
-    self.push_col(&s);
+    self.push_col(width, &s);
   }
   
-  pub fn push_col(&mut self, text: &str) {
+  pub fn push_divider(&mut self, height: usize) {
+    let mut s = String::new();
+    for _ in 0..height {
+      s.push_str("│\r\n");
+    }
+    self.push_col(1, &s);
+  }
+  
+  pub fn push_col(&mut self, width: usize, text: &str) {
     for (i, l) in text.lines().enumerate() {
-      if self.data.len() > i {
-        self.data[i].push_str(l);
+      let n = l.len(); // TODO: unicode support
+      let l = if n < width {
+        format!("{}{}", l, " ".repeat(width - n))
       }else{
-        self.data.push(l.to_owned());
+        l.to_string()
+      };
+      if self.data.len() > i {
+        self.data[i].push_str(&l);
+      }else{
+        self.data.push(l);
       }
     }
   }
