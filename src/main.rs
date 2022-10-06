@@ -124,15 +124,6 @@ impl Writer {
   }
   
   fn refresh(&mut self, cursor: &Cursor, content: &Content) -> crossterm::Result<()> {
-    // queue!(self.doc, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    // if content.len() > 0 {
-    //   content.fill(&mut self.doc);
-    // }else{
-    //   self.draw()?;
-    // }
-    // queue!(self.doc, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
-    // self.doc.flush()
-    
     queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     if content.len() > 0 {
       content.fill(&mut self.doc);
