@@ -2,10 +2,11 @@ use std::io;
 use std::io::stdout;
 use std::io::Write;
 
+use crate::text::Text;
 use crate::buffer::Buffer;
 
 pub struct Frame {
-  cols: Vec<Rows>,
+  cols: Vec<Text>,
 }
 
 impl Frame {
@@ -15,7 +16,7 @@ impl Frame {
     }
   }
   
-  pub fn push_col(&mut self, col: Rows) {
+  pub fn push_col(&mut self, col: Text) {
     self.cols.push(col)
   }
   
@@ -33,7 +34,7 @@ impl Frame {
   }
 }
 
-impl io::Write for Buffer {
+impl io::Write for Frame {
   fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
     match std::str::from_utf8(buf) {
       Ok(v) => {

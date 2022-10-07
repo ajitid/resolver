@@ -31,10 +31,6 @@ impl Buffer {
     self.data.push_str(s);
   }
   
-  pub fn push_rows(&mut self, rows: &Rows) {
-    self.data.push_str(&rows.render());
-  }
-  
   pub fn clear(&mut self) {
     self.data.clear();
   }

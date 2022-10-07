@@ -1,6 +1,6 @@
 mod buffer;
-mod content;
 mod editor;
+mod text;
 mod rows;
 
 use std::time;
@@ -18,7 +18,7 @@ use crossterm::terminal;
 use clap::Parser;
 
 use buffer::Buffer;
-use content::{Content, Pos};
+use text::{Text, Pos};
 use editor::Editor;
 use rows::Rows;
 
@@ -87,7 +87,7 @@ struct Writer {
   text_size: (u16, u16),
   buf: Buffer,
   doc: Buffer,
-  rows: Rows,
+  // rows: Rows,
 }
 
 impl Writer {
@@ -97,7 +97,7 @@ impl Writer {
       text_size: (size.0 / 3 * 2, size.1 - 1),
       buf: Buffer::new(),
       doc: Buffer::new(),
-      rows: Rows::new(),
+      // rows: Rows::new(),
     }
   }
   
@@ -123,21 +123,21 @@ impl Writer {
     Ok(())
   }
   
-  fn refresh(&mut self, cursor: &Cursor, content: &Content) -> crossterm::Result<()> {
+  fn refresh(&mut self, cursor: &Cursor, text: &Text) -> crossterm::Result<()> {
     queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    if content.len() > 0 {
-      content.fill(&mut self.doc);
+    if text.len() > 0 {
+      text.fill(&mut self.doc);
     }else{
       self.draw()?;
     }
-    let gw = 3;
-    self.rows.push_gutter(gw as usize, (self.term_size.1 - 1) as usize);
-    self.rows.push_col(self.text_size.0 as usize, self.doc.text());
-    self.rows.push_divider((self.term_size.1 - 1) as usize);
-    self.buf.push_rows(&self.rows);
-    queue!(self.buf, cursor::MoveTo(cursor.x + ((gw + 1) as u16), cursor.y), cursor::Show)?;
-    self.doc.clear();
-    self.rows.clear();
+    // let gw = 3;
+    // self.rows.push_gutter(gw as usize, (self.term_size.1 - 1) as usize);
+    // self.rows.push_col(self.text_size.0 as usize, self.doc.text());
+    // self.rows.push_divider((self.term_size.1 - 1) as usize);
+    // self.buf.push_rows(&self.rows);
+    // queue!(self.buf, cursor::MoveTo(cursor.x + ((gw + 1) as u16), cursor.y), cursor::Show)?;
+    // self.doc.clear();
+    // self.rows.clear();
     self.buf.flush()
   }
 }

@@ -1,6 +1,7 @@
 use std::io;
 use std::io::stdout;
 use std::io::Write;
+use std::str;
 
 use crate::buffer::Buffer;
 
@@ -17,7 +18,16 @@ impl Rows {
     }
   }
   
+  pub fn lines<'a>(&'a self) -> Vec<&'a str> {
+    let mut b = Vec::new();
+    for l in self.text.lines() {
+      
+    }
+    b
+  }
+  
   pub fn text<'a>(&'a self) -> &'a str {
     &self.text
   }
 }
+
