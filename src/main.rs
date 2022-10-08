@@ -127,6 +127,14 @@ impl Writer {
     Ok(())
   }
   
+  fn draw_gutter(width: usize, height: usize) -> String {
+    let mut g = String::new();
+    for i in 0..height {
+      g.push_str(&format!("{:>3}", i+1));
+    }
+    g
+  }
+  
   fn refresh(&mut self, cursor: &Cursor, text: &Text) -> crossterm::Result<()> {
     queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     
@@ -136,7 +144,8 @@ impl Writer {
     //   self.draw()?;
     // }
     
-    let cols = vec![text];
+    let gutter = Text::new_with_text(4, &Writer::draw_gutter(4, self.term_size.1 as usize));
+    let cols = vec![&gutter, &text];
     self.frame.write_cols(cols, &mut self.buf);
     
     // let gw = 3;
