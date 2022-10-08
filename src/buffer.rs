@@ -2,8 +2,6 @@ use std::io;
 use std::io::stdout;
 use std::str;
 
-use crate::rows::Rows;
-
 pub struct Buffer {
   data: String,
 }

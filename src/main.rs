@@ -2,7 +2,6 @@ mod buffer;
 mod editor;
 mod frame;
 mod text;
-mod rows;
 
 use std::time;
 use std::io::stdout;
@@ -28,8 +27,10 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
 pub struct Options {
-  #[clap(long)]
+  #[clap(long, help="Enable debugging mode")]
   debug: bool,
+  #[clap(long, help="Enable alternate screen debugging mode (no switch on exit)")]
+  debug_alternate: bool,
   #[clap(long)]
   verbose: bool,
   #[clap(help="Document to open")]
@@ -43,7 +44,9 @@ struct Finalize {
 impl Drop for Finalize {
   fn drop(&mut self) {
     terminal::disable_raw_mode().expect("Could not finalize terminal (good luck)");
-    execute!(stdout(), terminal::LeaveAlternateScreen).expect("Could not exit alternate screen");
+    if !self.opts.debug_alternate {
+      execute!(stdout(), terminal::LeaveAlternateScreen).expect("Could not exit alternate screen");
+    }
     if !self.opts.debug {
       Writer::clear().expect("Could not clear screen");
     }
@@ -126,14 +129,16 @@ impl Writer {
   
   fn refresh(&mut self, cursor: &Cursor, text: &Text) -> crossterm::Result<()> {
     queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    if text.len() > 0 {
-      text.fill(&mut self.doc);
-    }else{
-      self.draw()?;
-    }
+    
+    // if text.len() > 0 {
+    //   text.fill(&mut self.doc);
+    // }else{
+    //   self.draw()?;
+    // }
+    
     let cols = vec![text];
     self.frame.write_cols(cols, &mut self.buf);
-    println!(">>> {}", text);
+    
     // let gw = 3;
     // self.rows.push_gutter(gw as usize, (self.term_size.1 - 1) as usize);
     // self.rows.push_col(self.text_size.0 as usize, self.doc.text());
@@ -142,6 +147,7 @@ impl Writer {
     // queue!(self.buf, cursor::MoveTo(cursor.x + ((gw + 1) as u16), cursor.y), cursor::Show)?;
     // self.doc.clear();
     // self.rows.clear();
+    
     queue!(self.buf, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
     self.buf.flush()
   }

@@ -71,19 +71,12 @@ impl Text {
     self.text.lines()
   }
   
-  pub fn fill(&self, b: &mut Buffer) {
-    for l in &self.lines {
-      b.push_str(l.text(&self.text));
-      b.push_str("\r\n");
-    }
-  }
-  
   pub fn num_lines(&self) -> usize {
     self.lines.len()
   }
   
   pub fn read_line<'a>(&'a self, i: usize) -> Option<&'a str> {
-    if self.lines.len() < i {
+    if i < self.lines.len() {
       Some(self.lines[i].text(&self.text))
     }else{
       None
@@ -91,13 +84,12 @@ impl Text {
   }
   
   pub fn write_line(&self, i: usize, b: &mut Buffer) -> usize {
-    if self.lines.len() < i {
-      let t = self.lines[i].text(&self.text);
-      b.push_str(t);
-      t.len()
-    }else{
-      0
-    }
+    let t = match self.read_line(i) {
+      Some(t) => t,
+      None => return 0,
+    };
+    b.push_str(t);
+    t.len()
   }
   
   fn reflow(&mut self) -> &mut Self {
@@ -283,12 +275,13 @@ impl fmt::Display for Text {
     let n = self.num_lines();
     for i in 0..n {
       if let Some(l) = self.read_line(i) {
-        write!(f, "{}", l)?;
+        write!(f, "{}\r\n", l)?;
       }
     }
     Ok(())
   }
 }
+
 #[cfg(test)]
 mod tests {
   use super::*;

@@ -1,7 +1,3 @@
-use std::io;
-use std::io::stdout;
-use std::io::Write;
-
 use crate::text::Text;
 use crate::buffer::Buffer;
 
@@ -19,12 +15,11 @@ impl Frame {
   }
   
   pub fn write_cols(&self, cols: Vec<&Text>, buf: &mut Buffer) -> usize {
-    let mut i = 0;
     let lines: Vec<usize> = cols.iter().map(|t| { t.num_lines() }).collect();
-    let lmax: usize = match cols.iter().map(|t| { t.num_lines() }).reduce(|a, b| {
+    let lmax: usize = match lines.iter().reduce(|a, b| {
       if a > b { a } else { b }
     }) {
-      Some(v) => v,
+      Some(v) => *v,
       None => return 0, // nothing to do
     };
     for i in 0..=lmax { // until all content is consumed
