@@ -62,6 +62,10 @@ impl Text {
     self.text.len()
   }
   
+  pub fn width(&self) -> usize {
+    self.width
+  }
+  
   pub fn lines<'a>(&'a self) -> str::Lines<'a> {
     self.text.lines()
   }
@@ -77,11 +81,10 @@ impl Text {
     self.lines.len()
   }
   
-  pub fn write_line(&self, b: &mut Buffer, i: usize) -> usize {
+  pub fn write_line(&self, i: usize, b: &mut Buffer) -> usize {
     if self.lines.len() < i {
       let t = self.lines[i].text(&self.text);
       b.push_str(t);
-      b.push_str("\r\n");
       t.len()
     }else{
       0

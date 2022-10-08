@@ -1,5 +1,6 @@
 mod buffer;
 mod editor;
+mod frame;
 mod text;
 mod rows;
 
@@ -20,7 +21,7 @@ use clap::Parser;
 use buffer::Buffer;
 use text::{Text, Pos};
 use editor::Editor;
-use rows::Rows;
+use frame::Frame;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -85,9 +86,9 @@ impl Cursor {
 struct Writer {
   term_size: (u16, u16),
   text_size: (u16, u16),
+  frame: Frame,
   buf: Buffer,
   doc: Buffer,
-  // rows: Rows,
 }
 
 impl Writer {
@@ -95,9 +96,9 @@ impl Writer {
     Self{
       term_size: size,
       text_size: (size.0 / 3 * 2, size.1 - 1),
+      frame: Frame::new(size.0 as usize),
       buf: Buffer::new(),
       doc: Buffer::new(),
-      // rows: Rows::new(),
     }
   }
   
@@ -130,6 +131,8 @@ impl Writer {
     }else{
       self.draw()?;
     }
+    let cols = vec![text];
+    self.frame.write_cols(cols, &mut self.buf);
     // let gw = 3;
     // self.rows.push_gutter(gw as usize, (self.term_size.1 - 1) as usize);
     // self.rows.push_col(self.text_size.0 as usize, self.doc.text());
@@ -138,6 +141,7 @@ impl Writer {
     // queue!(self.buf, cursor::MoveTo(cursor.x + ((gw + 1) as u16), cursor.y), cursor::Show)?;
     // self.doc.clear();
     // self.rows.clear();
+    queue!(self.buf, cursor::MoveTo(cursor.x, cursor.y), cursor::Show)?;
     self.buf.flush()
   }
 }

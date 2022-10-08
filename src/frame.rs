@@ -6,49 +6,40 @@ use crate::text::Text;
 use crate::buffer::Buffer;
 
 pub struct Frame {
-  cols: Vec<Text>,
+  width: usize,
+  sep: char,
 }
 
 impl Frame {
-  pub fn new() -> Self {
+  pub fn new(width: usize) -> Self {
     Frame{
-      cols: Vec::new(),
+      width: width,
+      sep: '┊',
     }
   }
   
-  pub fn push_col(&mut self, col: Text) {
-    self.cols.push(col)
-  }
-  
-  pub fn render(&self) -> String {
-    let mut s = String::new();
-    for l in &self.cols {
-      s.push_str(&l);
-      s.push_str("\r\n");
+  pub fn write_cols(&self, cols: Vec<&Text>, buf: &mut Buffer) -> usize {
+    let mut i = 0;
+    let lines: Vec<usize> = cols.iter().map(|t| { t.num_lines() }).collect();
+    let lmax: usize = match cols.iter().map(|t| { t.num_lines() }).reduce(|a, b| {
+      if a > b { a } else { b }
+    }) {
+      Some(v) => v,
+      None => return 0, // nothing to do
+    };
+    for i in 0..=lmax { // until all content is consumed
+      for (x, c) in cols.iter().enumerate() {
+        if x > 0 {
+          buf.push(self.sep);
+        }
+        let n = c.write_line(i, buf);
+        let w = c.width();
+        if n < w {
+          buf.push_str(&" ".repeat(w - n));
+        }
+      }
+      buf.push_str("\r\n");
     }
-    s
-  }
-  
-  pub fn clear(&mut self) {
-    self.cols.clear();
-  }
-}
-
-impl io::Write for Frame {
-  fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-    match std::str::from_utf8(buf) {
-      Ok(v) => {
-        self.push_str(v);
-        Ok(v.len())
-      },
-      Err(_) => Err(io::ErrorKind::WriteZero.into()),
-    }
-  }
-  
-  fn flush(&mut self) -> io::Result<()> {
-    let out = write!(stdout(), "{}", self.data);
-    stdout().flush()?;
-    self.data.clear();
-    out
+    lmax
   }
 }
