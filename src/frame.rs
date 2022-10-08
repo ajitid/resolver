@@ -22,7 +22,7 @@ impl Frame {
       Some(v) => *v,
       None => return 0, // nothing to do
     };
-    for i in 0..=lmax { // until all content is consumed
+    for i in 0..lmax { // until all content is consumed
       for (x, c) in cols.iter().enumerate() {
         let adj = if x > 0 {
           buf.push(self.sep);

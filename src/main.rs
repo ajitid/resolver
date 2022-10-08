@@ -135,6 +135,8 @@ impl Writer {
         g.push_str(" RESOLVER. The 'Soulver' in your terminal.");
       }else if i == 3 {
         g.push_str(&format!(" v{}", VERSION));
+      }else if i == 5 {
+        g.push_str(" Cool formula output will go on this side. Eventually.");
       }
       g.push('\n');
     }
