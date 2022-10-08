@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str;
 
 use crate::buffer::Buffer;
@@ -79,6 +80,14 @@ impl Text {
   
   pub fn num_lines(&self) -> usize {
     self.lines.len()
+  }
+  
+  pub fn read_line<'a>(&'a self, i: usize) -> Option<&'a str> {
+    if self.lines.len() < i {
+      Some(self.lines[i].text(&self.text))
+    }else{
+      None
+    }
   }
   
   pub fn write_line(&self, i: usize, b: &mut Buffer) -> usize {
@@ -269,6 +278,17 @@ impl Text {
   }
 }
 
+impl fmt::Display for Text {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let n = self.num_lines();
+    for i in 0..n {
+      if let Some(l) = self.read_line(i) {
+        write!(f, "{}", l)?;
+      }
+    }
+    Ok(())
+  }
+}
 #[cfg(test)]
 mod tests {
   use super::*;

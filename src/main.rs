@@ -133,6 +133,7 @@ impl Writer {
     }
     let cols = vec![text];
     self.frame.write_cols(cols, &mut self.buf);
+    println!(">>> {}", text);
     // let gw = 3;
     // self.rows.push_gutter(gw as usize, (self.term_size.1 - 1) as usize);
     // self.rows.push_col(self.text_size.0 as usize, self.doc.text());
