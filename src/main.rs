@@ -127,17 +127,32 @@ impl Writer {
     Ok(())
   }
   
+  fn draw_welcome(width: usize, height: usize) -> String {
+    let mut g = String::new();
+    for i in 0..height {
+      g.push('~');
+      if i == 2 {
+        g.push_str(" RESOLVER. The 'Soulver' in your terminal.");
+      }else if i == 3 {
+        g.push_str(&format!(" v{}", VERSION));
+      }
+      g.push('\n');
+    }
+    g
+  }
+  
   fn draw_gutter(width: usize, height: usize) -> String {
     let mut g = String::new();
     for i in 0..height {
-      g.push_str(&format!(" {:>3}", i+1));
+      g.push_str(&format!(" {:>3}\n", i+1));
     }
     g
   }
   
   fn refresh(&mut self, cursor: &Cursor, text: &Text) -> crossterm::Result<()> {
     queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    let gw = 4;
+    let gw = 5;
+    let tw = (self.term_size.0 as usize / 3) - 2;
     
     // if text.len() > 0 {
     //   text.fill(&mut self.doc);
@@ -145,17 +160,11 @@ impl Writer {
     //   self.draw()?;
     // }
     
-    let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize - 1));
-    let cols = vec![&gutter, &text];
-    self.frame.write_cols(cols, &mut self.buf);
-    
-    // self.rows.push_gutter(gw as usize, (self.term_size.1 - 1) as usize);
-    // self.rows.push_col(self.text_size.0 as usize, self.doc.text());
-    // self.rows.push_divider((self.term_size.1 - 1) as usize);
-    // self.buf.push_rows(&self.rows);
-    // queue!(self.buf, cursor::MoveTo(cursor.x + ((gw + 1) as u16), cursor.y), cursor::Show)?;
-    // self.doc.clear();
-    // self.rows.clear();
+    let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize));
+    // let ticker = Text::new_with_string(20, Writer::draw_gutter(20, self.term_size.1 as usize));
+    let ticker = Text::new_with_string(tw, Writer::draw_welcome(tw, self.term_size.1 as usize));
+    let cols = vec![&gutter, &text, &ticker];
+    self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf);
     
     queue!(self.buf, cursor::MoveTo(cursor.x + ((gw + 1) as u16), cursor.y), cursor::Show)?;
     self.buf.flush()

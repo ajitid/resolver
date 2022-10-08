@@ -14,7 +14,7 @@ impl Frame {
     }
   }
   
-  pub fn write_cols(&self, cols: Vec<&Text>, buf: &mut Buffer) -> usize {
+  pub fn write_cols(&self, cols: Vec<&Text>, height: usize, buf: &mut Buffer) -> usize {
     let lines: Vec<usize> = cols.iter().map(|t| { t.num_lines() }).collect();
     let lmax: usize = match lines.iter().reduce(|a, b| {
       if a > b { a } else { b }
@@ -36,7 +36,9 @@ impl Frame {
           buf.push_str(&" ".repeat(w - n));
         }
       }
-      buf.push_str("\r\n");
+      if i < height - 1 {
+        buf.push_str("\r\n");
+      }
     }
     lmax
   }
