@@ -24,12 +24,15 @@ impl Frame {
     };
     for i in 0..=lmax { // until all content is consumed
       for (x, c) in cols.iter().enumerate() {
-        if x > 0 {
+        let adj = if x > 0 {
           buf.push(self.sep);
-        }
+          1
+        }else{
+          0
+        };
         let n = c.write_line(i, buf);
         let w = c.width();
-        if n < w {
+        if n < w - adj {
           buf.push_str(&" ".repeat(w - n));
         }
       }

@@ -48,9 +48,20 @@ impl Text {
     }
   }
   
-  pub fn new_with_text(width: usize, text: &str) -> Text {
+  pub fn new_with_str(width: usize, text: &str) -> Text {
     let mut c = Text{
       text: text.to_owned(),
+      width: width,
+      lines: Vec::new(),
+      loc: 0,
+    };
+    c.reflow();
+    c
+  }
+  
+  pub fn new_with_string(width: usize, text: String) -> Text {
+    let mut c = Text{
+      text: text, // no copy
       width: width,
       lines: Vec::new(),
       loc: 0,
@@ -288,7 +299,7 @@ mod tests {
   
   #[test]
   fn test_reflow() {
-    let c = Text::new_with_text(100, "Hello");
+    let c = Text::new_with_str(100, "Hello");
     assert_eq!(vec![
       Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5}
     ], c.lines);
@@ -296,7 +307,7 @@ mod tests {
       "Hello"
     ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
     
-    let c = Text::new_with_text(100, "Hello\nthere.");
+    let c = Text::new_with_str(100, "Hello\nthere.");
     assert_eq!(vec![
       Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5},
       Line{num: 1, offset: 6, extent: 12, chars: 6, bytes: 6}
@@ -306,7 +317,7 @@ mod tests {
       "there.",
     ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
 
-    let c = Text::new_with_text(100, "Hello\nthere.\n");
+    let c = Text::new_with_str(100, "Hello\nthere.\n");
     assert_eq!(vec![
       Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5},
       Line{num: 1, offset: 6, extent: 13, chars: 6, bytes: 6},
@@ -316,7 +327,7 @@ mod tests {
       "there.",
     ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
 
-    let c = Text::new_with_text(100, "Hello\nthere.\n!");
+    let c = Text::new_with_str(100, "Hello\nthere.\n!");
     assert_eq!(vec![
       Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5},
       Line{num: 1, offset: 6,  extent: 13, chars: 6, bytes: 6},
@@ -331,38 +342,38 @@ mod tests {
   
   #[test]
   fn test_index() {
-    assert_eq!(Pos{index: 0, x: 0, y: 0}, Text::new_with_text(100, "").index(0));
-    assert_eq!(Pos{index: 1, x: 1, y: 0}, Text::new_with_text(100, "H").index(1));
-    assert_eq!(Pos{index: 2, x: 2, y: 0}, Text::new_with_text(100, "Hi").index(2));
-    assert_eq!(Pos{index: 3, x: 0, y: 1}, Text::new_with_text(100, "Hi\n").index(3));
-    assert_eq!(Pos{index: 4, x: 1, y: 1}, Text::new_with_text(100, "Hi\nT").index(4));
-    assert_eq!(Pos{index: 5, x: 2, y: 1}, Text::new_with_text(100, "Hi\nTi").index(5));
-    assert_eq!(Pos{index: 6, x: 3, y: 1}, Text::new_with_text(100, "Hi\nTim").index(6));
-    assert_eq!(Pos{index: 7, x: 0, y: 2}, Text::new_with_text(100, "Hi\nTim\n").index(7));
-    assert_eq!(Pos{index: 8, x: 1, y: 2}, Text::new_with_text(100, "Hi\nTim\n!").index(8));
+    assert_eq!(Pos{index: 0, x: 0, y: 0}, Text::new_with_str(100, "").index(0));
+    assert_eq!(Pos{index: 1, x: 1, y: 0}, Text::new_with_str(100, "H").index(1));
+    assert_eq!(Pos{index: 2, x: 2, y: 0}, Text::new_with_str(100, "Hi").index(2));
+    assert_eq!(Pos{index: 3, x: 0, y: 1}, Text::new_with_str(100, "Hi\n").index(3));
+    assert_eq!(Pos{index: 4, x: 1, y: 1}, Text::new_with_str(100, "Hi\nT").index(4));
+    assert_eq!(Pos{index: 5, x: 2, y: 1}, Text::new_with_str(100, "Hi\nTi").index(5));
+    assert_eq!(Pos{index: 6, x: 3, y: 1}, Text::new_with_str(100, "Hi\nTim").index(6));
+    assert_eq!(Pos{index: 7, x: 0, y: 2}, Text::new_with_str(100, "Hi\nTim\n").index(7));
+    assert_eq!(Pos{index: 8, x: 1, y: 2}, Text::new_with_str(100, "Hi\nTim\n!").index(8));
     //
-    assert_eq!(Pos{index: 4, x: 4, y: 0}, Text::new_with_text(100, "Hello").index(4));
-    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_text(100, "Hello!\n").index(6));
-    assert_eq!(Pos{index: 7, x: 0, y: 1}, Text::new_with_text(100, "Hello!\n").index(7));
+    assert_eq!(Pos{index: 4, x: 4, y: 0}, Text::new_with_str(100, "Hello").index(4));
+    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_str(100, "Hello!\n").index(6));
+    assert_eq!(Pos{index: 7, x: 0, y: 1}, Text::new_with_str(100, "Hello!\n").index(7));
   }
   
   #[test]
   fn test_movement() {
-    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_text(100, "Hello.").right(5));
-    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_text(100, "Hello.").right(100));
-    assert_eq!(Pos{index: 7, x: 0, y: 1}, Text::new_with_text(100, "Hello,\nthere").right(6));
+    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_str(100, "Hello.").right(5));
+    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_str(100, "Hello.").right(100));
+    assert_eq!(Pos{index: 7, x: 0, y: 1}, Text::new_with_str(100, "Hello,\nthere").right(6));
     
-    assert_eq!(Pos{index: 4, x: 4, y: 0}, Text::new_with_text(100, "Hello.").left(5));
-    assert_eq!(Pos{index: 0, x: 0, y: 0}, Text::new_with_text(100, "Hello.").left(0));
-    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_text(100, "Hello,\nthere").left(7));
+    assert_eq!(Pos{index: 4, x: 4, y: 0}, Text::new_with_str(100, "Hello.").left(5));
+    assert_eq!(Pos{index: 0, x: 0, y: 0}, Text::new_with_str(100, "Hello.").left(0));
+    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_str(100, "Hello,\nthere").left(7));
     
-    assert_eq!(Pos{index: 0, x: 0, y: 0}, Text::new_with_text(100, "Hello,\nto\nyourself").up(7));
-    assert_eq!(Pos{index: 1, x: 1, y: 0}, Text::new_with_text(100, "Hello,\nto\nyourself").up(8));
-    assert_eq!(Pos{index: 10, x: 2, y: 1}, Text::new_with_text(100, "Hello,\nto\nyourself").up(13));
-    assert_eq!(Pos{index: 10, x: 2, y: 1}, Text::new_with_text(100, "Hello,\nto\nyourself").up(16));
+    assert_eq!(Pos{index: 0, x: 0, y: 0}, Text::new_with_str(100, "Hello,\nto\nyourself").up(7));
+    assert_eq!(Pos{index: 1, x: 1, y: 0}, Text::new_with_str(100, "Hello,\nto\nyourself").up(8));
+    assert_eq!(Pos{index: 10, x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").up(13));
+    assert_eq!(Pos{index: 10, x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").up(16));
 
-    assert_eq!(Pos{index: 10, x: 2, y: 1}, Text::new_with_text(100, "Hello,\nto\nyourself").down(2));
-    assert_eq!(Pos{index: 10, x: 2, y: 1}, Text::new_with_text(100, "Hello,\nto\nyourself").down(6));
+    assert_eq!(Pos{index: 10, x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").down(2));
+    assert_eq!(Pos{index: 10, x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").down(6));
   }
   
 }
