@@ -3,8 +3,8 @@ use crate::rdl::exec::{Context, Node, Ident, Add};
 use crate::rdl::unit;
 use crate::rdl::error;
 
-pub fn parse<'a>(scan: &'a Scanner) -> Result<impl Node, error::Error> {
-  match &scan.token() {
+pub fn parse<'a>(scan: &'a mut Scanner) -> Result<impl Node, error::Error> {
+  match scan.token() {
     Ok(tok)  => Ok(parse_expr(scan, &tok)?),
     Err(err) => Err(err),
   }
@@ -12,7 +12,7 @@ pub fn parse<'a>(scan: &'a Scanner) -> Result<impl Node, error::Error> {
 
 fn parse_expr<'a>(scan: &'a Scanner, tok: &Token) -> Result<impl Node, error::Error> {
   match tok.ttype {
-    // scan::TType::Ident => 
+    TType::Ident => Ok(Ident::new(&tok.ttext)),
     TType::End => Err(error::Error::EndOfInput),
     _ => Err(error::Error::EndOfInput),
   }
