@@ -17,7 +17,7 @@ impl Editor {
     Editor{
       reader: Reader,
       writer: Writer::new_with_size(size),
-      text: Text::new(size.0 / 3),
+      text: Text::new((size.0 / 3) * 2),
       pos: text::ZERO_POS,
     }
   }

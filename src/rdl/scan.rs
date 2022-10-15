@@ -12,7 +12,11 @@ pub const RPAREN: char  = ')';
 pub const EQUAL: char   = '=';
 pub const QUOTE: char   = '"';
 pub const COMMA: char   = ',';
+pub const ADD: char     = '+';
+pub const SUB: char     = '-';
 pub const DIV: char     = '/';
+pub const MUL: char     = '*';
+pub const MOD: char     = '%';
 pub const AT: char      = '@';
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -220,13 +224,18 @@ impl<'a> Scanner<'a> {
   }
   
   fn scan_operator(&mut self) -> Result<(), error::Error> {
-    let op = match self.next() {
-      Some(op) => op,
-      None => return Err(error::Error::EndOfInput),
-    };
+    let mut buf = String::new();
+    while let Some(c) = self.peek() {
+      if Self::is_operator(c) {
+        buf.push(c);
+      }else{
+        break;
+      }
+      self.skip(); // consume the character
+    }
     self.push(Token{
       ttype: TType::Operator,
-      ttext: op.to_string(),
+      ttext: buf,
     });
     Ok(())
   }
@@ -262,7 +271,7 @@ impl<'a> Scanner<'a> {
   }
   
   fn is_operator(c: char) -> bool {
-    c == EQUAL
+    c == EQUAL || c == ADD || c == SUB || c == MUL || c == DIV || c == MOD
   }
   
   fn ident(&mut self) -> Result<String, error::Error> {
@@ -384,6 +393,10 @@ mod tests {
     assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
+    
+    let s = r#"=+-*/%"#; // consuming operators is greedy
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=+-*/%".to_string()}), t.token());
     
     let s = r#"Hello    = 122"#;
     let mut t = Scanner::new(s);

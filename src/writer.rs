@@ -100,7 +100,7 @@ impl Writer {
   
   pub fn refresh(&mut self, pos: &Pos, text: &Text) -> crossterm::Result<()> {
     queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    let tw = ((self.term_size.0 as usize / 3) * 2) - 6;
+    let tw = (self.term_size.0 / 3) - 6;
     let gw = 5;
     
     let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize));
