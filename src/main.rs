@@ -23,6 +23,8 @@ use text::{Text, Pos};
 use editor::Editor;
 use frame::Frame;
 
+use rdl::scan;
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser, Debug, Clone)]
@@ -144,6 +146,24 @@ impl Writer {
     g
   }
   
+  fn draw_formula(width: usize, height: usize, text: &Text) -> String {
+    let mut g = String::new();
+    for l in text.lines() {
+      let mut s = scan::Scanner::new(l);
+      loop {
+        if let Ok(tok) = s.token() {
+          if tok.ttype == scan::TType::End {
+            break;
+          }
+          g.push_str(&tok.to_string());
+        }else{
+          break;
+        }
+      }
+    }
+    g
+  }
+  
   fn draw_gutter(width: usize, height: usize) -> String {
     let mut g = String::new();
     for i in 0..height {
@@ -164,7 +184,7 @@ impl Writer {
     // }
     
     let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize));
-    let ticker = Text::new_with_string(tw, Writer::draw_welcome(tw, self.term_size.1 as usize));
+    let ticker = Text::new_with_string(tw, Writer::draw_formula(tw, self.term_size.1 as usize, text));
     let cols = vec![&gutter, &text, &ticker];
     self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf);
     

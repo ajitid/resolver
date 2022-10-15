@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str;
 use std::ops;
 
@@ -29,6 +30,12 @@ pub enum TType {
 pub struct Token {
   pub ttype: TType,
   pub ttext: String,
+}
+
+impl fmt::Display for Token {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "<{:?} \"{}\">", self.ttype, self.ttext)
+  }
 }
 
 #[derive(Debug)]
