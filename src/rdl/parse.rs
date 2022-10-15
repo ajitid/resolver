@@ -1,19 +1,19 @@
-use crate::rdl::scan;
+use crate::rdl::scan::{Scanner, Token, TType};
 use crate::rdl::exec::{Context, Node, Ident, Add};
 use crate::rdl::unit;
 use crate::rdl::error;
 
-pub fn parse<'a>(scan: &'a scan::Scanner) -> Result<impl Node, error::Error> {
-  match scan.token() {
-    Ok(tok)  => Ok(parse_expr(scan, tok)?),
+pub fn parse<'a>(scan: &'a Scanner) -> Result<impl Node, error::Error> {
+  match &scan.token() {
+    Ok(tok)  => Ok(parse_expr(scan, &tok)?),
     Err(err) => Err(err),
-  };
+  }
 }
 
-fn parse_expr<'a>(scan: &'a scan::Scanner, tok: &Token) -> Result<impl Node, error::Error> {
+fn parse_expr<'a>(scan: &'a Scanner, tok: &Token) -> Result<impl Node, error::Error> {
   match tok.ttype {
-    scan::TType::Ident => 
-    scan::TType::End => Err(error::Error::EndOfInput),
+    // scan::TType::Ident => 
+    TType::End => Err(error::Error::EndOfInput),
     _ => Err(error::Error::EndOfInput),
   }
 }
@@ -39,7 +39,7 @@ mod tests {
   // #[test]
   // fn parse_simple() {
   //   let s = "a+b".to_string();
-  //   let mut t = scan::Scanner::new(&s);
+  //   let mut t = Scanner::new(&s);
   //   assert_eq!(Some('F'), t.peek());
   // }
   
