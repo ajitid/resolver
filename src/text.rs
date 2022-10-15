@@ -3,7 +3,7 @@ use std::str;
 
 use crate::buffer::Buffer;
 
-const ZERO_POS: Pos = Pos{x: 0, y: 0, index: 0};
+pub const ZERO_POS: Pos = Pos{x: 0, y: 0, index: 0};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Pos {
@@ -245,6 +245,10 @@ impl Text {
     }else{
       Pos{x: x+1, y: y, index: idx}
     }
+  }
+  
+  pub fn index_rel(&mut self) -> Pos {
+    self.index(self.loc)
   }
   
   pub fn set_text(&mut self, text: String) {
