@@ -77,14 +77,14 @@ impl Writer {
     for l in text.lines() {
       let mut s = scan::Scanner::new(l);
       loop {
-        if let Ok(tok) = s.token() {
-          if tok.ttype == scan::TType::End {
-            break;
-          }
-          g.push_str(&tok.to_string());
-        }else{
-          break;
-        }
+        let tok = match s.token() {
+          Ok(tok) => tok,
+          Err(_)  => break,
+        };
+        match tok.styled() {
+          Some(text) => g.push_str(&text),
+          None => break,
+        };
       }
     }
     g

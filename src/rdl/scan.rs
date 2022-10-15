@@ -2,6 +2,8 @@ use std::fmt;
 use std::str;
 use std::ops;
 
+use crossterm::style::Stylize;
+
 use crate::rdl::error;
 
 pub const ESCAPE: char  = '\\';
@@ -34,6 +36,21 @@ pub enum TType {
 pub struct Token {
   pub ttype: TType,
   pub ttext: String,
+}
+
+impl Token {
+  pub fn styled(&self) -> Option<String> {
+    let ttext: &str = &self.ttext;
+    match self.ttype {
+      TType::Verbatim => Some(format!("{}", ttext.reset())),
+      TType::Ident => Some(format!("{}", ttext.bold())),
+      TType::Number => Some(format!("{}", ttext.yellow())),
+      TType::String => Some(format!("{}", ttext.cyan())),
+      TType::Operator => Some(format!("{}", ttext.green())),
+      TType::Symbol => Some(format!("{}", ttext.blue())),
+      _ => None,
+    }
+  }
 }
 
 impl fmt::Display for Token {
