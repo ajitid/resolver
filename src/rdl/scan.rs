@@ -153,6 +153,33 @@ impl<'a> Scanner<'a> {
     None
   }
   
+  /// Look ahead for the next token in the stream or an error if no token
+  /// can be produced. If there are no more tokens because the input stream
+  /// has been fully consumed, the End token is returned. The token is not
+  /// consumed.
+  pub fn la(&mut self) -> Result<Token, error::Error> {
+    if self.tokens.len() == 0 {
+      self.scan()?;
+    }
+    if self.tokens.len() > 0 {
+      Ok(self.tokens[0].clone())
+    }else{
+      Ok(Token{ttype: TType::End, ttext: "".to_string()})
+    }
+  }
+  
+  /// Step over and consume the next token that has already been scanned.
+  /// This can be used to discard a token that has already been obtained
+  /// via la(). If no token exists in the look-ahead buffer, this method
+  /// does nothing.
+  pub fn step(&mut self) -> Option<Token> {
+    if self.tokens.len() > 0 {
+      Some(self.tokens.remove(0))
+    }else{
+      None
+    }
+  }
+  
   /// Produce the next token in the stream or an error if no token can be
   /// produced. If there are no more tokens because the input stream has
   /// been fully consumed, the End token is returned.

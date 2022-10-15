@@ -3,18 +3,30 @@ use crate::rdl::exec::{Context, Node, Ident, Add};
 use crate::rdl::unit;
 use crate::rdl::error;
 
-pub fn parse<'a>(scan: &'a mut Scanner) -> Result<impl Node, error::Error> {
-  match scan.token() {
-    Ok(tok)  => Ok(parse_expr(scan, &tok)?),
-    Err(err) => Err(err),
-  }
+pub struct Parser<'a> {
+  scan: &'a mut Scanner<'a>,
 }
 
-fn parse_expr<'a>(scan: &'a Scanner, tok: &Token) -> Result<impl Node, error::Error> {
-  match tok.ttype {
-    TType::Ident => Ok(Ident::new(&tok.ttext)),
-    TType::End => Err(error::Error::EndOfInput),
-    _ => Err(error::Error::EndOfInput),
+impl<'a> Parser<'a> {
+  pub fn new(scan: &'a mut Scanner<'a>) -> Parser<'a> {
+    Parser{
+      scan: scan,
+    }
+  }
+  
+  pub fn parse(&mut self) -> Result<impl Node, error::Error> {
+    match self.scan.token() {
+      Ok(tok)  => Ok(self.parse_expr(&tok)?),
+      Err(err) => Err(err),
+    }
+  }
+  
+  fn parse_expr(&mut self, tok: &Token) -> Result<impl Node, error::Error> {
+    match tok.ttype {
+      TType::Ident => Ok(Ident::new(&tok.ttext)),
+      TType::End => Err(error::Error::EndOfInput),
+      _ => Err(error::Error::EndOfInput),
+    }
   }
 }
 
@@ -30,7 +42,7 @@ mod tests {
     cxt.set("c", unit::Unit::None(2.0));
     
     let t = r#"1 c"#;
-    let n = parse(&mut Scanner::new(t)).expect("Could not parse");
+    let n = (&mut Parser::new(&mut Scanner::new(t))).parse().expect("Could not parse");
     assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
     let n = Add::new(Ident::new("a"), Ident::new("b"));
