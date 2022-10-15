@@ -1,6 +1,7 @@
 mod buffer;
 mod editor;
 mod frame;
+mod rdl;
 mod text;
 
 use std::time;
@@ -163,7 +164,6 @@ impl Writer {
     // }
     
     let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize));
-    // let ticker = Text::new_with_string(20, Writer::draw_gutter(20, self.term_size.1 as usize));
     let ticker = Text::new_with_string(tw, Writer::draw_welcome(tw, self.term_size.1 as usize));
     let cols = vec![&gutter, &text, &ticker];
     self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf);
