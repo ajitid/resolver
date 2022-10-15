@@ -372,43 +372,39 @@ mod tests {
     assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
     
-    let s = r#"Hello = 122"#;
+    let s = r#"Hello=122"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
+    assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
+    assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
+    
+    let s = r#"Hello    = 122"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
+    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: "    ".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
     
-    let s = r#"Hello = 122 kg"#;
+    let s = r#"Hello? = 122 kg"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
+    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: "? ".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "kg".to_string()}), t.token());
     
-    let s = r#"Hello, there, Mr. 122"#;
+    let s = r#"Hello, there, Mr.=122"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: ", ".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "there".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: ", ".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Mr".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: ". ".to_string()}), t.token());
+    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: ".".to_string()}), t.token());
+    assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
     assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
-    
-    // let s = r#"\r\n\"\@\{\(\/\\"#.to_string();
-    // let mut t = Scanner::new(&s);
-    // assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: "\r\n\"@{(/\\".to_string()}), t.token());
-    
-    // let s = r#"Foo@_"#.to_string();
-    // let mut t = Scanner::new(&s);
-    // assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: "Foo".to_string()}), t.token());
-    // assert_eq!(Ok(Token{ttype: TType::Meta, ttext: AT.to_string()}), t.token());
-    // assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "_".to_string()}), t.token());
-    // assert_eq!(Ok(Token{ttype: TType::End, ttext: "".to_string()}), t.token());
   }
 }
