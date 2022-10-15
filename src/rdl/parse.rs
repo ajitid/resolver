@@ -28,7 +28,11 @@ mod tests {
     cxt.set("a", unit::Unit::None(1.0));
     cxt.set("b", unit::Unit::None(1.0));
     cxt.set("c", unit::Unit::None(2.0));
-
+    
+    let t = r#"1 c"#;
+    let n = parse(&mut Scanner::new(t)).expect("Could not parse");
+    assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
+    
     let n = Add::new(Ident::new("a"), Ident::new("b"));
     assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
