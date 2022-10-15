@@ -1,8 +1,9 @@
 use std::fmt;
+use std::ops;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Unit {
-  Entire(f64),      // indivisible
+  None(f64),        // indivisible
   
   Teaspoon(f64),    // base
   Tablespoon(f64),  // 3x tsp
@@ -23,7 +24,7 @@ impl Unit {
   pub fn from(q: f64, n: Option<String>) -> Option<Unit> {
     if let Some(n) = n {
       match n.as_str() {
-        "entire"  => Some(Self::Entire(q)),
+        "none"    => Some(Self::None(q)),
         
         "tsp"     => Some(Self::Teaspoon(q)),
         "tbsp"    => Some(Self::Tablespoon(q)),
@@ -41,7 +42,7 @@ impl Unit {
         _         => None,
       }
     }else{
-      Some(Self::Entire(q))
+      Some(Self::None(q))
     }
   }
   
@@ -49,7 +50,7 @@ impl Unit {
     let mut u = *self;
     loop {
       match u {
-        Self::Entire(n)     => return Self::Entire(n),
+        Self::None(n)       => return Self::None(n),
 
         Self::Teaspoon(n)   => return Self::Teaspoon(n),
         Self::Tablespoon(n) => u = Self::Teaspoon(n * 3.0),
@@ -72,7 +73,7 @@ impl Unit {
     let mut u = *self;
     loop {
       match u {
-        Self::Entire(n) => return Self::Entire(n),
+        Self::None(n) => return Self::None(n),
 
         Self::Teaspoon(n) => {
           if n < 3.0 {
@@ -140,10 +141,34 @@ impl Unit {
   }
 }
 
+impl ops::Add<Unit> for Unit {
+  type Output = Unit;
+  
+  fn add(self, right: Unit) -> Unit {
+    match self {
+      Self::None(n) => Self::None(n + if let Self::None(v) = right { v as f64 } else { 0.0 }),
+      
+      Self::Teaspoon(n) => Self::Teaspoon(n + if let Self::Teaspoon(v) = right { v as f64 } else { 0.0 }),
+      Self::Tablespoon(n) => Self::Tablespoon(n + if let Self::Tablespoon(v) = right { v as f64 } else { 0.0 }),
+      Self::Cup(n) => Self::Cup(n + if let Self::Cup(v) = right { v as f64 } else { 0.0 }),
+      Self::Quart(n) => Self::Quart(n + if let Self::Quart(v) = right { v as f64 } else { 0.0 }),
+      Self::Gallon(n) => Self::Gallon(n + if let Self::Gallon(v) = right { v as f64 } else { 0.0 }),
+
+      Self::Milliliter(n) => Self::Milliliter(n + if let Self::Milliliter(v) = right { v as f64 } else { 0.0 }),
+      Self::Centiliter(n) => Self::Centiliter(n + if let Self::Centiliter(v) = right { v as f64 } else { 0.0 }),
+      Self::Deciliter(n) => Self::Deciliter(n + if let Self::Deciliter(v) = right { v as f64 } else { 0.0 }),
+      Self::Liter(n) => Self::Liter(n + if let Self::Liter(v) = right { v as f64 } else { 0.0 }),
+      
+      Self::Gram(n) => Self::Gram(n + if let Self::Gram(v) = right { v as f64 } else { 0.0 }),
+      Self::Kilogram(n) => Self::Kilogram(n + if let Self::Kilogram(v) = right { v as f64 } else { 0.0 }),
+    }
+  }
+}
+
 impl fmt::Display for Unit {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self.pack() {
-      Self::Entire(n)     => write!(f, "{}", format_qty(n)),
+      Self::None(n)       => write!(f, "{}", format_qty(n)),
       
       Self::Teaspoon(n)   => write!(f, "{} {}", format_qty(n), "tsp"),
       Self::Tablespoon(n) => write!(f, "{} {}", format_qty(n), "tbsp"),

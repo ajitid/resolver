@@ -376,7 +376,7 @@ mod tests {
   #[test]
   fn peek_next() {
     let s = "Foo bar".to_string();
-    let mut t = super::Scanner::new(&s);
+    let mut t = Scanner::new(&s);
     assert_eq!(Some('F'), t.peek());
     assert_eq!(Some('F'), t.peek());
     assert_eq!(Some('F'), t.peek());
