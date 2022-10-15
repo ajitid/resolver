@@ -81,9 +81,9 @@ impl Writer {
           Ok(tok) => tok,
           Err(_)  => break,
         };
-        match tok.styled() {
-          Some(text) => g.push_str(&text),
-          None => break,
+        match tok.ttype {
+          scan::TType::End => break,
+          _ => g.push_str(&format!("{}", tok)),
         };
       }
     }
