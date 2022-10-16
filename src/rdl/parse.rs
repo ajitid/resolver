@@ -1,32 +1,64 @@
-use crate::rdl::scan::{Scanner, Token, TType};
-use crate::rdl::exec::{Context, Node, Ident, Add};
+use crate::rdl::scan::{Scanner, TType};
+use crate::rdl::exec::{Context, Node};
 use crate::rdl::unit;
 use crate::rdl::error;
 
-pub struct Parser;
+pub struct Parser<'a> {
+  scan: Scanner<'a>,
+}
 
-impl Parser {
-  pub fn new() -> Parser {
-    Parser
+impl<'a> Parser<'a> {
+  pub fn new(scan: Scanner<'a>) -> Parser<'a> {
+    Parser{
+      scan: scan,
+    }
   }
   
-  pub fn parse<'a>(&'a self, scan: &'a mut Scanner<'a>) -> Result<impl Node, error::Error> {
-    let tok = match scan.la() {
-      Some(tok) => tok,
-      None      => return Err(error::Error::EndOfInput),
+  pub fn parse(&mut self) -> Result<Node, error::Error> {
+    self.parse_arith()
+  }
+  
+  fn parse_arith(&mut self) -> Result<Node, error::Error> {
+    let left = self.parse_primary()?;
+    
+    let ttype = match self.scan.la_type() {
+      Some(ttype) => ttype,
+      None => return Ok(left),
     };
-    Ok(self.parse_expr(scan)?)
+    if ttype != TType::Operator {
+      return Ok(left);
+    }
+    let op = match self.scan.token() {
+      Ok(op) => op,
+      Err(err) => return Err(err.into()),
+    };
+    
+    let ttype = match self.scan.la_type() {
+      Some(ttype) => ttype,
+      None => return Ok(left),
+    };
+    let right = match ttype {
+      TType::Verbatim => return Ok(left),
+      TType::End => return Ok(left),
+      _ => self.parse_arith()?,
+    };
+    
+    match op.ttext.chars().next().unwrap() {
+      ADD => Ok(Node::new_add(&left, &right)),
+      _ => Err(error::Error::TokenNotMatched),
+    }
   }
   
-  fn parse_expr<'a>(&'a self, scan: &'a mut Scanner<'a>) -> Result<impl Node, error::Error> {
-    if let Some(tok) = scan.la() {
-      match tok.ttype {
-        TType::Ident => Ok(Ident::new(&tok.ttext)),
-        TType::End => Err(error::Error::EndOfInput),
-        _ => Err(error::Error::EndOfInput),
-      }
-    }else{
-      Err(error::Error::EndOfInput)
+  fn parse_primary(&mut self) -> Result<Node, error::Error> {
+    let tok = match self.scan.token() {
+      Ok(tok) => tok,
+      Err(err) => return Err(err),
+    };
+    match tok.ttype {
+      TType::Ident => Ok(Node::new_ident(&tok.ttext)),
+      TType::Number => Ok(Node::new_number(tok.ttext.parse::<f64>()?)),
+      TType::End => Err(error::Error::EndOfInput),
+      _ => Err(error::Error::TokenNotMatched),
     }
   }
 }
@@ -42,15 +74,15 @@ mod tests {
     cxt.set("b", unit::Unit::None(1.0));
     cxt.set("c", unit::Unit::None(2.0));
     
-    let t = r#"1 c"#;
-    let n = Parser::new().parse(&mut Scanner::new(t)).expect("Could not parse");
+    let t = r#"1+c"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
     assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
-    let n = Add::new(Ident::new("a"), Ident::new("b"));
-    assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
+    // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
+    // assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
-    let n = Add::new(Ident::new("a"), Ident::new("c"));
-    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
+    // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("c"));
+    // assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
   }
   
   // #[test]

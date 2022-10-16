@@ -172,12 +172,25 @@ impl<'a> Scanner<'a> {
   /// can be produced. If there are no more tokens because the input stream
   /// has been fully consumed, the End token is returned. The token is not
   /// consumed.
-  pub fn la(&'a mut self) -> Option<&'a Token> {
+  pub fn la(&mut self) -> Option<Token> {
     if self.tokens.len() == 0 {
       self.scan(); // ignore error, just produce none
     }
     if self.tokens.len() > 0 {
-      Some(&self.tokens[0])
+      Some(self.tokens[0].clone())
+    }else{
+      None
+    }
+  }
+  
+  /// Look ahead for the next token type in the stream. This is equivalnt
+  /// to la() except only the type is returned.
+  pub fn la_type(&mut self) -> Option<TType> {
+    if self.tokens.len() == 0 {
+      self.scan(); // ignore error, just produce none
+    }
+    if self.tokens.len() > 0 {
+      Some(self.tokens[0].ttype)
     }else{
       None
     }
@@ -198,7 +211,7 @@ impl<'a> Scanner<'a> {
   /// Produce the next token in the stream or an error if no token can be
   /// produced. If there are no more tokens because the input stream has
   /// been fully consumed, the End token is returned.
-  pub fn token(&'a mut self) -> Result<Token, error::Error> {
+  pub fn token(&mut self) -> Result<Token, error::Error> {
     if self.tokens.len() == 0 {
       self.scan()?;
     }
@@ -209,11 +222,11 @@ impl<'a> Scanner<'a> {
     }
   }
   
-  fn push(&'a mut self, tok: Token) {
+  fn push(&mut self, tok: Token) {
     self.tokens.push(tok);
   }
   
-  fn scan(&'a mut self) -> Result<(), error::Error> {
+  fn scan(&mut self) -> Result<(), error::Error> {
     if let Some(c) = self.peek() {
       match self.scan_semantic() {
         Ok(v)  => Ok(v),
@@ -237,7 +250,7 @@ impl<'a> Scanner<'a> {
     Err(error::Error::TokenNotMatched)
   }
   
-  fn scan_verbatim(&'a mut self) -> Result<(), error::Error> {
+  fn scan_verbatim(&mut self) -> Result<(), error::Error> {
     let mut buf = String::new();
     loop {
       if let Some(c) = self.peek() {
