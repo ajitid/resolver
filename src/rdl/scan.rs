@@ -24,6 +24,7 @@ pub const AT: char      = '@';
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TType {
   Verbatim,
+  Whitespace,
   Ident,
   Number,
   String,
@@ -50,6 +51,7 @@ impl Token {
     let ttext: &str = self.ttext.as_ref();
     match self.ttype {
       TType::Verbatim => Some(format!("{}", ttext.reset())),
+      TType::Whitespace => Some(format!("{}", ttext.reset())),
       TType::Ident => Some(format!("{}", ttext.bold())),
       TType::Number => Some(format!("{}", ttext.yellow())),
       TType::String => Some(format!("{}", ttext.cyan())),
@@ -172,9 +174,9 @@ impl<'a> Scanner<'a> {
   /// can be produced. If there are no more tokens because the input stream
   /// has been fully consumed, the End token is returned. The token is not
   /// consumed.
-  pub fn la(&mut self) -> Option<Token> {
+  pub fn _la(&mut self) -> Option<Token> {
     if self.tokens.len() == 0 {
-      self.scan(); // ignore error, just produce none
+      let _ = self.scan(); // ignore error, just produce none
     }
     if self.tokens.len() > 0 {
       Some(self.tokens[0].clone())
@@ -187,7 +189,7 @@ impl<'a> Scanner<'a> {
   /// to la() except only the type is returned.
   pub fn la_type(&mut self) -> Option<TType> {
     if self.tokens.len() == 0 {
-      self.scan(); // ignore error, just produce none
+      let _ = self.scan(); // ignore error, just produce none
     }
     if self.tokens.len() > 0 {
       Some(self.tokens[0].ttype)
@@ -200,7 +202,7 @@ impl<'a> Scanner<'a> {
   /// This can be used to discard a token that has already been obtained
   /// via la(). If no token exists in the look-ahead buffer, this method
   /// does nothing.
-  pub fn step(&mut self) -> Option<Token> {
+  pub fn _step(&mut self) -> Option<Token> {
     if self.tokens.len() > 0 {
       Some(self.tokens.remove(0))
     }else{
@@ -245,6 +247,8 @@ impl<'a> Scanner<'a> {
         return self.scan_number();
       }else if Self::is_operator(c) {
         return self.scan_operator();
+      }else if Self::is_whitespace(c) {
+        return self.scan_whitespace();
       }
     }
     Err(error::Error::TokenNotMatched)
@@ -312,6 +316,15 @@ impl<'a> Scanner<'a> {
     Ok(())
   }
   
+  fn scan_whitespace(&mut self) -> Result<(), error::Error> {
+    let ws = self.whitespace()?;
+    self.push(Token{
+      ttype: TType::Whitespace,
+      ttext: ws,
+    });
+    Ok(())
+  }
+  
   fn skip_ws(&mut self) -> Result<(), error::Error> {
     let _ = self.whitespace()?;
     Ok(())
@@ -340,6 +353,10 @@ impl<'a> Scanner<'a> {
   
   fn is_number_start(c: char) -> bool {
     c.is_digit(10)
+  }
+  
+  fn is_whitespace(c: char) -> bool {
+    c.is_whitespace()
   }
   
   fn is_operator(c: char) -> bool {
@@ -457,7 +474,7 @@ mod tests {
     let s = r#"Hello 122"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     
     let s = r#"Hello=122"#;
@@ -473,9 +490,9 @@ mod tests {
     let s = r#"Hello    = 122"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, "    ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, "    ")), t.token());
     assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     
     let s = r#"Hello? = 122 kg"#;
@@ -483,9 +500,9 @@ mod tests {
     assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
     assert_eq!(Ok(Token::new(TType::Verbatim, "? ")), t.token());
     assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
     assert_eq!(Ok(Token::new(TType::Ident, "kg")), t.token());
     
     let s = r#"Hello, there, Mr.=122"#;

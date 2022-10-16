@@ -247,10 +247,6 @@ impl Text {
     }
   }
   
-  pub fn index_rel(&mut self) -> Pos {
-    self.index(self.loc)
-  }
-  
   pub fn set_text(&mut self, text: String) {
     self.text = text;
     self.reflow();
