@@ -1,3 +1,4 @@
+use std::fmt;
 use std::collections::HashMap;
 
 use crate::rdl::unit;
@@ -37,16 +38,22 @@ pub enum NType {
   Mod,
 }
 
-pub struct Node<'a> {
+impl fmt::Display for NType {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    (self as &dyn fmt::Debug).fmt(f)
+  }
+}
+
+pub struct Node {
   ntype: NType,
-  left:  Option<&'a Node<'a>>,
-  right: Option<&'a Node<'a>>,
+  left:  Option<Box<Node>>,
+  right: Option<Box<Node>>,
   text:  Option<String>,
   value: Option<f64>,
 }
 
-impl<'a> Node<'a> {
-  pub fn new_ident(name: &str) -> Node<'a> {
+impl Node {
+  pub fn new_ident(name: &str) -> Node {
     Node{
       ntype: NType::Ident,
       left: None, right: None,
@@ -55,7 +62,7 @@ impl<'a> Node<'a> {
     }
   }
   
-  pub fn new_number(value: f64) -> Node<'a> {
+  pub fn new_number(value: f64) -> Node {
     Node{
       ntype: NType::Number,
       left: None, right: None,
@@ -64,10 +71,10 @@ impl<'a> Node<'a> {
     }
   }
   
-  pub fn new_add(left: &'a Node, right: &'a Node) -> Node<'a> {
+  pub fn new_add(left: Node, right: Node) -> Node {
     Node{
       ntype: NType::Add,
-      left: Some(left), right: Some(right),
+      left: Some(Box::new(left)), right: Some(Box::new(right)),
       text: None,
       value: None,
     }
@@ -78,14 +85,14 @@ impl<'a> Node<'a> {
       Ident  => self.exec_ident(cxt),
       Number => self.exec_number(cxt),
       Add    => self.exec_add(cxt),
-      _ => Err(error::Error::InvalidASTNode),
+      _ => Err(error::Error::InvalidASTNode(format!("{}: Node type is not supported in this context", self.ntype))),
     }
   }
   
   fn exec_ident(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
-    let name = match self.text {
+    let name = match &self.text {
       Some(name) => name,
-      None => return Err(error::Error::InvalidASTNode),
+      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected text", self.ntype))),
     };
     match cxt.get(&name) {
       Some(v) => Ok(v),
@@ -96,21 +103,27 @@ impl<'a> Node<'a> {
   fn exec_number(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
     match self.value {
       Some(v) => Ok(unit::Unit::None(v)),
-      None => Err(error::Error::InvalidASTNode),
+      None => Err(error::Error::InvalidASTNode(format!("{}: Expected value", self.ntype))),
     }
   }
   
   fn exec_add(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
-    let left = match self.left {
+    let left = match &self.left {
       Some(left) => left,
-      None => return Err(error::Error::InvalidASTNode),
+      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected left child", self.ntype))),
     };
-    let right = match self.right {
+    let right = match &self.right {
       Some(right) => right,
-      None => return Err(error::Error::InvalidASTNode),
+      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected right child", self.ntype))),
     };
-    let left = left.exec(cxt)?;
-    let right = right.exec(cxt)?;
+    let left = match left.exec(cxt) {
+      Ok(left) => left,
+      Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
+    };
+    let right = match right.exec(cxt) {
+      Ok(right) => right,
+      Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec right: {}", self.ntype, err))),
+    };
     Ok(left + right)
   }
 }
@@ -125,11 +138,11 @@ mod tests {
     cxt.set("a", unit::Unit::None(1.0));
     cxt.set("b", unit::Unit::None(1.0));
     cxt.set("c", unit::Unit::None(2.0));
-
-    let n = Node::new_add(&Node::new_ident("a"), &Node::new_ident("b"));
+    
+    let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
     assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
-    let n = Node::new_add(&Node::new_ident("a"), &Node::new_ident("c"));
+    let n = Node::new_add(Node::new_ident("a"), Node::new_ident("c"));
     assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
   }
   

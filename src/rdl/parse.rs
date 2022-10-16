@@ -44,7 +44,7 @@ impl<'a> Parser<'a> {
     };
     
     match op.ttext.chars().next().unwrap() {
-      ADD => Ok(Node::new_add(&left, &right)),
+      ADD => Ok(Node::new_add(left, right)),
       _ => Err(error::Error::TokenNotMatched),
     }
   }
@@ -67,12 +67,16 @@ impl<'a> Parser<'a> {
 mod tests {
   use super::*;
   
-  #[test]
+  // #[test]
   fn exec_simple() {
     let mut cxt = Context::new();
     cxt.set("a", unit::Unit::None(1.0));
     cxt.set("b", unit::Unit::None(1.0));
     cxt.set("c", unit::Unit::None(2.0));
+    
+    let t = r#"1"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
     
     let t = r#"1+c"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
