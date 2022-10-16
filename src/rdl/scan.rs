@@ -202,12 +202,31 @@ impl<'a> Scanner<'a> {
   /// This can be used to discard a token that has already been obtained
   /// via la(). If no token exists in the look-ahead buffer, this method
   /// does nothing.
-  pub fn _step(&mut self) -> Option<Token> {
+  fn step(&mut self) -> Option<Token> {
     if self.tokens.len() > 0 {
       Some(self.tokens.remove(0))
     }else{
       None
     }
+  }
+  
+  /// Discard the as many of the specified token that are in the stream
+  /// up until but not including the first token that is of a different
+  /// type. The number of tokens discarded is returned.
+  pub fn discard(&mut self, which: TType) -> usize {
+    let mut n: usize = 0;
+    loop {
+      match self.la_type() {
+        Some(next) => if next == which {
+          n += 1;
+          self.step();
+        }else{
+          break;
+        },
+        None => break,
+      };
+    }
+    n
   }
   
   /// Produce the next token in the stream or an error if no token can be

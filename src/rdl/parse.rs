@@ -21,6 +21,8 @@ impl<'a> Parser<'a> {
   fn parse_arith(&mut self) -> Result<Node, error::Error> {
     let left = self.parse_primary()?;
     
+    self.scan.discard(TType::Whitespace);
+    
     let ttype = match self.scan.la_type() {
       Some(ttype) => ttype,
       None => return Ok(left),
@@ -32,6 +34,8 @@ impl<'a> Parser<'a> {
       Ok(op) => op,
       Err(err) => return Err(err.into()),
     };
+    
+    self.scan.discard(TType::Whitespace);
     
     let ttype = match self.scan.la_type() {
       Some(ttype) => ttype,
@@ -90,6 +94,18 @@ mod tests {
     let t = r#"1.25-c"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
     assert_eq!(Ok(unit::Unit::None(-0.75)), n.exec(&cxt));
+    
+    let t = r#"1.25 - c"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    assert_eq!(Ok(unit::Unit::None(-0.75)), n.exec(&cxt));
+    
+    let t = r#"c - 1.25"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    assert_eq!(Ok(unit::Unit::None(0.75)), n.exec(&cxt));
+    
+    let t = r#"c - 1.25 + a"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&cxt));
     
     // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
     // assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
