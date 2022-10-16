@@ -44,6 +44,7 @@ impl fmt::Display for NType {
   }
 }
 
+#[derive(Debug)]
 pub struct Node {
   ntype: NType,
   left:  Option<Box<Node>>,
@@ -80,11 +81,24 @@ impl Node {
     }
   }
   
+  pub fn new_sub(left: Node, right: Node) -> Node {
+    Node{
+      ntype: NType::Sub,
+      left: Some(Box::new(left)), right: Some(Box::new(right)),
+      text: None,
+      value: None,
+    }
+  }
+  
   pub fn exec(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
     match self.ntype {
-      Ident  => self.exec_ident(cxt),
-      Number => self.exec_number(cxt),
-      Add    => self.exec_add(cxt),
+      NType::Ident  => self.exec_ident(cxt),
+      NType::Number => self.exec_number(cxt),
+      NType::Add    => self.exec_arith(cxt),
+      NType::Sub    => self.exec_arith(cxt),
+      NType::Mul    => self.exec_arith(cxt),
+      NType::Div    => self.exec_arith(cxt),
+      NType::Mod    => self.exec_arith(cxt),
       _ => Err(error::Error::InvalidASTNode(format!("{}: Node type is not supported in this context", self.ntype))),
     }
   }
@@ -107,7 +121,7 @@ impl Node {
     }
   }
   
-  fn exec_add(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
+  fn exec_arith(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
     let left = match &self.left {
       Some(left) => left,
       None => return Err(error::Error::InvalidASTNode(format!("{}: Expected left child", self.ntype))),
@@ -124,7 +138,14 @@ impl Node {
       Ok(right) => right,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec right: {}", self.ntype, err))),
     };
-    Ok(left + right)
+    match self.ntype {
+      NType::Add => Ok(left + right),
+      NType::Sub => Ok(left - right),
+      // NType::Mul => Ok(left * right),
+      // NType::Div => Ok(left / right),
+      // NType::Mod => Ok(left % right),
+      _ => Err(error::Error::InvalidASTNode(format!("{}: Unsupported operation", self.ntype))),
+    }
   }
 }
 
@@ -139,11 +160,17 @@ mod tests {
     cxt.set("b", unit::Unit::None(1.0));
     cxt.set("c", unit::Unit::None(2.0));
     
+    let n = Node::new_ident("a");
+    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+    
+    let n = Node::new_number(1.25);
+    assert_eq!(Ok(unit::Unit::None(1.25)), n.exec(&cxt));
+    
     let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
     assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
-    let n = Node::new_add(Node::new_ident("a"), Node::new_ident("c"));
-    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
+    let n = Node::new_sub(Node::new_ident("a"), Node::new_ident("c"));
+    assert_eq!(Ok(unit::Unit::None(-1.0)), n.exec(&cxt));
   }
   
 }

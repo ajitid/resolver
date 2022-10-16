@@ -165,6 +165,30 @@ impl ops::Add<Unit> for Unit {
   }
 }
 
+impl ops::Sub<Unit> for Unit {
+  type Output = Unit;
+  
+  fn sub(self, right: Unit) -> Unit {
+    match self {
+      Self::None(n) => Self::None(n - if let Self::None(v) = right { v as f64 } else { 0.0 }),
+      
+      Self::Teaspoon(n) => Self::Teaspoon(n - if let Self::Teaspoon(v) = right { v as f64 } else { 0.0 }),
+      Self::Tablespoon(n) => Self::Tablespoon(n - if let Self::Tablespoon(v) = right { v as f64 } else { 0.0 }),
+      Self::Cup(n) => Self::Cup(n - if let Self::Cup(v) = right { v as f64 } else { 0.0 }),
+      Self::Quart(n) => Self::Quart(n - if let Self::Quart(v) = right { v as f64 } else { 0.0 }),
+      Self::Gallon(n) => Self::Gallon(n - if let Self::Gallon(v) = right { v as f64 } else { 0.0 }),
+
+      Self::Milliliter(n) => Self::Milliliter(n - if let Self::Milliliter(v) = right { v as f64 } else { 0.0 }),
+      Self::Centiliter(n) => Self::Centiliter(n - if let Self::Centiliter(v) = right { v as f64 } else { 0.0 }),
+      Self::Deciliter(n) => Self::Deciliter(n - if let Self::Deciliter(v) = right { v as f64 } else { 0.0 }),
+      Self::Liter(n) => Self::Liter(n - if let Self::Liter(v) = right { v as f64 } else { 0.0 }),
+      
+      Self::Gram(n) => Self::Gram(n - if let Self::Gram(v) = right { v as f64 } else { 0.0 }),
+      Self::Kilogram(n) => Self::Kilogram(n - if let Self::Kilogram(v) = right { v as f64 } else { 0.0 }),
+    }
+  }
+}
+
 impl fmt::Display for Unit {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self.pack() {

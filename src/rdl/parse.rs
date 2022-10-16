@@ -82,6 +82,10 @@ mod tests {
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
     assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
+    let t = r#"1.25+c"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    assert_eq!(Ok(unit::Unit::None(2.25)), n.exec(&cxt));
+    
     // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
     // assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
