@@ -39,8 +39,15 @@ pub struct Token {
 }
 
 impl Token {
+  pub fn new(ttype: TType, ttext: &str) -> Token {
+    Token{
+      ttype: ttype,
+      ttext: ttext.to_string(),
+    }
+  }
+  
   pub fn styled(&self) -> Option<String> {
-    let ttext: &str = &self.ttext;
+    let ttext: &str = self.ttext.as_ref();
     match self.ttype {
       TType::Verbatim => Some(format!("{}", ttext.reset())),
       TType::Ident => Some(format!("{}", ttext.bold())),
@@ -91,17 +98,25 @@ impl<'a> Scanner<'a> {
   }
   
   pub fn skip(&mut self) {
-    self.peek = self.data.next();
-    self.index = self.index + 1;
+    self.peek = self.read();
   }
   
   pub fn next(&mut self) -> Option<char> {
     let n = self.peek();
     if n != None {
-      self.peek = self.data.next();
-      self.index = self.index + 1;
+      self.peek = self.read();
     }
     n
+  }
+  
+  fn read(&mut self) -> Option<char> {
+    match self.data.next() {
+      Some(c) => {
+        self.index += 1;
+        Some(c)
+      },
+      None => None,
+    }
   }
   
   /// Determine if the next char in the stream passes the provided check.
@@ -157,14 +172,14 @@ impl<'a> Scanner<'a> {
   /// can be produced. If there are no more tokens because the input stream
   /// has been fully consumed, the End token is returned. The token is not
   /// consumed.
-  pub fn la(&mut self) -> Result<Token, error::Error> {
+  pub fn la(&'a mut self) -> Option<&'a Token> {
     if self.tokens.len() == 0 {
-      self.scan()?;
+      self.scan(); // ignore error, just produce none
     }
     if self.tokens.len() > 0 {
-      Ok(self.tokens[0].clone())
+      Some(&self.tokens[0])
     }else{
-      Ok(Token{ttype: TType::End, ttext: "".to_string()})
+      None
     }
   }
   
@@ -183,22 +198,22 @@ impl<'a> Scanner<'a> {
   /// Produce the next token in the stream or an error if no token can be
   /// produced. If there are no more tokens because the input stream has
   /// been fully consumed, the End token is returned.
-  pub fn token(&mut self) -> Result<Token, error::Error> {
+  pub fn token(&'a mut self) -> Result<Token, error::Error> {
     if self.tokens.len() == 0 {
       self.scan()?;
     }
     if self.tokens.len() > 0 {
       Ok(self.tokens.remove(0))
     }else{
-      Ok(Token{ttype: TType::End, ttext: "".to_string()})
+      Ok(Token::new(TType::End, ""))
     }
   }
   
-  fn push(&mut self, tok: Token) {
+  fn push(&'a mut self, tok: Token) {
     self.tokens.push(tok);
   }
   
-  fn scan(&mut self) -> Result<(), error::Error> {
+  fn scan(&'a mut self) -> Result<(), error::Error> {
     if let Some(c) = self.peek() {
       match self.scan_semantic() {
         Ok(v)  => Ok(v),
@@ -222,7 +237,7 @@ impl<'a> Scanner<'a> {
     Err(error::Error::TokenNotMatched)
   }
   
-  fn scan_verbatim(&mut self) -> Result<(), error::Error> {
+  fn scan_verbatim(&'a mut self) -> Result<(), error::Error> {
     let mut buf = String::new();
     loop {
       if let Some(c) = self.peek() {
@@ -428,47 +443,47 @@ mod tests {
   fn next_token() {
     let s = r#"Hello 122"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     
     let s = r#"Hello=122"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     
     let s = r#"=+-*/%"#; // consuming operators is greedy
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=+-*/%".to_string()}), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "=+-*/%")), t.token());
     
     let s = r#"Hello    = 122"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: "    ".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, "    ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     
     let s = r#"Hello? = 122 kg"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: "? ".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: " ".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "kg".to_string()}), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, "? ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "kg")), t.token());
     
     let s = r#"Hello, there, Mr.=122"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Hello".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: ", ".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "there".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: ", ".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Ident, ttext: "Mr".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Verbatim, ttext: ".".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Operator, ttext: "=".to_string()}), t.token());
-    assert_eq!(Ok(Token{ttype: TType::Number, ttext: "122".to_string()}), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, ", ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "there")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, ", ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Mr")), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, ".")), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
   }
 }

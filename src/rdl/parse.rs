@@ -14,14 +14,15 @@ impl<'a> Parser<'a> {
     }
   }
   
-  pub fn parse(&mut self) -> Result<impl Node, error::Error> {
-    match self.scan.token() {
-      Ok(tok)  => Ok(self.parse_expr(&tok)?),
-      Err(err) => Err(err),
+  pub fn parse(&'a mut self) -> Result<impl Node, error::Error> {
+    let tok = self.scan.la();
+    match tok {
+      Some(tok) => Ok(self.parse_expr(tok)?),
+      None => Err(error::Error::EndOfInput),
     }
   }
   
-  fn parse_expr(&mut self, tok: &Token) -> Result<impl Node, error::Error> {
+  fn parse_expr(&'a mut self, tok: &'a Token) -> Result<impl Node, error::Error> {
     match tok.ttype {
       TType::Ident => Ok(Ident::new(&tok.ttext)),
       TType::End => Err(error::Error::EndOfInput),
