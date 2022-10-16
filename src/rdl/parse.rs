@@ -3,30 +3,30 @@ use crate::rdl::exec::{Context, Node, Ident, Add};
 use crate::rdl::unit;
 use crate::rdl::error;
 
-pub struct Parser<'a> {
-  scan: &'a mut Scanner<'a>,
-}
+pub struct Parser;
 
-impl<'a> Parser<'a> {
-  pub fn new(scan: &'a mut Scanner<'a>) -> Parser<'a> {
-    Parser{
-      scan: scan,
-    }
+impl Parser {
+  pub fn new() -> Parser {
+    Parser
   }
   
-  pub fn parse(&'a mut self) -> Result<impl Node, error::Error> {
-    let tok = self.scan.la();
-    match tok {
-      Some(tok) => Ok(self.parse_expr(tok)?),
-      None => Err(error::Error::EndOfInput),
-    }
+  pub fn parse<'a>(&'a self, scan: &'a mut Scanner<'a>) -> Result<impl Node, error::Error> {
+    let tok = match scan.la() {
+      Some(tok) => tok,
+      None      => return Err(error::Error::EndOfInput),
+    };
+    Ok(self.parse_expr(scan)?)
   }
   
-  fn parse_expr(&'a mut self, tok: &'a Token) -> Result<impl Node, error::Error> {
-    match tok.ttype {
-      TType::Ident => Ok(Ident::new(&tok.ttext)),
-      TType::End => Err(error::Error::EndOfInput),
-      _ => Err(error::Error::EndOfInput),
+  fn parse_expr<'a>(&'a self, scan: &'a mut Scanner<'a>) -> Result<impl Node, error::Error> {
+    if let Some(tok) = scan.la() {
+      match tok.ttype {
+        TType::Ident => Ok(Ident::new(&tok.ttext)),
+        TType::End => Err(error::Error::EndOfInput),
+        _ => Err(error::Error::EndOfInput),
+      }
+    }else{
+      Err(error::Error::EndOfInput)
     }
   }
 }
@@ -43,7 +43,7 @@ mod tests {
     cxt.set("c", unit::Unit::None(2.0));
     
     let t = r#"1 c"#;
-    let n = (&mut Parser::new(&mut Scanner::new(t))).parse().expect("Could not parse");
+    let n = Parser::new().parse(&mut Scanner::new(t)).expect("Could not parse");
     assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
     let n = Add::new(Ident::new("a"), Ident::new("b"));
