@@ -30,6 +30,7 @@ impl<'a> Parser<'a> {
       Some(ttype) => ttype,
       None => return Ok(left),
     };
+    println!(">>> LEFT OP? [{}] → {:?}", self.scan, ttype);
     if ttype != TType::Operator {
       return Ok(left);
     }
@@ -83,14 +84,14 @@ impl<'a> Parser<'a> {
   }
   
   fn parse_expr(&mut self) -> Result<Node, error::Error> {
-    println!(">>> >>> >>> BEFORE: {:?}", self.scan.la_type().expect("Nope"));
     let expr = self.parse()?;
-    println!(">>> >>> >>> {}", expr);
     let ttype = match self.scan.la_type() {
       Some(ttype) => ttype,
       None => return Err(error::Error::TokenNotMatched),
     };
-    if ttype != TType::RParen {
+    if ttype == TType::RParen {
+      self.scan.token()?;
+    }else{
       return Err(error::Error::TokenNotMatched);
     }
     Ok(expr)

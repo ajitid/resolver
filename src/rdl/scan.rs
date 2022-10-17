@@ -79,6 +79,12 @@ pub struct Scanner<'a> {
   index: usize,
 }
 
+impl<'a> fmt::Display for Scanner<'a> {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.text)
+  }
+}
+
 impl<'a> Scanner<'a> {
   pub fn new(text: &'a str) -> Scanner<'a> {
     Scanner{
@@ -351,7 +357,7 @@ impl<'a> Scanner<'a> {
   }
   
   fn scan_symbol(&mut self) -> Result<(), error::Error> {
-    if let Some(c) = self.peek() {
+    if let Some(c) = self.next() {
       let ttype = match c {
         LPAREN => TType::LParen,
         RPAREN => TType::RParen,
@@ -559,5 +565,19 @@ mod tests {
     assert_eq!(Ok(Token::new(TType::Verbatim, ".")), t.token());
     assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
+    
+    let s = r#"a + (1 * b)"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Ident, "a")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "+")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::LParen, "(")), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "1")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "*")), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "b")), t.token());
+    assert_eq!(Ok(Token::new(TType::RParen, ")")), t.token());
   }
 }
