@@ -109,7 +109,7 @@ mod tests {
   use super::*;
   
   #[test]
-  fn exec_simple() {
+  fn parse_simple() {
     let mut cxt = Context::new();
     cxt.set("a", unit::Unit::None(1.0));
     cxt.set("b", unit::Unit::None(1.0));
@@ -165,7 +165,7 @@ mod tests {
     println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
     
-    let t = r#"c - (1.25 + a) + 10, and then 20 - 10 - 1"#;
+    let t = r#"c - (1.25 + a) + 10 and then 20 - 10 - 1"#;
     let mut p = Parser::new(Scanner::new(t));
     let n = p.parse().expect("Could not parse");
     println!(">>> [{}] → [{}]", t, n);
@@ -180,18 +180,6 @@ mod tests {
     println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(9.0)), n.exec(&cxt));
     
-    // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
-    // assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
-    
-    // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("c"));
-    // assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
   }
-  
-  // #[test]
-  // fn parse_simple() {
-  //   let s = "a+b".to_string();
-  //   let mut t = Scanner::new(&s);
-  //   assert_eq!(Some('F'), t.peek());
-  // }
   
 }
