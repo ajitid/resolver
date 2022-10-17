@@ -140,6 +140,10 @@ mod tests {
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
     assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
     
+    let t = r#"c - (1.25 + a) + 10, and then this text follows"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
+    
     // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
     // assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
     
