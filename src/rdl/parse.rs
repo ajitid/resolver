@@ -15,7 +15,9 @@ impl<'a> Parser<'a> {
   }
   
   pub fn parse(&mut self) -> Result<Node, error::Error> {
-    self.scan.discard_fn(|ttype| { ttype == TType::Whitespace || ttype == TType::Verbatim });
+    self.scan.discard_fn(|ttype| {
+      ttype == TType::Whitespace || ttype == TType::Verbatim
+    });
     self.parse_enter()
   }
   
@@ -168,6 +170,12 @@ mod tests {
     let n = p.parse().expect("Could not parse");
     println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
+    let n = p.parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
+    assert_eq!(Err(error::Error::UnboundVariable("and".to_string())), n.exec(&cxt));
+    let n = p.parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
+    assert_eq!(Err(error::Error::UnboundVariable("then".to_string())), n.exec(&cxt));
     let n = p.parse().expect("Could not parse");
     println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(9.0)), n.exec(&cxt));
