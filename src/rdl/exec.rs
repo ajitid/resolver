@@ -40,7 +40,15 @@ pub enum NType {
 
 impl fmt::Display for NType {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    (self as &dyn fmt::Debug).fmt(f)
+    match self {
+      NType::Ident  => write!(f, "ident"),
+      NType::Number => write!(f, "value"),
+      NType::Add    => write!(f, "+"),
+      NType::Sub    => write!(f, "-"),
+      NType::Mul    => write!(f, "*"),
+      NType::Div    => write!(f, "/"),
+      NType::Mod    => write!(f, "%"),
+    }
   }
 }
 
@@ -51,6 +59,15 @@ pub struct Node {
   right: Option<Box<Node>>,
   text:  Option<String>,
   value: Option<f64>,
+}
+
+impl fmt::Display for Node {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self.print() {
+      Ok(out)  => write!(f, "{}", out),
+      Err(err) => write!(f, "error: {}", err),
+    }
+  }
 }
 
 impl Node {
@@ -76,7 +93,7 @@ impl Node {
     Node{
       ntype: NType::Add,
       left: Some(Box::new(left)), right: Some(Box::new(right)),
-      text: None,
+      text: Some("+".to_string()),
       value: None,
     }
   }
@@ -85,20 +102,16 @@ impl Node {
     Node{
       ntype: NType::Sub,
       left: Some(Box::new(left)), right: Some(Box::new(right)),
-      text: None,
+      text: Some("-".to_string()),
       value: None,
     }
   }
   
   pub fn exec(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
     match self.ntype {
-      NType::Ident  => self.exec_ident(cxt),
+      NType::Ident => self.exec_ident(cxt),
       NType::Number => self.exec_number(cxt),
-      NType::Add    => self.exec_arith(cxt),
-      NType::Sub    => self.exec_arith(cxt),
-      NType::Mul    => self.exec_arith(cxt),
-      NType::Div    => self.exec_arith(cxt),
-      NType::Mod    => self.exec_arith(cxt),
+      NType::Add | NType::Sub | NType::Mul | NType::Div | NType::Mod => self.exec_arith(cxt),
       _ => Err(error::Error::InvalidASTNode(format!("{}: Node type is not supported in this context", self.ntype))),
     }
   }
@@ -146,6 +159,45 @@ impl Node {
       // NType::Mod => Ok(left % right),
       _ => Err(error::Error::InvalidASTNode(format!("{}: Unsupported operation", self.ntype))),
     }
+  }
+  
+  pub fn print(&self) -> Result<String, error::Error> {
+    match self.ntype {
+      NType::Ident  => self.print_ident(),
+      NType::Number => self.print_number(),
+      NType::Add    => self.print_arith(),
+      NType::Sub    => self.print_arith(),
+      NType::Mul    => self.print_arith(),
+      NType::Div    => self.print_arith(),
+      NType::Mod    => self.print_arith(),
+      _ => Err(error::Error::InvalidASTNode(format!("{}: Node type is not supported in this context", self.ntype))),
+    }
+  }
+  
+  fn print_ident(&self) -> Result<String, error::Error> {
+    match &self.text {
+      Some(name) => Ok(name.to_owned()),
+      None => Err(error::Error::InvalidASTNode(format!("{}: Expected text", self.ntype))),
+    }
+  }
+  
+  fn print_number(&self) -> Result<String, error::Error> {
+    match self.value {
+      Some(v) => Ok(format!("{}", v)),
+      None => Err(error::Error::InvalidASTNode(format!("{}: Expected value", self.ntype))),
+    }
+  }
+  
+  fn print_arith(&self) -> Result<String, error::Error> {
+    let left = match &self.left {
+      Some(left) => left,
+      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected left child", self.ntype))),
+    };
+    let right = match &self.right {
+      Some(right) => right,
+      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected right child", self.ntype))),
+    };
+    Ok(format!("({} {} {})", left.print()?, self.ntype, right.print()?))
   }
 }
 

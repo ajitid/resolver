@@ -29,6 +29,8 @@ pub enum TType {
   Number,
   String,
   Operator,
+  LParen,
+  RParen,
   Symbol,
   End,
 }
@@ -268,6 +270,8 @@ impl<'a> Scanner<'a> {
         return self.scan_operator();
       }else if Self::is_whitespace(c) {
         return self.scan_whitespace();
+      }else if Self::is_symbol(c) {
+        return self.scan_symbol();
       }
     }
     Err(error::Error::TokenNotMatched)
@@ -282,6 +286,8 @@ impl<'a> Scanner<'a> {
         }else if Self::is_number_start(c) {
           break;
         }else if Self::is_operator(c) {
+          break;
+        }else if Self::is_symbol(c) {
           break;
         }else if c == ESCAPE {
           buf.push_str(&self.escape()?)
@@ -344,6 +350,21 @@ impl<'a> Scanner<'a> {
     Ok(())
   }
   
+  fn scan_symbol(&mut self) -> Result<(), error::Error> {
+    if let Some(c) = self.peek() {
+      let ttype = match c {
+        LPAREN => TType::LParen,
+        RPAREN => TType::RParen,
+        _      => TType::Symbol,
+      };
+      self.push(Token{
+        ttype: ttype,
+        ttext: c.to_string(),
+      });
+    }
+    Ok(())
+  }
+  
   fn skip_ws(&mut self) -> Result<(), error::Error> {
     let _ = self.whitespace()?;
     Ok(())
@@ -382,11 +403,15 @@ impl<'a> Scanner<'a> {
     c == EQUAL || c == ADD || c == SUB || c == MUL || c == DIV || c == MOD
   }
   
+  fn is_symbol(c: char) -> bool {
+    c == LPAREN || c == RPAREN
+  }
+  
   fn ident(&mut self) -> Result<String, error::Error> {
     let mut buf = String::new();
-    buf.push(self.assert_fn(|c| { Scanner::is_ident_start(c) })?);
+    buf.push(self.assert_fn(|c| { Self::is_ident_start(c) })?);
     while let Some(c) = self.peek() {
-      if Scanner::is_ident(c) {
+      if Self::is_ident(c) {
         buf.push(c);
       }else{
         break;

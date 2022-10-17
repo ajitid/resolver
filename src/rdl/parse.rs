@@ -20,7 +20,10 @@ impl<'a> Parser<'a> {
   
   fn parse_arith(&mut self) -> Result<Node, error::Error> {
     let left = self.parse_primary()?;
-    
+    self.parse_arith_left(left)
+  }
+  
+  fn parse_arith_left(&mut self, left: Node) -> Result<Node, error::Error> {
     self.scan.discard(TType::Whitespace);
     
     let ttype = match self.scan.la_type() {
@@ -52,8 +55,8 @@ impl<'a> Parser<'a> {
     let opc = op.ttext.chars().next().unwrap();
     match right {
       Some(right) => match opc {
-        scan::ADD => Ok(Node::new_add(left, right)),
-        scan::SUB => Ok(Node::new_sub(left, right)),
+        scan::ADD => Ok(self.parse_arith_left(Node::new_add(left, right))?),
+        scan::SUB => Ok(self.parse_arith_left(Node::new_sub(left, right))?),
         _ => Err(error::Error::TokenNotMatched),
       },
       None => match opc {
@@ -72,9 +75,22 @@ impl<'a> Parser<'a> {
     match tok.ttype {
       TType::Ident => Ok(Node::new_ident(&tok.ttext)),
       TType::Number => Ok(Node::new_number(tok.ttext.parse::<f64>()?)),
+      TType::LParen => self.parse_expr(),
       TType::End => Err(error::Error::EndOfInput),
       _ => Err(error::Error::TokenNotMatched),
     }
+  }
+  
+  fn parse_expr(&mut self) -> Result<Node, error::Error> {
+    let expr = self.parse()?;
+    let ttype = match self.scan.la_type() {
+      Some(ttype) => ttype,
+      None => return Err(error::Error::TokenNotMatched),
+    };
+    if ttype != TType::RParen {
+      return Err(error::Error::TokenNotMatched);
+    }
+    Ok(expr)
   }
 }
 
@@ -111,10 +127,17 @@ mod tests {
     
     let t = r#"c - 1.25"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> AST {}", n);
     assert_eq!(Ok(unit::Unit::None(0.75)), n.exec(&cxt));
     
     let t = r#"c - 1.25 + a"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> AST {}", n);
+    assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&cxt));
+    
+    let t = r#"c - (1.25 + a) + 10"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> AST {}", n);
     assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&cxt));
     
     // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
