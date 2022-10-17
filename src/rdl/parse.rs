@@ -49,6 +49,7 @@ impl<'a> Parser<'a> {
       TType::End => return Ok(left),
       TType::Ident => Some(self.parse_primary()?),
       TType::Number => Some(self.parse_primary()?),
+      TType::LParen => Some(self.parse_primary()?),
       _ => None,
     };
     
@@ -82,7 +83,9 @@ impl<'a> Parser<'a> {
   }
   
   fn parse_expr(&mut self) -> Result<Node, error::Error> {
+    println!(">>> >>> >>> BEFORE: {:?}", self.scan.la_type().expect("Nope"));
     let expr = self.parse()?;
+    println!(">>> >>> >>> {}", expr);
     let ttype = match self.scan.la_type() {
       Some(ttype) => ttype,
       None => return Err(error::Error::TokenNotMatched),
@@ -127,17 +130,16 @@ mod tests {
     
     let t = r#"c - 1.25"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> AST {}", n);
     assert_eq!(Ok(unit::Unit::None(0.75)), n.exec(&cxt));
     
     let t = r#"c - 1.25 + a"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> AST {}", n);
+    println!(">>> AST [{}] -> {}", t, n);
     assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&cxt));
     
     let t = r#"c - (1.25 + a) + 10"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> AST {}", n);
+    println!(">>> AST [{}] -> {}", t, n);
     assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&cxt));
     
     // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
