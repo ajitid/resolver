@@ -30,7 +30,6 @@ impl<'a> Parser<'a> {
       Some(ttype) => ttype,
       None => return Ok(left),
     };
-    println!(">>> LEFT OP? [{}] → {:?}", self.scan, ttype);
     if ttype != TType::Operator {
       return Ok(left);
     }
@@ -135,13 +134,11 @@ mod tests {
     
     let t = r#"c - 1.25 + a"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> AST [{}] -> {}", t, n);
     assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&cxt));
     
     let t = r#"c - (1.25 + a) + 10"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> AST [{}] -> {}", t, n);
-    assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
     
     // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
     // assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
