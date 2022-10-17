@@ -44,13 +44,23 @@ impl<'a> Parser<'a> {
     let right = match ttype {
       TType::Verbatim => return Ok(left),
       TType::End => return Ok(left),
-      _ => self.parse_arith()?,
+      TType::Ident => Some(self.parse_primary()?),
+      TType::Number => Some(self.parse_primary()?),
+      _ => None,
     };
     
-    match op.ttext.chars().next().unwrap() {
-      scan::ADD => Ok(Node::new_add(left, right)),
-      scan::SUB => Ok(Node::new_sub(left, right)),
-      _ => Err(error::Error::TokenNotMatched),
+    let opc = op.ttext.chars().next().unwrap();
+    match right {
+      Some(right) => match opc {
+        scan::ADD => Ok(Node::new_add(left, right)),
+        scan::SUB => Ok(Node::new_sub(left, right)),
+        _ => Err(error::Error::TokenNotMatched),
+      },
+      None => match opc {
+        scan::ADD => Ok(Node::new_add(left, self.parse_arith()?)),
+        scan::SUB => Ok(Node::new_sub(left, self.parse_arith()?)),
+        _ => Err(error::Error::TokenNotMatched),
+      },
     }
   }
   
