@@ -12,6 +12,8 @@ use crate::text::{Text, Pos};
 use crate::frame::Frame;
 
 use crate::rdl::scan;
+use crate::rdl::parse;
+use crate::rdl::exec;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -74,19 +76,30 @@ impl Writer {
   
   fn draw_formula(width: usize, height: usize, text: &Text) -> String {
     let mut g = String::new();
+    let mut cxt = exec::Context::new();
+
     for l in text.lines() {
-      let mut s = scan::Scanner::new(l);
+      let mut p = parse::Parser::new(scan::Scanner::new(l));
+      let mut i = 0;
       loop {
-        let tok = match s.token() {
-          Ok(tok) => tok,
+        let root = match p.parse() {
+          Ok(root) => root,
           Err(_)  => break,
         };
-        match tok.ttype {
-          scan::TType::End => break,
-          _ => g.push_str(&format!("{}", tok)),
+        
+        if i > 0 { g.push_str("; "); }
+        g.push_str(&format!("{}", root));
+
+        let res = match root.exec(&cxt) {
+          Ok(res) => res,
+          Err(_)  => continue,
         };
+        g.push_str(&format!(" → {}", res));
+        
+        i += 1;
       }
     }
+    
     g
   }
   
