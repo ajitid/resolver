@@ -110,38 +110,52 @@ mod tests {
     
     let t = r#"1"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
     
     let t = r#"1+c"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
     
     let t = r#"1.25+c"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(3.25)), n.exec(&cxt));
     
     let t = r#"1.25-c"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(-0.75)), n.exec(&cxt));
     
     let t = r#"1.25 - c"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(-0.75)), n.exec(&cxt));
     
     let t = r#"c - 1.25"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(0.75)), n.exec(&cxt));
     
     let t = r#"c - 1.25 + a"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&cxt));
+    
+    let t = r#"c - (1.25 + a)"#;
+    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
+    assert_eq!(Ok(unit::Unit::None(-0.25)), n.exec(&cxt));
     
     let t = r#"c - (1.25 + a) + 10"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
     
     let t = r#"c - (1.25 + a) + 10, and then this text follows"#;
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
     
     // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
