@@ -222,10 +222,17 @@ impl<'a> Scanner<'a> {
   /// up until but not including the first token that is of a different
   /// type. The number of tokens discarded is returned.
   pub fn discard(&mut self, which: TType) -> usize {
+    self.discard_fn(|ttype| { which == ttype })
+  }
+  
+  /// Discard the as many of the specified token that are in the stream
+  /// up until but not including the first token that does not match the
+  /// specified filter. The number of tokens discarded is returned.
+  pub fn discard_fn(&mut self, check: impl Fn(TType) -> bool) -> usize {
     let mut n: usize = 0;
     loop {
       match self.la_type() {
-        Some(next) => if next == which {
+        Some(next) => if check(next) {
           n += 1;
           self.step();
         }else{

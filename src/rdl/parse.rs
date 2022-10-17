@@ -15,6 +15,11 @@ impl<'a> Parser<'a> {
   }
   
   pub fn parse(&mut self) -> Result<Node, error::Error> {
+    self.scan.discard_fn(|ttype| { ttype == TType::Whitespace || ttype == TType::Verbatim });
+    self.parse_enter()
+  }
+  
+  fn parse_enter(&mut self) -> Result<Node, error::Error> {
     self.parse_arith()
   }
   
@@ -83,7 +88,7 @@ impl<'a> Parser<'a> {
   }
   
   fn parse_expr(&mut self) -> Result<Node, error::Error> {
-    let expr = self.parse()?;
+    let expr = self.parse_enter()?;
     let ttype = match self.scan.la_type() {
       Some(ttype) => ttype,
       None => return Err(error::Error::TokenNotMatched),
@@ -157,6 +162,15 @@ mod tests {
     let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
     println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
+    
+    let t = r#"c - (1.25 + a) + 10, and then 20 - 10 - 1"#;
+    let mut p = Parser::new(Scanner::new(t));
+    let n = p.parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
+    assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&cxt));
+    let n = p.parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
+    assert_eq!(Ok(unit::Unit::None(9.0)), n.exec(&cxt));
     
     // let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
     // assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
