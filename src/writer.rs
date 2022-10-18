@@ -89,7 +89,7 @@ impl Writer {
         
         if i > 0 { g.push_str("; "); }
         g.push_str(&format!("{}", root));
-
+        
         let res = match root.exec(&cxt) {
           Ok(res) => res,
           Err(_)  => continue,
@@ -98,6 +98,7 @@ impl Writer {
         
         i += 1;
       }
+      g.push('\n');
     }
     
     g

@@ -108,7 +108,29 @@ impl<'a> Parser<'a> {
 mod tests {
   use super::*;
   
+  fn parse_expr(t: &str) -> Result<Node, error::Error> {
+    let n = Parser::new(Scanner::new(t)).parse()?;
+    println!(">>> [{}] → [{}]", t, n);
+    Ok(n)
+  }
+  
   #[test]
+  fn parse_primitive() {
+    let mut cxt = Context::new();
+    cxt.set("a", unit::Unit::None(1.0));
+    cxt.set("b", unit::Unit::None(2.0));
+    cxt.set("c", unit::Unit::None(3.0));
+    
+    let n = parse_expr(r#"1"#).expect("Could not parse");
+    assert_eq!(Node::new_number(1.0), n);
+    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+    
+    let n = parse_expr(r#"a"#).expect("Could not parse");
+    assert_eq!(Node::new_ident("a"), n);
+    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+  }
+  
+  // #[test]
   fn parse_simple() {
     let mut cxt = Context::new();
     cxt.set("a", unit::Unit::None(1.0));
@@ -180,6 +202,37 @@ mod tests {
     println!(">>> [{}] → [{}]", t, n);
     assert_eq!(Ok(unit::Unit::None(9.0)), n.exec(&cxt));
     
+    let t = r#"100+200;0"#;
+    let mut p = Parser::new(Scanner::new(t));
+    let n = p.parse().expect("Could not parse");
+    println!(">>> [{}] → [{}]", t, n);
+    
+    let t = r#"100+200; 0"#;
+    assert_eq!("(100 + 200) → 300; 0 → 0", &parse_line(t, &cxt))
+  }
+  
+  fn parse_line(text: &str, cxt: &Context) -> String {
+    let mut g = String::new();
+    let mut p = Parser::new(Scanner::new(text));
+    let mut i = 0;
+    loop {
+      let r = match p.parse() {
+        Ok(r) => r,
+        Err(_)  => break,
+      };
+      
+      if i > 0 { g.push_str("; "); }
+      g.push_str(&format!("{}", r));
+      
+      let res = match r.exec(&cxt) {
+        Ok(res) => res,
+        Err(_)  => continue,
+      };
+      g.push_str(&format!(" → {}", res));
+      
+      i += 1;
+    }
+    g
   }
   
 }
