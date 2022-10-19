@@ -125,9 +125,17 @@ mod tests {
     assert_eq!(Node::new_number(1.0), n);
     assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
     
+    let n = parse_expr(r#"123.456"#).expect("Could not parse");
+    assert_eq!(Node::new_number(123.456), n);
+    assert_eq!(Ok(unit::Unit::None(123.456)), n.exec(&cxt));
+    
     let n = parse_expr(r#"a"#).expect("Could not parse");
     assert_eq!(Node::new_ident("a"), n);
     assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+    
+    let n = parse_expr(r#"Hello"#).expect("Could not parse");
+    assert_eq!(Node::new_ident("Hello"), n);
+    assert_eq!(Err(error::Error::UnboundVariable("Hello".to_string())), n.exec(&cxt));
   }
   
   // #[test]
