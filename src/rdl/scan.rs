@@ -263,7 +263,7 @@ impl<'a> Scanner<'a> {
   }
   
   fn scan(&mut self) -> Result<(), error::Error> {
-    if let Some(c) = self.peek() {
+    if let Some(_) = self.peek() {
       match self.scan_semantic() {
         Ok(v)  => Ok(v),
         Err(_) => self.scan_verbatim(),

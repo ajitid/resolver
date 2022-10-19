@@ -13,12 +13,16 @@ impl Buffer {
     }
   }
   
-  pub fn text(&self) -> &str {
+  pub fn _text(&self) -> &str {
     &self.data
   }
   
-  pub fn lines(&self) -> str::Lines {
+  pub fn _lines(&self) -> str::Lines {
     self.data.lines()
+  }
+  
+  pub fn clear(&mut self) {
+    self.data.clear();
   }
   
   pub fn push(&mut self, c: char) {
@@ -27,10 +31,6 @@ impl Buffer {
   
   pub fn push_str(&mut self, s: &str) {
     self.data.push_str(s);
-  }
-  
-  pub fn clear(&mut self) {
-    self.data.clear();
   }
 }
 
@@ -48,7 +48,7 @@ impl io::Write for Buffer {
   fn flush(&mut self) -> io::Result<()> {
     let out = write!(stdout(), "{}", self.data);
     stdout().flush()?;
-    self.data.clear();
+    self.clear();
     out
   }
 }

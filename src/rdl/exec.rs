@@ -112,7 +112,6 @@ impl Node {
       NType::Ident => self.exec_ident(cxt),
       NType::Number => self.exec_number(cxt),
       NType::Add | NType::Sub | NType::Mul | NType::Div | NType::Mod => self.exec_arith(cxt),
-      _ => Err(error::Error::InvalidASTNode(format!("{}: Node type is not supported in this context", self.ntype))),
     }
   }
   
@@ -127,7 +126,7 @@ impl Node {
     }
   }
   
-  fn exec_number(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
+  fn exec_number(&self, _cxt: &Context) -> Result<unit::Unit, error::Error> {
     match self.value {
       Some(v) => Ok(unit::Unit::None(v)),
       None => Err(error::Error::InvalidASTNode(format!("{}: Expected value", self.ntype))),
@@ -165,12 +164,7 @@ impl Node {
     match self.ntype {
       NType::Ident  => self.print_ident(),
       NType::Number => self.print_number(),
-      NType::Add    => self.print_arith(),
-      NType::Sub    => self.print_arith(),
-      NType::Mul    => self.print_arith(),
-      NType::Div    => self.print_arith(),
-      NType::Mod    => self.print_arith(),
-      _ => Err(error::Error::InvalidASTNode(format!("{}: Node type is not supported in this context", self.ntype))),
+      NType::Add | NType::Sub | NType::Mul | NType::Div | NType::Mod => self.print_arith(),
     }
   }
   

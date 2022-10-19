@@ -22,7 +22,6 @@ pub struct Writer {
   text_size: (usize, usize),
   frame: Frame,
   buf: Buffer,
-  doc: Buffer,
 }
 
 impl Writer {
@@ -32,7 +31,6 @@ impl Writer {
       text_size: ((size.0 / 3) * 2, size.1 - 1),
       frame: Frame::new(size.0),
       buf: Buffer::new(),
-      doc: Buffer::new(),
     }
   }
   
@@ -42,23 +40,7 @@ impl Writer {
     Ok(())
   }
   
-  fn draw(&mut self) -> crossterm::Result<()> {
-    let rows = self.term_size.1;
-    for i in 0..rows {
-      self.doc.push('~');
-      if i == 2 {
-        self.doc.push_str(" RESOLVER. The 'Soulver' in your terminal.");
-      }else if i == 3 {
-        self.doc.push_str(&format!(" v{}", VERSION));
-      }
-      if i < rows - 1 {
-        self.doc.push_str("\r\n");
-      }
-    }
-    Ok(())
-  }
-  
-  fn draw_welcome(width: usize, height: usize) -> String {
+  fn _draw_welcome(_width: usize, height: usize) -> String {
     let mut g = String::new();
     for i in 0..height {
       g.push('~');
@@ -74,9 +56,9 @@ impl Writer {
     g
   }
   
-  fn draw_formula(width: usize, height: usize, text: &Text) -> String {
+  fn draw_formula(_width: usize, _height: usize, text: &Text) -> String {
     let mut g = String::new();
-    let mut cxt = exec::Context::new();
+    let cxt = exec::Context::new();
 
     for l in text.lines() {
       let mut p = parse::Parser::new(scan::Scanner::new(l));
@@ -104,7 +86,7 @@ impl Writer {
     g
   }
   
-  fn draw_gutter(width: usize, height: usize) -> String {
+  fn draw_gutter(_width: usize, height: usize) -> String {
     let mut g = String::new();
     for i in 0..height {
       g.push_str(&format!(" {:>3}\n", i+1));
