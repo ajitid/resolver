@@ -107,6 +107,33 @@ impl Node {
     }
   }
   
+  pub fn new_mul(left: Node, right: Node) -> Node {
+    Node{
+      ntype: NType::Mul,
+      left: Some(Box::new(left)), right: Some(Box::new(right)),
+      text: Some("*".to_string()),
+      value: None,
+    }
+  }
+  
+  pub fn new_div(left: Node, right: Node) -> Node {
+    Node{
+      ntype: NType::Div,
+      left: Some(Box::new(left)), right: Some(Box::new(right)),
+      text: Some("/".to_string()),
+      value: None,
+    }
+  }
+  
+  pub fn new_mod(left: Node, right: Node) -> Node {
+    Node{
+      ntype: NType::Mod,
+      left: Some(Box::new(left)), right: Some(Box::new(right)),
+      text: Some("%".to_string()),
+      value: None,
+    }
+  }
+  
   pub fn exec(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
     match self.ntype {
       NType::Ident => self.exec_ident(cxt),
@@ -153,9 +180,9 @@ impl Node {
     match self.ntype {
       NType::Add => Ok(left + right),
       NType::Sub => Ok(left - right),
-      // NType::Mul => Ok(left * right),
-      // NType::Div => Ok(left / right),
-      // NType::Mod => Ok(left % right),
+      NType::Mul => Ok(left * right),
+      NType::Div => Ok(left / right),
+      NType::Mod => Ok(left % right),
       _ => Err(error::Error::InvalidASTNode(format!("{}: Unsupported operation", self.ntype))),
     }
   }

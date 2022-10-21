@@ -65,11 +65,17 @@ impl<'a> Parser<'a> {
       Some(right) => match opc {
         scan::ADD => Ok(self.parse_arith_left(Node::new_add(left, right))?),
         scan::SUB => Ok(self.parse_arith_left(Node::new_sub(left, right))?),
+        scan::MUL => Ok(self.parse_arith_left(Node::new_mul(left, right))?),
+        scan::DIV => Ok(self.parse_arith_left(Node::new_div(left, right))?),
+        scan::MOD => Ok(self.parse_arith_left(Node::new_mod(left, right))?),
         _ => Err(error::Error::TokenNotMatched),
       },
       None => match opc {
         scan::ADD => Ok(Node::new_add(left, self.parse_arith()?)),
         scan::SUB => Ok(Node::new_sub(left, self.parse_arith()?)),
+        scan::MUL => Ok(Node::new_mul(left, self.parse_arith()?)),
+        scan::DIV => Ok(Node::new_div(left, self.parse_arith()?)),
+        scan::MOD => Ok(Node::new_mod(left, self.parse_arith()?)),
         _ => Err(error::Error::TokenNotMatched),
       },
     }
@@ -114,6 +120,12 @@ mod tests {
     Ok(n)
   }
   
+  fn exec_node(n: Node, cxt: &Context) -> Result<unit::Unit, error::Error> {
+    let v = n.exec(cxt)?;
+    println!("=== [{}] → {}", n, v);
+    Ok(v)
+  }
+  
   #[test]
   fn parse_primitive() {
     let mut cxt = Context::new();
@@ -123,19 +135,65 @@ mod tests {
     
     let n = parse_expr(r#"1"#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &cxt));
     
     let n = parse_expr(r#"123.456"#).expect("Could not parse");
     assert_eq!(Node::new_number(123.456), n);
-    assert_eq!(Ok(unit::Unit::None(123.456)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(123.456)), exec_node(n, &cxt));
     
     let n = parse_expr(r#"a"#).expect("Could not parse");
     assert_eq!(Node::new_ident("a"), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &cxt));
     
     let n = parse_expr(r#"Hello"#).expect("Could not parse");
     assert_eq!(Node::new_ident("Hello"), n);
-    assert_eq!(Err(error::Error::UnboundVariable("Hello".to_string())), n.exec(&cxt));
+    assert_eq!(Err(error::Error::UnboundVariable("Hello".to_string())), exec_node(n, &cxt));
+  }
+  
+  #[test]
+  fn parse_arith() {
+    let mut cxt = Context::new();
+    cxt.set("a", unit::Unit::None(1.0));
+    cxt.set("b", unit::Unit::None(2.0));
+    cxt.set("c", unit::Unit::None(3.0));
+    
+    let n = parse_expr(r#"1 + 2"#).expect("Could not parse");
+    assert_eq!(Node::new_add(Node::new_number(1.0), Node::new_number(2.0)), n);
+    assert_eq!(Ok(unit::Unit::None(3.0)), exec_node(n, &cxt));
+    
+    let n = parse_expr(r#"1 - 2"#).expect("Could not parse");
+    assert_eq!(Node::new_sub(Node::new_number(1.0), Node::new_number(2.0)), n);
+    assert_eq!(Ok(unit::Unit::None(-1.0)), exec_node(n, &cxt));
+    
+    let n = parse_expr(r#"1 * 2"#).expect("Could not parse");
+    assert_eq!(Node::new_mul(Node::new_number(1.0), Node::new_number(2.0)), n);
+    assert_eq!(Ok(unit::Unit::None(2.0)), exec_node(n, &cxt));
+    
+    let n = parse_expr(r#"1 / 2"#).expect("Could not parse");
+    assert_eq!(Node::new_div(Node::new_number(1.0), Node::new_number(2.0)), n);
+    assert_eq!(Ok(unit::Unit::None(0.5)), exec_node(n, &cxt));
+    
+    let n = parse_expr(r#"4 % 3"#).expect("Could not parse");
+    assert_eq!(Node::new_mod(Node::new_number(4.0), Node::new_number(3.0)), n);
+    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &cxt));
+    
+    ///
+    
+    let n = parse_expr(r#"1 - 2 + 3"#).expect("Could not parse");
+    assert_eq!(Node::new_add(Node::new_sub(Node::new_number(1.0), Node::new_number(2.0)), Node::new_number(3.0)), n);
+    assert_eq!(Ok(unit::Unit::None(2.0)), exec_node(n, &cxt));
+  }
+  
+  #[test]
+  fn parse_subexpr() {
+    let mut cxt = Context::new();
+    cxt.set("a", unit::Unit::None(1.0));
+    cxt.set("b", unit::Unit::None(2.0));
+    cxt.set("c", unit::Unit::None(3.0));
+    
+    let n = parse_expr(r#"1 - (2 + 3)"#).expect("Could not parse");
+    assert_eq!(Node::new_sub(Node::new_number(1.0), Node::new_add(Node::new_number(2.0), Node::new_number(3.0))), n);
+    assert_eq!(Ok(unit::Unit::None(-4.0)), n.exec(&cxt));
   }
   
   // #[test]

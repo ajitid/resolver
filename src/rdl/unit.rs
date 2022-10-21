@@ -141,27 +141,43 @@ impl Unit {
   }
 }
 
+macro_rules! unit_value_f64 {
+  ($variant: path, $value: expr) => {
+    if let $variant(v) = $value {
+      v as f64
+    }else{
+      0.0
+    }
+  };
+}
+
+macro_rules! unit_op_f64 {
+  ($left: ident, $right: expr, $op: tt) => {
+    match $left {
+      Self::None(value) => Self::None(value $op unit_value_f64!(Self::None, $right)),
+      
+      Self::Teaspoon(value) => Self::Teaspoon(value $op unit_value_f64!(Self::Teaspoon, $right)),
+      Self::Tablespoon(value) => Self::Tablespoon(value $op unit_value_f64!(Self::Tablespoon, $right)),
+      Self::Cup(value) => Self::Cup(value $op unit_value_f64!(Self::Cup, $right)),
+      Self::Quart(value) => Self::Quart(value $op unit_value_f64!(Self::Quart, $right)),
+      Self::Gallon(value) => Self::Gallon(value $op unit_value_f64!(Self::Gallon, $right)),
+
+      Self::Milliliter(value) => Self::Milliliter(value $op unit_value_f64!(Self::Milliliter, $right)),
+      Self::Centiliter(value) => Self::Centiliter(value $op unit_value_f64!(Self::Centiliter, $right)),
+      Self::Deciliter(value) => Self::Deciliter(value $op unit_value_f64!(Self::Deciliter, $right)),
+      Self::Liter(value) => Self::Liter(value $op unit_value_f64!(Self::Liter, $right)),
+      
+      Self::Gram(value) => Self::Gram(value $op unit_value_f64!(Self::Gram, $right)),
+      Self::Kilogram(value) => Self::Kilogram(value $op unit_value_f64!(Self::Kilogram, $right)),
+    }
+  };
+}
+
 impl ops::Add<Unit> for Unit {
   type Output = Unit;
   
   fn add(self, right: Unit) -> Unit {
-    match self {
-      Self::None(n) => Self::None(n + if let Self::None(v) = right { v as f64 } else { 0.0 }),
-      
-      Self::Teaspoon(n) => Self::Teaspoon(n + if let Self::Teaspoon(v) = right { v as f64 } else { 0.0 }),
-      Self::Tablespoon(n) => Self::Tablespoon(n + if let Self::Tablespoon(v) = right { v as f64 } else { 0.0 }),
-      Self::Cup(n) => Self::Cup(n + if let Self::Cup(v) = right { v as f64 } else { 0.0 }),
-      Self::Quart(n) => Self::Quart(n + if let Self::Quart(v) = right { v as f64 } else { 0.0 }),
-      Self::Gallon(n) => Self::Gallon(n + if let Self::Gallon(v) = right { v as f64 } else { 0.0 }),
-
-      Self::Milliliter(n) => Self::Milliliter(n + if let Self::Milliliter(v) = right { v as f64 } else { 0.0 }),
-      Self::Centiliter(n) => Self::Centiliter(n + if let Self::Centiliter(v) = right { v as f64 } else { 0.0 }),
-      Self::Deciliter(n) => Self::Deciliter(n + if let Self::Deciliter(v) = right { v as f64 } else { 0.0 }),
-      Self::Liter(n) => Self::Liter(n + if let Self::Liter(v) = right { v as f64 } else { 0.0 }),
-      
-      Self::Gram(n) => Self::Gram(n + if let Self::Gram(v) = right { v as f64 } else { 0.0 }),
-      Self::Kilogram(n) => Self::Kilogram(n + if let Self::Kilogram(v) = right { v as f64 } else { 0.0 }),
-    }
+    unit_op_f64!(self, right, +)
   }
 }
 
@@ -169,23 +185,31 @@ impl ops::Sub<Unit> for Unit {
   type Output = Unit;
   
   fn sub(self, right: Unit) -> Unit {
-    match self {
-      Self::None(n) => Self::None(n - if let Self::None(v) = right { v as f64 } else { 0.0 }),
-      
-      Self::Teaspoon(n) => Self::Teaspoon(n - if let Self::Teaspoon(v) = right { v as f64 } else { 0.0 }),
-      Self::Tablespoon(n) => Self::Tablespoon(n - if let Self::Tablespoon(v) = right { v as f64 } else { 0.0 }),
-      Self::Cup(n) => Self::Cup(n - if let Self::Cup(v) = right { v as f64 } else { 0.0 }),
-      Self::Quart(n) => Self::Quart(n - if let Self::Quart(v) = right { v as f64 } else { 0.0 }),
-      Self::Gallon(n) => Self::Gallon(n - if let Self::Gallon(v) = right { v as f64 } else { 0.0 }),
+    unit_op_f64!(self, right, -)
+  }
+}
 
-      Self::Milliliter(n) => Self::Milliliter(n - if let Self::Milliliter(v) = right { v as f64 } else { 0.0 }),
-      Self::Centiliter(n) => Self::Centiliter(n - if let Self::Centiliter(v) = right { v as f64 } else { 0.0 }),
-      Self::Deciliter(n) => Self::Deciliter(n - if let Self::Deciliter(v) = right { v as f64 } else { 0.0 }),
-      Self::Liter(n) => Self::Liter(n - if let Self::Liter(v) = right { v as f64 } else { 0.0 }),
-      
-      Self::Gram(n) => Self::Gram(n - if let Self::Gram(v) = right { v as f64 } else { 0.0 }),
-      Self::Kilogram(n) => Self::Kilogram(n - if let Self::Kilogram(v) = right { v as f64 } else { 0.0 }),
-    }
+impl ops::Mul<Unit> for Unit {
+  type Output = Unit;
+  
+  fn mul(self, right: Unit) -> Unit {
+    unit_op_f64!(self, right, *)
+  }
+}
+
+impl ops::Div<Unit> for Unit {
+  type Output = Unit;
+  
+  fn div(self, right: Unit) -> Unit {
+    unit_op_f64!(self, right, /)
+  }
+}
+
+impl ops::Rem<Unit> for Unit {
+  type Output = Unit;
+  
+  fn rem(self, right: Unit) -> Unit {
+    unit_op_f64!(self, right, %)
   }
 }
 
