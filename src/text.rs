@@ -189,7 +189,7 @@ impl Text {
         offset: ao,
         extent: ao + lb, // abs offset to end of text; last line trails whitespace
         chars:  lc,      // width to end of text; last line trails whitespace
-        bytes:  lb,       // same as chars for now
+        bytes:  lb,      // same as chars for now
       });
     }
     
