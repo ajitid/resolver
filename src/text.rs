@@ -301,16 +301,26 @@ mod tests {
   fn test_reflow() {
     let c = Text::new_with_str(100, "Hello");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5}
+      Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5},
     ], c.lines);
     assert_eq!(vec![
       "Hello"
     ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
     
+    let c = Text::new_with_str(3, "Hello");
+    assert_eq!(vec![
+      Line{num: 0, offset: 0, extent: 3, chars: 3, bytes: 3},
+      Line{num: 1, offset: 3, extent: 5, chars: 2, bytes: 2},
+    ], c.lines);
+    assert_eq!(vec![
+      "Hel",
+      "lo",
+    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    
     let c = Text::new_with_str(100, "Hello\nthere.");
     assert_eq!(vec![
       Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5},
-      Line{num: 1, offset: 6, extent: 12, chars: 6, bytes: 6}
+      Line{num: 1, offset: 6, extent: 12, chars: 6, bytes: 6},
     ], c.lines);
     assert_eq!(vec![
       "Hello",

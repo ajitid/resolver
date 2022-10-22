@@ -11,8 +11,7 @@ use crate::buffer::Buffer;
 use crate::text::{Text, Pos};
 use crate::frame::Frame;
 
-use crate::rdl::scan;
-use crate::rdl::parse;
+use crate::rdl;
 use crate::rdl::exec;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -61,25 +60,7 @@ impl Writer {
     let cxt = exec::Context::new();
 
     for l in text.lines() {
-      let mut p = parse::Parser::new(scan::Scanner::new(l));
-      let mut i = 0;
-      loop {
-        let root = match p.parse() {
-          Ok(root) => root,
-          Err(_)  => break,
-        };
-        
-        if i > 0 { g.push_str("; "); }
-        g.push_str(&format!("{}", root));
-        
-        let res = match root.exec(&cxt) {
-          Ok(res) => res,
-          Err(_)  => continue,
-        };
-        g.push_str(&format!(" → {}", res));
-        
-        i += 1;
-      }
+      g.push_str(rdl::render(&cxt, l).as_ref());
       g.push('\n');
     }
     

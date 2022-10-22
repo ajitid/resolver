@@ -8,7 +8,7 @@ use scan::Scanner;
 use parse::Parser;
 use exec::Context;
 
-fn render(cxt: &Context, text: &str) -> String {
+pub fn render(cxt: &Context, text: &str) -> String {
   let mut g = String::new();
   let mut p = Parser::new(Scanner::new(text));
   let mut i = 0;
@@ -22,13 +22,12 @@ fn render(cxt: &Context, text: &str) -> String {
       Ok(res) => res,
       Err(_)  => continue,
     };
-
+    
     if i > 0 { g.push_str("; "); }
     g.push_str(&format!("{}", r));
     g.push_str(&format!(" → {}", res));
     
     i += 1;
   }
-  println!("*** [{}] → [{}]", text, g);
   g
 }
