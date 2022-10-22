@@ -104,6 +104,8 @@ impl Text {
   }
   
   fn reflow(&mut self) -> &mut Self {
+    return self.reflow_new(); // TESTING
+    //
     let mut f: usize = 0;
     let mut i: usize = 0;
     let mut x: usize = 0;
@@ -125,6 +127,75 @@ impl Text {
     }
     self.lines = l;
     self
+  }
+  
+  fn reflow_new(&mut self) -> &mut Self {
+    let mut l: Vec<Line> = Vec::new();
+    
+    let mut ao: usize = 0; // absolute text offset
+    let mut lc: usize = 0; // line width in chars
+    let mut lb: usize = 0; // line width in bytes
+    let mut lw: usize = 0; // line width to beginning of last whitespace
+    let mut lr: usize = 0; // line width to beginning of last non-whitespace
+    let mut ly: usize = 0; // line number
+    let mut p:  char = '\0'; // previous iteration character
+    
+    // 0             16
+    //             w
+    // ┌───────────┐ r
+    // ┌─────────────┐
+    // Hello this is some text.
+    // └──────────────┘
+    //                b/c
+    
+    for c in self.text.chars() {
+      lb += 1;
+      lc += 1;
+      
+      if c.is_whitespace() {
+        if !p.is_whitespace() { lw = lc; }
+      }else{
+        if  p.is_whitespace() { lr = lc; }
+      }
+      
+      if Self::is_break(c) || lc >= self.width {
+        let br = if lw > 0 { lw }else{ lc }; // break
+        let cw = if lw > 0 { lr }else{ lc }; // consume width
+        
+        l.push(Line{
+          num: ly,
+          offset: ao,
+          extent: ao + cw, // abs offset to beginning of break point
+          chars: br,       // width to break point
+          bytes: br,       // same as chars for now
+        });
+        
+        ly += 1;  // increment line number
+        ao += cw; // increment absolute offset
+        
+        let rm = lc - cw; // remaining in the current line to carry over
+        lc = rm;
+        lb = rm;
+      }
+      
+      p = c
+    }
+    if lc > 0 {
+      l.push(Line{
+        num: ly,
+        offset: ao,
+        extent: ao + lb,  // abs offset to end of text; last line trails whitespace
+        chars: lc,        // width to end of text; last line trails whitespace
+        bytes: lb,        // same as chars for now
+      });
+    }
+    
+    self.lines = l;
+    self
+  }
+  
+  fn is_break(c: char) -> bool {
+    c == '\n'
   }
   
   pub fn up(&mut self, idx: usize) -> Pos {
@@ -315,6 +386,16 @@ mod tests {
     assert_eq!(vec![
       "Hel",
       "lo",
+    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    
+    let c = Text::new_with_str(8, "Hello there");
+    assert_eq!(vec![
+      Line{num: 0, offset: 0, extent: 3, chars: 5, bytes: 5},
+      Line{num: 1, offset: 3, extent: 5, chars: 2, bytes: 2},
+    ], c.lines);
+    assert_eq!(vec![
+      "Hello",
+      "there",
     ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
     
     let c = Text::new_with_str(100, "Hello\nthere.");
