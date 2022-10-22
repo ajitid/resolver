@@ -4,8 +4,10 @@ use crate::Reader;
 use crate::text;
 use crate::text::{Text, Pos};
 use crate::writer::Writer;
+use crate::options;
 
 pub struct Editor {
+  opts: options::Options,
   reader: Reader,
   writer: Writer,
   text: Text,
@@ -13,10 +15,11 @@ pub struct Editor {
 }
 
 impl Editor {
-  pub fn new_with_size(size: (usize, usize)) -> Self {
+  pub fn new_with_size(size: (usize, usize), opts: options::Options) -> Self {
     Editor{
+      opts: opts.clone(),
       reader: Reader,
-      writer: Writer::new_with_size(size),
+      writer: Writer::new_with_size(size, opts),
       text: Text::new((size.0 / 3) * 2),
       pos: text::ZERO_POS,
     }

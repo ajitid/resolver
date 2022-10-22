@@ -2,6 +2,7 @@ mod buffer;
 mod editor;
 mod writer;
 mod frame;
+mod options;
 mod rdl;
 mod text;
 
@@ -19,21 +20,8 @@ use clap::Parser;
 use editor::Editor;
 use writer::Writer;
 
-#[derive(Parser, Debug, Clone)]
-#[clap(author, version, about, long_about = None)]
-pub struct Options {
-  #[clap(long, help="Enable debugging mode")]
-  debug: bool,
-  #[clap(long, help="Enable alternate screen debugging mode (no switch on exit)")]
-  debug_alternate: bool,
-  #[clap(long)]
-  verbose: bool,
-  #[clap(help="Document to open")]
-  doc: Option<String>,
-}
-
 struct Finalize {
-  opts: Options,
+  opts: options::Options,
 }
 
 impl Drop for Finalize {
@@ -63,13 +51,13 @@ impl Reader {
 }
 
 fn main() -> crossterm::Result<()> {
-  let opts = Options::parse();
+  let opts = options::Options::parse();
   let _cleanup = Finalize{opts: opts.clone()};
   execute!(stdout(), terminal::EnterAlternateScreen)?;
   terminal::enable_raw_mode()?;
   
   let size = terminal::size().unwrap();
-  let mut editor = Editor::new_with_size((size.0 as usize, size.1 as usize));
+  let mut editor = Editor::new_with_size((size.0 as usize, size.1 as usize), opts.clone());
   if let Some(doc) = opts.doc {
     match fs::read_to_string(doc) {
       Ok(text) => editor.set_text(text),

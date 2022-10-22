@@ -7,6 +7,7 @@ use crossterm::cursor;
 use crossterm::execute;
 use crossterm::terminal;
 
+use crate::options;
 use crate::buffer::Buffer;
 use crate::text::{Text, Pos};
 use crate::frame::Frame;
@@ -17,6 +18,7 @@ use crate::rdl::exec;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct Writer {
+  opts: options::Options,
   term_size: (usize, usize),
   text_size: (usize, usize),
   frame: Frame,
@@ -24,8 +26,9 @@ pub struct Writer {
 }
 
 impl Writer {
-  pub fn new_with_size(size: (usize, usize)) -> Self {
+  pub fn new_with_size(size: (usize, usize), opts: options::Options) -> Self {
     Self{
+      opts: opts,
       term_size: size,
       text_size: ((size.0 / 3) * 2, size.1 - 1),
       frame: Frame::new(size.0),
@@ -78,14 +81,19 @@ impl Writer {
   pub fn refresh(&mut self, pos: &Pos, text: &Text) -> crossterm::Result<()> {
     queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     let tw = (self.term_size.0 / 3) - 6;
-    let gw = 5;
+    let gw = if self.opts.debug_editor { 0 }else{ 5 };
+    let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
     
     let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize));
     let ticker = Text::new_with_string(tw, Writer::draw_formula(tw, self.term_size.1 as usize, text));
-    let cols = vec![&gutter, &text, &ticker];
-    self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf);
+    let cols: Vec<&Text> = if self.opts.debug_editor {
+      vec![&text]
+    }else{
+      vec![&gutter, &text, &ticker]
+    };
     
-    queue!(self.buf, cursor::MoveTo((pos.x + gw + 1) as u16, pos.y as u16), cursor::Show)?;
+    self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf);
+    queue!(self.buf, cursor::MoveTo((pos.x + ox) as u16, pos.y as u16), cursor::Show)?;
     self.buf.flush()
   }
 }
