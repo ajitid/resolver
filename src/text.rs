@@ -149,25 +149,25 @@ impl Text {
     //                b/c
     
     for c in self.text.chars() {
-      lb += 1;
-      lc += 1;
-      
       if c.is_whitespace() {
         if !p.is_whitespace() { lw = lc; }
       }else{
         if  p.is_whitespace() { lr = lc; }
       }
       
+      lb += 1;
+      lc += 1;
+      
       if Self::is_break(c) || lc >= self.width {
-        let br = if lw > 0 { lw }else{ lc }; // break
-        let cw = if lw > 0 { lr }else{ lc }; // consume width
+        let br = if lw > 0 { lw } else { lc }; // break
+        let cw = if lr > 0 { lr } else { lc }; // consume width
         
         l.push(Line{
-          num: ly,
+          num:    ly,
           offset: ao,
           extent: ao + cw, // abs offset to beginning of break point
-          chars: br,       // width to break point
-          bytes: br,       // same as chars for now
+          chars:  br,      // width to break point
+          bytes:  br,      // same as chars for now
         });
         
         ly += 1;  // increment line number
@@ -182,11 +182,11 @@ impl Text {
     }
     if lc > 0 {
       l.push(Line{
-        num: ly,
+        num:    ly,
         offset: ao,
-        extent: ao + lb,  // abs offset to end of text; last line trails whitespace
-        chars: lc,        // width to end of text; last line trails whitespace
-        bytes: lb,        // same as chars for now
+        extent: ao + lb, // abs offset to end of text; last line trails whitespace
+        chars:  lc,      // width to end of text; last line trails whitespace
+        bytes:  lb,       // same as chars for now
       });
     }
     
@@ -390,8 +390,8 @@ mod tests {
     
     let c = Text::new_with_str(8, "Hello there");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 3, chars: 5, bytes: 5},
-      Line{num: 1, offset: 3, extent: 5, chars: 2, bytes: 2},
+      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5},
+      Line{num: 1, offset: 6, extent: 11, chars: 5, bytes: 5},
     ], c.lines);
     assert_eq!(vec![
       "Hello",
