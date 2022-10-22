@@ -176,10 +176,13 @@ impl Text {
         let rm = lc - cw; // remaining in the current line to carry over
         lc = rm;
         lb = rm;
+        lw = 0; // reset whitespace boundary
+        lr = 0; // reset non-whitespace boundary
       }
       
       p = c
     }
+    
     if lc > 0 {
       l.push(Line{
         num:    ly,
@@ -396,6 +399,21 @@ mod tests {
     assert_eq!(vec![
       "Hello",
       "there",
+    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    
+    let c = Text::new_with_str(8, "Hello there monchambo");
+    println!(">>> [{}] → {:?}", c, c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    assert_eq!(vec![
+      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5},
+      Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5},
+      Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8},
+      Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1},
+    ], c.lines);
+    assert_eq!(vec![
+      "Hello",
+      "there",
+      "monchamb",
+      "o",
     ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
     
     let c = Text::new_with_str(100, "Hello\nthere.");
