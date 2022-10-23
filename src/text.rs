@@ -608,21 +608,22 @@ mod tests {
   
   #[test]
   fn test_movement() {
-    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_str(100, "Hello.").right(5));
-    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_str(100, "Hello.").right(100));
-    assert_eq!(Pos{index: 7, x: 0, y: 1}, Text::new_with_str(100, "Hello,\nthere").right(6));
+    assert_eq!(Pos{index: 6,  x: 6, y: 0}, Text::new_with_str(100, "Hello.").right(5));
+    assert_eq!(Pos{index: 6,  x: 6, y: 0}, Text::new_with_str(100, "Hello.").right(100));
+    assert_eq!(Pos{index: 7,  x: 0, y: 1}, Text::new_with_str(100, "Hello,\nthere").right(6));
     
-    assert_eq!(Pos{index: 4, x: 4, y: 0}, Text::new_with_str(100, "Hello.").left(5));
-    assert_eq!(Pos{index: 0, x: 0, y: 0}, Text::new_with_str(100, "Hello.").left(0));
-    assert_eq!(Pos{index: 6, x: 6, y: 0}, Text::new_with_str(100, "Hello,\nthere").left(7));
+    assert_eq!(Pos{index: 4,  x: 4, y: 0}, Text::new_with_str(100, "Hello.").left(5));
+    assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello.").left(0));
+    assert_eq!(Pos{index: 6,  x: 6, y: 0}, Text::new_with_str(100, "Hello,\nthere").left(7));
     
-    assert_eq!(Pos{index: 0, x: 0, y: 0}, Text::new_with_str(100, "Hello,\nto\nyourself").up(7));
-    assert_eq!(Pos{index: 1, x: 1, y: 0}, Text::new_with_str(100, "Hello,\nto\nyourself").up(8));
-    assert_eq!(Pos{index: 9, x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").up(13));
-    assert_eq!(Pos{index: 9, x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").up(16));
+    assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello,\nto\nyourself").up(7));
+    assert_eq!(Pos{index: 1,  x: 1, y: 0}, Text::new_with_str(100, "Hello,\nto\nyourself").up(8));
+    assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").up(13));
+    assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").up(16));
 
-    assert_eq!(Pos{index: 9, x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").down(2));
-    assert_eq!(Pos{index: 9, x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").down(6));
+    assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").down(2));
+    assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").down(6));
+    assert_eq!(Pos{index: 18, x: 8, y: 2}, Text::new_with_str(100, "Hello,\nto\nyourself").down(18));
   }
   
 }
