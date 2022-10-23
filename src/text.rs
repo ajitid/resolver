@@ -244,11 +244,13 @@ impl Text {
   }
   
   pub fn down(&mut self, idx: usize) -> Pos {
+    let nlines = self.lines.len();
     let pos = self.index(idx);
-    let n = pos.y + 1;
-    if n >= self.lines.len() {
-      let line = &self.lines[pos.y];
-      return Pos{x: line.width(), y: pos.y, index: line.right()};
+    let y = min(nlines - 1, pos.y);
+    let n = y + 1;
+    if n >= nlines {
+      let line = &self.lines[y];
+      return Pos{x: line.width(), y: y, index: line.right()};
     }
     let line = &self.lines[n];
     let w = line.width();
@@ -624,6 +626,23 @@ mod tests {
     assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").down(2));
     assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Hello,\nto\nyourself").down(6));
     assert_eq!(Pos{index: 18, x: 8, y: 2}, Text::new_with_str(100, "Hello,\nto\nyourself").down(18));
+  }
+  
+  #[test]
+  fn test_editing() {
+    let mut t = Text::new(100);
+    t.insert_rel('H');
+    t.insert_rel('e');
+    t.insert_rel('l');
+    t.insert_rel('l');
+    t.insert_rel('o');
+    t.insert_rel('\n');
+    t.insert_rel('O');
+    t.insert_rel('k');
+    t.insert_rel('\n');
+    t.down_rel();
+    t.right_rel();
+    assert_eq!(Pos{index: 9, x: 0, y: 2}, t.right_rel());
   }
   
 }
