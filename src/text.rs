@@ -15,12 +15,12 @@ pub struct Pos {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Line {
-  num: usize,
+  num:    usize,
   offset: usize,
   extent: usize,
-  chars: usize,
-  bytes: usize,
-  hard: bool, // does this line break at a literal newline?
+  chars:  usize,
+  bytes:  usize,
+  hard:   bool, // does this line break at a literal newline?
 }
 
 impl Line {
@@ -153,19 +153,29 @@ impl Text {
     //                b/c
     
     for c in self.text.chars() {
+      let hard = Self::is_break(c);
+      
+      if hard {
+        if !p.is_whitespace() {
+          lr = lc;
+        }
+      }
       if c.is_whitespace() {
-        if !p.is_whitespace() { lw = lc; }
+        if !p.is_whitespace() {
+          lw = lc;
+        }
       }else{
-        if  p.is_whitespace() { lr = lc; }
+        if p.is_whitespace() {
+          lr = lc;
+        }
       }
       
-      lb += 1;
       lc += 1;
+      lb += 1;
       
-      let hard = Self::is_break(c);
       if hard || lc >= self.width {
         let br = if lw > 0 { lw } else { lc }; // break
-        let cw = if lr > 0 { lr } else { lc }; // consume width
+        let cw = if !hard && lr > 0 { lr } else { lc }; // consume width
         
         l.push(Line{
           num:    ly,
@@ -182,11 +192,13 @@ impl Text {
         let rm = lc - cw; // remaining in the current line to carry over
         lc = rm;
         lb = rm;
-        lw = 0; // reset whitespace boundary
-        lr = 0; // reset non-whitespace boundary
+        lw = 0;   // reset whitespace boundary
+        lr = 0;   // reset non-whitespace boundary
+        
+        p = '\0';
+      }else{
+        p = c
       }
-      
-      p = c
     }
     
     if lc > 0 {
@@ -372,95 +384,133 @@ impl fmt::Display for Text {
 mod tests {
   use super::*;
   
+  fn test_reflow_case<'a>(width: usize, text: &'a str, ex_metrics: Vec<Line>, ex_lines: Vec<&'a str>) {
+    let c = Text::new_with_str(width, text);
+    let actual = c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>();
+    println!(">>> {:>3}w [{:?}] → {:?}", width, text, actual);
+    assert_eq!(ex_metrics, c.lines);
+    assert_eq!(ex_lines, actual);
+  }
+  
   #[test]
   fn test_reflow() {
-    let c = Text::new_with_str(100, "Hello");
-    assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5, hard: false,},
-    ], c.lines);
-    assert_eq!(vec![
-      "Hello"
-    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    test_reflow_case(
+      100, "Hello",
+      vec![
+        Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5, hard: false,},
+      ],
+      vec![
+        "Hello",
+      ],
+    );
     
-    let c = Text::new_with_str(3, "Hello");
-    assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 3, chars: 3, bytes: 3, hard: false},
-      Line{num: 1, offset: 3, extent: 5, chars: 2, bytes: 2, hard: false},
-    ], c.lines);
-    assert_eq!(vec![
-      "Hel",
-      "lo",
-    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    test_reflow_case(
+      3, "Hello",
+      vec![
+          Line{num: 0, offset: 0, extent: 3, chars: 3, bytes: 3, hard: false},
+          Line{num: 1, offset: 3, extent: 5, chars: 2, bytes: 2, hard: false},
+      ],
+      vec![
+        "Hel",
+        "lo",
+      ],
+    );
     
-    let c = Text::new_with_str(8, "Hello there");
-    assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
-      Line{num: 1, offset: 6, extent: 11, chars: 5, bytes: 5, hard: false},
-    ], c.lines);
-    assert_eq!(vec![
-      "Hello",
-      "there",
-    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    test_reflow_case(
+      8, "Hello there",
+      vec![
+        Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
+        Line{num: 1, offset: 6, extent: 11, chars: 5, bytes: 5, hard: false},
+      ],
+      vec![
+        "Hello",
+        "there",
+      ],
+    );
     
-    let c = Text::new_with_str(8, "Hello there monchambo");
-    assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
-      Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5, hard: false},
-      Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8, hard: false},
-      Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1, hard: false},
-    ], c.lines);
-    assert_eq!(vec![
-      "Hello",
-      "there",
-      "monchamb",
-      "o",
-    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    test_reflow_case(
+      8, "Hello there monchambo",
+      vec![
+        Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
+        Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5, hard: false},
+        Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8, hard: false},
+        Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1, hard: false},
+      ],
+      vec![
+        "Hello",
+        "there",
+        "monchamb",
+        "o",
+      ],
+    );
     
-    let c = Text::new_with_str(8, "Hello\nthere monchambo");
-    assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: true},
-      Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5, hard: false},
-      Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8, hard: false},
-      Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1, hard: false},
-    ], c.lines);
-    assert_eq!(vec![
-      "Hello",
-      "there",
-      "monchamb",
-      "o",
-    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    test_reflow_case(
+      8, "Hello\nthere monchambo",
+      vec![
+        Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: true},
+        Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5, hard: false},
+        Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8, hard: false},
+        Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1, hard: false},
+      ],
+      vec![
+        "Hello",
+        "there",
+        "monchamb",
+        "o",
+      ],
+    );
     
-    let c = Text::new_with_str(100, "Hello\nthere.");
-    assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
-      Line{num: 1, offset: 6, extent: 12, chars: 6, bytes: 6, hard: false},
-    ], c.lines);
-    assert_eq!(vec![
-      "Hello",
-      "there.",
-    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    test_reflow_case(
+      100, "Hello\nthere.",
+      vec![
+        Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, offset: 6, extent: 12, chars: 6, bytes: 6, hard: false},
+      ],
+      vec![
+        "Hello",
+        "there.",
+      ],
+    );
 
-    let c = Text::new_with_str(100, "Hello\nthere.\n");
-    assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
-      Line{num: 1, offset: 6, extent: 13, chars: 6, bytes: 6, hard: true},
-    ], c.lines);
-    assert_eq!(vec![
-      "Hello",
-      "there.",
-    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    test_reflow_case(
+      100, "Hello\nthere.\n",
+      vec![
+        Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, offset: 6, extent: 13, chars: 6, bytes: 6, hard: true},
+      ],
+      vec![
+        "Hello",
+        "there.",
+      ],
+    );
 
-    let c = Text::new_with_str(100, "Hello\nthere.\n!");
-    assert_eq!(vec![
-      Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
-      Line{num: 1, offset: 6,  extent: 13, chars: 6, bytes: 6, hard: true},
-      Line{num: 2, offset: 13, extent: 14, chars: 1, bytes: 1, hard: false},
-    ], c.lines);
-    assert_eq!(vec![
-      "Hello",
-      "there.",
-      "!"
-    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    test_reflow_case(
+      100, "Hello\nthere.\n!",
+      vec![
+        Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, offset: 6,  extent: 13, chars: 6, bytes: 6, hard: true},
+        Line{num: 2, offset: 13, extent: 14, chars: 1, bytes: 1, hard: false},
+      ],
+      vec![
+        "Hello",
+        "there.",
+        "!"
+      ],
+    );
+    
+    test_reflow_case(
+      100, "Hello\n there.\n!",
+      vec![
+        Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, offset: 6,  extent: 14, chars: 7, bytes: 7, hard: true},
+        Line{num: 2, offset: 14, extent: 15, chars: 1, bytes: 1, hard: false},
+      ],
+      vec![
+        "Hello",
+        " there.",
+        "!"
+      ],
+    );
   }
   
   #[test]

@@ -33,7 +33,7 @@ impl Frame {
         let n = c.write_line(i, buf);
         let w = c.width();
         if n < w - adj {
-          buf.push_str(&" ".repeat(w - n));
+          buf.push_str(&" ".repeat(w - adj - n));
         }
       }
       if i < height - 1 {
