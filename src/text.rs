@@ -244,11 +244,18 @@ impl Text {
   }
   
   pub fn down(&mut self, idx: usize) -> Pos {
-    let nlines = self.lines.len();
+    let nl = self.lines.len();
+    if nl == 0 {
+      return ZERO_POS; // no line data; we have no content
+    }
     let pos = self.index(idx);
-    let y = min(nlines - 1, pos.y);
+    let y = if nl > 0 {
+      min(nl - 1, pos.y)
+    } else {
+      0
+    };
     let n = y + 1;
-    if n >= nlines {
+    if n >= nl {
       let line = &self.lines[y];
       return Pos{x: line.width(), y: y, index: line.right()};
     }
@@ -316,6 +323,9 @@ impl Text {
   }
   
   pub fn index(&mut self, idx: usize) -> Pos {
+    if self.len() == 0 {
+      return ZERO_POS;
+    }
     if idx == 0 {
       return ZERO_POS;
     }
@@ -332,7 +342,7 @@ impl Text {
       hard = line.hard;
     }
     if hard || x + 1 > self.width {
-      Pos{x: 0, y: y+1, index: idx}
+      Pos{x: 0, y: self.lines.len(), index: idx}
     }else{
       Pos{x: x, y: y, index: idx}
     }
@@ -397,14 +407,6 @@ mod tests {
       assert_eq!($ex_lines, actual);
     }
   }
-  
-  // fn test_reflow_case<'a>(width: usize, text: &'a str, ex_metrics: Vec<Line>, ex_lines: Vec<&'a str>) {
-  //   let c = Text::new_with_str(width, text);
-  //   let actual = c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>();
-  //   println!(">>> {:>3}w [{:?}] → {:?}", width, text, actual);
-  //   assert_eq!(ex_metrics, c.lines);
-  //   assert_eq!(ex_lines, actual);
-  // }
   
   #[test]
   fn test_reflow() {
@@ -643,6 +645,10 @@ mod tests {
     t.down_rel();
     t.right_rel();
     assert_eq!(Pos{index: 9, x: 0, y: 2}, t.right_rel());
+    
+    let mut t = Text::new(100);
+    t.down_rel();
+    assert_eq!(Pos{index: 0, x: 0, y: 0}, t.down_rel());
   }
   
 }

@@ -25,7 +25,7 @@ pub fn render(cxt: &Context, text: &str) -> String {
     
     if i > 0 { g.push_str("; "); }
     g.push_str(&format!("{}", r));
-    g.push_str(&format!(" → {}", res));
+    g.push_str(&format!(" => {}", res));
     
     i += 1;
   }

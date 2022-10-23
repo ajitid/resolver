@@ -15,6 +15,14 @@ impl Context {
     }
   }
   
+  pub fn new_with_stdlib() -> Context {
+    let mut vars = HashMap::new();
+    vars.insert("pi".to_string(), unit::Unit::None(std::f64::consts::PI));
+    Context{
+      vars: vars,
+    }
+  }
+  
   pub fn set(&mut self, key: &str, val: unit::Unit) {
     self.vars.insert(key.to_string(), val);
   }
