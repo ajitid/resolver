@@ -300,38 +300,6 @@ impl Text {
   }
   
   pub fn index(&mut self, idx: usize) -> Pos {
-    return self.index_new(idx); // TESTING
-    //
-    if idx == 0 {
-      return ZERO_POS;
-    }
-    let idx = min(self.len(), idx);
-    let mut x: usize = 0;
-    let mut y: usize = 0;
-    let mut nl: bool = false;
-    for line in &self.lines {
-      y = line.num;
-      if line.contains(idx) {
-        let slice = line.text(&self.text);
-        let eix = idx - line.offset;
-        nl = true;
-        for (i, c) in slice.chars().enumerate() {
-          if i == eix {
-            return Pos{x: i, y: line.num, index: idx};
-          }
-          x = i;
-          nl = c == '\n';
-        }
-      }
-    }
-    if nl || x + 1 > self.width {
-      Pos{x: 0, y: y+1, index: idx}
-    }else{
-      Pos{x: x+1, y: y, index: idx}
-    }
-  }
-  
-  pub fn index_new(&mut self, idx: usize) -> Pos {
     if idx == 0 {
       return ZERO_POS;
     }
