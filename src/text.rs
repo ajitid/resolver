@@ -154,10 +154,12 @@ impl Text {
     
     for c in self.text.chars() {
       let hard = Self::is_break(c);
-      
       if hard {
         if !p.is_whitespace() {
           lr = lc;
+        }
+        if lw == 0 { // no whitespace boundary; set to here
+          lw = lc;
         }
       }
       if c.is_whitespace() {
@@ -174,7 +176,7 @@ impl Text {
       lb += 1;
       
       if hard || lc >= self.width {
-        let br = if lw > 0 { lw } else { lc }; // break
+        let br = if  hard || lw > 0 { lw } else { lc }; // break
         let cw = if !hard && lr > 0 { lr } else { lc }; // consume width
         
         l.push(Line{
@@ -384,27 +386,37 @@ impl fmt::Display for Text {
 mod tests {
   use super::*;
   
-  fn test_reflow_case<'a>(width: usize, text: &'a str, ex_metrics: Vec<Line>, ex_lines: Vec<&'a str>) {
-    let c = Text::new_with_str(width, text);
-    let actual = c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>();
-    println!(">>> {:>3}w [{:?}] → {:?}", width, text, actual);
-    assert_eq!(ex_metrics, c.lines);
-    assert_eq!(ex_lines, actual);
+  macro_rules! test_reflow_case {
+    ($width: expr, $text: expr, $ex_metrics: expr, $ex_lines: expr) => {
+      let c = Text::new_with_str($width, $text);
+      let actual = c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>();
+      println!(">>> {:>3}w [{:?}] → {:?}", $width, $text, actual);
+      assert_eq!($ex_metrics, c.lines);
+      assert_eq!($ex_lines, actual);
+    }
   }
+  
+  // fn test_reflow_case<'a>(width: usize, text: &'a str, ex_metrics: Vec<Line>, ex_lines: Vec<&'a str>) {
+  //   let c = Text::new_with_str(width, text);
+  //   let actual = c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>();
+  //   println!(">>> {:>3}w [{:?}] → {:?}", width, text, actual);
+  //   assert_eq!(ex_metrics, c.lines);
+  //   assert_eq!(ex_lines, actual);
+  // }
   
   #[test]
   fn test_reflow() {
-    test_reflow_case(
+    test_reflow_case!(
       100, "Hello",
       vec![
         Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5, hard: false,},
       ],
       vec![
         "Hello",
-      ],
+      ]
     );
     
-    test_reflow_case(
+    test_reflow_case!(
       3, "Hello",
       vec![
           Line{num: 0, offset: 0, extent: 3, chars: 3, bytes: 3, hard: false},
@@ -413,10 +425,10 @@ mod tests {
       vec![
         "Hel",
         "lo",
-      ],
+      ]
     );
     
-    test_reflow_case(
+    test_reflow_case!(
       8, "Hello there",
       vec![
         Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
@@ -425,10 +437,10 @@ mod tests {
       vec![
         "Hello",
         "there",
-      ],
+      ]
     );
     
-    test_reflow_case(
+    test_reflow_case!(
       8, "Hello there monchambo",
       vec![
         Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
@@ -441,10 +453,10 @@ mod tests {
         "there",
         "monchamb",
         "o",
-      ],
+      ]
     );
     
-    test_reflow_case(
+    test_reflow_case!(
       8, "Hello\nthere monchambo",
       vec![
         Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: true},
@@ -457,10 +469,10 @@ mod tests {
         "there",
         "monchamb",
         "o",
-      ],
+      ]
     );
     
-    test_reflow_case(
+    test_reflow_case!(
       100, "Hello\nthere.",
       vec![
         Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
@@ -469,10 +481,10 @@ mod tests {
       vec![
         "Hello",
         "there.",
-      ],
+      ]
     );
 
-    test_reflow_case(
+    test_reflow_case!(
       100, "Hello\nthere.\n",
       vec![
         Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
@@ -481,10 +493,10 @@ mod tests {
       vec![
         "Hello",
         "there.",
-      ],
+      ]
     );
 
-    test_reflow_case(
+    test_reflow_case!(
       100, "Hello\nthere.\n!",
       vec![
         Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
@@ -494,11 +506,11 @@ mod tests {
       vec![
         "Hello",
         "there.",
-        "!"
-      ],
+        "!",
+      ]
     );
     
-    test_reflow_case(
+    test_reflow_case!(
       100, "Hello\n there.\n!",
       vec![
         Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
@@ -508,8 +520,72 @@ mod tests {
       vec![
         "Hello",
         " there.",
-        "!"
+        "!",
+      ]
+    );
+    
+    test_reflow_case!(
+      100, " \n \n \nHello.",
+      vec![
+        Line{num: 0, offset: 0, extent: 2,  chars: 1, bytes: 1, hard: true},
+        Line{num: 1, offset: 2, extent: 4,  chars: 1, bytes: 1, hard: true},
+        Line{num: 2, offset: 4, extent: 6,  chars: 1, bytes: 1, hard: true},
+        Line{num: 3, offset: 6, extent: 12, chars: 6, bytes: 6, hard: false},
       ],
+      vec![
+        " ",
+        " ",
+        " ",
+        "Hello.",
+      ]
+    );
+    
+    test_reflow_case!(
+      100, "\n\n\nHello.",
+      vec![
+        Line{num: 0, offset: 0, extent: 1, chars: 0, bytes: 0, hard: true},
+        Line{num: 1, offset: 1, extent: 2, chars: 0, bytes: 0, hard: true},
+        Line{num: 2, offset: 2, extent: 3, chars: 0, bytes: 0, hard: true},
+        Line{num: 3, offset: 3, extent: 9, chars: 6, bytes: 6, hard: false},
+      ],
+      vec![
+        "",
+        "",
+        "",
+        "Hello.",
+      ]
+    );
+    
+    test_reflow_case!(
+      100, "\nHello.\nOk",
+      vec![
+        Line{num: 0, offset: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
+        Line{num: 1, offset: 1, extent: 8,  chars: 6, bytes: 6, hard: true},
+        Line{num: 2, offset: 8, extent: 10, chars: 2, bytes: 2, hard: false},
+      ],
+      vec![
+        "",
+        "Hello.",
+        "Ok",
+      ]
+    );
+    
+    test_reflow_case!(
+      5, "\n\nHello.\nOk",
+      vec![
+        Line{num: 0, offset: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
+        Line{num: 1, offset: 1, extent: 2,  chars: 0, bytes: 0, hard: true},
+        Line{num: 2, offset: 2, extent: 7,  chars: 5, bytes: 5, hard: false},
+        Line{num: 3, offset: 7, extent: 9,  chars: 1, bytes: 1, hard: true},
+        Line{num: 4, offset: 9, extent: 11, chars: 2, bytes: 2, hard: false},
+      ],
+      vec![
+        "",
+        "",
+        "Hello",
+        ".",
+        "Ok",
+      ]
     );
   }
   
