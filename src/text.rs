@@ -20,11 +20,24 @@ pub struct Line {
   extent: usize,
   chars: usize,
   bytes: usize,
+  hard: bool, // does this line break at a literal newline?
 }
 
 impl Line {
   pub fn text<'a>(&self, text: &'a str) -> &'a str {
     &text[self.offset..self.offset + self.bytes]
+  }
+  
+  pub fn width(&self) -> usize {
+    self.bytes
+  }
+  
+  pub fn left(&self) -> usize {
+    self.offset
+  }
+  
+  pub fn right(&self) -> usize {
+    self.offset + self.bytes
   }
   
   pub fn extent(&self) -> usize {
@@ -149,7 +162,8 @@ impl Text {
       lb += 1;
       lc += 1;
       
-      if Self::is_break(c) || lc >= self.width {
+      let hard = Self::is_break(c);
+      if hard || lc >= self.width {
         let br = if lw > 0 { lw } else { lc }; // break
         let cw = if lr > 0 { lr } else { lc }; // consume width
         
@@ -159,6 +173,7 @@ impl Text {
           extent: ao + cw, // abs offset to beginning of break point
           chars:  br,      // width to break point
           bytes:  br,      // same as chars for now
+          hard:   hard,    // is this a hard break that ends in a newline literal?
         });
         
         ly += 1;  // increment line number
@@ -181,6 +196,7 @@ impl Text {
         extent: ao + lb, // abs offset to end of text; last line trails whitespace
         chars:  lc,      // width to end of text; last line trails whitespace
         bytes:  lb,      // same as chars for now
+        hard:   false,   // can't be a hard break here
       });
     }
     
@@ -198,11 +214,12 @@ impl Text {
       return ZERO_POS;
     }
     let n = pos.y - 1;
-    let line = &self.lines[n];
-    if line.chars > pos.x {
-      Pos{x: pos.x, y: n, index: line.offset + pos.x}
+    let l = &self.lines[n];
+    let w = l.width();
+    if w > pos.x {
+      Pos{x: pos.x, y: n, index: l.offset + pos.x}
     }else{
-      Pos{x: line.chars, y: n, index: line.extent()}
+      Pos{x: w, y: n, index: l.right()}
     }
   }
   
@@ -217,13 +234,14 @@ impl Text {
     let n = pos.y + 1;
     if n >= self.lines.len() {
       let line = &self.lines[pos.y];
-      return Pos{x: line.chars, y: pos.y, index: line.extent()};
+      return Pos{x: line.width(), y: pos.y, index: line.right()};
     }
     let line = &self.lines[n];
-    if line.chars > pos.x {
+    let w = line.width();
+    if w > pos.x {
       Pos{x: pos.x, y: n, index: line.offset + pos.x}
     }else{
-      Pos{x: line.chars, y: n, index: line.extent()}
+      Pos{x: w, y: n, index: line.right()}
     }
   }
   
@@ -272,7 +290,7 @@ impl Text {
   pub fn end(&mut self, idx: usize) -> Pos {
     let pos = self.index(idx);
     let line = &self.lines[pos.y];
-    Pos{x: line.chars, y: pos.y, index: line.extent()}
+    Pos{x: line.width(), y: pos.y, index: line.right()}
   }
   
   pub fn end_rel(&mut self) -> Pos {
@@ -320,18 +338,20 @@ impl Text {
     let idx = min(self.len(), idx);
     let mut x: usize = 0;
     let mut y: usize = 0;
-    let mut nl: bool = false;
+    let mut hard: bool = false;
     for line in &self.lines {
       if let Some(pos) = line.pos(self.width, idx) {
-        return pos
+        return pos;
       }
+      y = line.num;
+      x = line.width();
+      hard = line.hard;
     }
-    // if nl || x + 1 > self.width {
-    //   Pos{x: 0, y: y+1, index: idx}
-    // }else{
-    //   Pos{x: x+1, y: y, index: idx}
-    // }
-    ZERO_POS
+    if hard || x + 1 > self.width {
+      Pos{x: 0, y: y+1, index: idx}
+    }else{
+      Pos{x: x, y: y, index: idx}
+    }
   }
   
   pub fn set_text(&mut self, text: String) {
@@ -388,7 +408,7 @@ mod tests {
   fn test_reflow() {
     let c = Text::new_with_str(100, "Hello");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5},
+      Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5, hard: false,},
     ], c.lines);
     assert_eq!(vec![
       "Hello"
@@ -396,8 +416,8 @@ mod tests {
     
     let c = Text::new_with_str(3, "Hello");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 3, chars: 3, bytes: 3},
-      Line{num: 1, offset: 3, extent: 5, chars: 2, bytes: 2},
+      Line{num: 0, offset: 0, extent: 3, chars: 3, bytes: 3, hard: false},
+      Line{num: 1, offset: 3, extent: 5, chars: 2, bytes: 2, hard: false},
     ], c.lines);
     assert_eq!(vec![
       "Hel",
@@ -406,8 +426,8 @@ mod tests {
     
     let c = Text::new_with_str(8, "Hello there");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5},
-      Line{num: 1, offset: 6, extent: 11, chars: 5, bytes: 5},
+      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
+      Line{num: 1, offset: 6, extent: 11, chars: 5, bytes: 5, hard: false},
     ], c.lines);
     assert_eq!(vec![
       "Hello",
@@ -416,10 +436,10 @@ mod tests {
     
     let c = Text::new_with_str(8, "Hello there monchambo");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5},
-      Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5},
-      Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8},
-      Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1},
+      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
+      Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5, hard: false},
+      Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8, hard: false},
+      Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1, hard: false},
     ], c.lines);
     assert_eq!(vec![
       "Hello",
@@ -430,10 +450,10 @@ mod tests {
     
     let c = Text::new_with_str(8, "Hello\nthere monchambo");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5},
-      Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5},
-      Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8},
-      Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1},
+      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: true},
+      Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5, hard: false},
+      Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8, hard: false},
+      Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1, hard: false},
     ], c.lines);
     assert_eq!(vec![
       "Hello",
@@ -444,8 +464,8 @@ mod tests {
     
     let c = Text::new_with_str(100, "Hello\nthere.");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5},
-      Line{num: 1, offset: 6, extent: 12, chars: 6, bytes: 6},
+      Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
+      Line{num: 1, offset: 6, extent: 12, chars: 6, bytes: 6, hard: false},
     ], c.lines);
     assert_eq!(vec![
       "Hello",
@@ -454,8 +474,8 @@ mod tests {
 
     let c = Text::new_with_str(100, "Hello\nthere.\n");
     assert_eq!(vec![
-      Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5},
-      Line{num: 1, offset: 6, extent: 13, chars: 6, bytes: 6},
+      Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
+      Line{num: 1, offset: 6, extent: 13, chars: 6, bytes: 6, hard: true},
     ], c.lines);
     assert_eq!(vec![
       "Hello",
@@ -464,9 +484,9 @@ mod tests {
 
     let c = Text::new_with_str(100, "Hello\nthere.\n!");
     assert_eq!(vec![
-      Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5},
-      Line{num: 1, offset: 6,  extent: 13, chars: 6, bytes: 6},
-      Line{num: 2, offset: 13, extent: 14, chars: 1, bytes: 1},
+      Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
+      Line{num: 1, offset: 6,  extent: 13, chars: 6, bytes: 6, hard: true},
+      Line{num: 2, offset: 13, extent: 14, chars: 1, bytes: 1, hard: false},
     ], c.lines);
     assert_eq!(vec![
       "Hello",
