@@ -23,7 +23,7 @@ pub struct Line {
 
 impl Line {
   pub fn text<'a>(&self, text: &'a str) -> &'a str {
-    &text[self.offset..self.extent]
+    &text[self.offset..self.offset + self.bytes]
   }
   
   pub fn end(&self) -> usize {
