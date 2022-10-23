@@ -1,5 +1,6 @@
 use std::fmt;
 use std::str;
+use std::cmp::min;
 
 use crate::buffer::Buffer;
 
@@ -23,10 +24,18 @@ pub struct Line {
 
 impl Line {
   pub fn text<'a>(&self, text: &'a str) -> &'a str {
-    &text[self.offset..self.offset + self.bytes]
+    &text[self.left()..self.right()]
   }
   
-  pub fn end(&self) -> usize {
+  pub fn left(&self) -> usize {
+    self.offset
+  }
+  
+  pub fn right(&self) -> usize {
+    self.offset + self.bytes
+  }
+  
+  pub fn extent(&self) -> usize {
     self.extent
   }
 }
@@ -211,7 +220,7 @@ impl Text {
     if line.chars > pos.x {
       Pos{x: pos.x, y: n, index: line.offset + pos.x}
     }else{
-      Pos{x: line.chars, y: n, index: line.end()}
+      Pos{x: line.chars, y: n, index: line.extent()}
     }
   }
   
@@ -226,13 +235,13 @@ impl Text {
     let n = pos.y + 1;
     if n >= self.lines.len() {
       let line = &self.lines[pos.y];
-      return Pos{x: line.chars, y: pos.y, index: line.end()};
+      return Pos{x: line.chars, y: pos.y, index: line.extent()};
     }
     let line = &self.lines[n];
     if line.chars > pos.x {
       Pos{x: pos.x, y: n, index: line.offset + pos.x}
     }else{
-      Pos{x: line.chars, y: n, index: line.end()}
+      Pos{x: line.chars, y: n, index: line.extent()}
     }
   }
   
@@ -281,7 +290,7 @@ impl Text {
   pub fn end(&mut self, idx: usize) -> Pos {
     let pos = self.index(idx);
     let line = &self.lines[pos.y];
-    Pos{x: line.chars, y: pos.y, index: line.end()}
+    Pos{x: line.chars, y: pos.y, index: line.extent()}
   }
   
   pub fn end_rel(&mut self) -> Pos {
@@ -294,15 +303,14 @@ impl Text {
     if idx == 0 {
       return ZERO_POS;
     }
-    let l = self.len();
-    let idx = if idx > l { l } else { idx };
+    let idx = min(self.len(), idx);
     let mut x: usize = 0;
     let mut y: usize = 0;
     let mut nl: bool = false;
     for l in &self.lines {
       y = l.num;
-      if idx >= l.offset && idx <= l.extent {
-        let slice = &self.text[l.offset..l.extent];
+      if idx >= l.offset && idx <= l.right() {
+        let slice = l.text(&self.text);
         let eix = idx - l.offset;
         nl = true;
         for (i, c) in slice.chars().enumerate() {
@@ -402,7 +410,20 @@ mod tests {
     ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
     
     let c = Text::new_with_str(8, "Hello there monchambo");
-    println!(">>> [{}] → {:?}", c, c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    assert_eq!(vec![
+      Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5},
+      Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5},
+      Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8},
+      Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1},
+    ], c.lines);
+    assert_eq!(vec![
+      "Hello",
+      "there",
+      "monchamb",
+      "o",
+    ], c.lines.iter().map(|e| { e.text(&c.text) }).collect::<Vec<&str>>());
+    
+    let c = Text::new_with_str(8, "Hello\nthere monchambo");
     assert_eq!(vec![
       Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5},
       Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5},

@@ -14,4 +14,3 @@ pub struct Options {
   #[clap(help="Document to open")]
   pub doc: Option<String>,
 }
-
