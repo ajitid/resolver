@@ -24,19 +24,27 @@ pub struct Line {
 
 impl Line {
   pub fn text<'a>(&self, text: &'a str) -> &'a str {
-    &text[self.left()..self.right()]
-  }
-  
-  pub fn left(&self) -> usize {
-    self.offset
-  }
-  
-  pub fn right(&self) -> usize {
-    self.offset + self.bytes
+    &text[self.offset..self.offset + self.bytes]
   }
   
   pub fn extent(&self) -> usize {
     self.extent
+  }
+  
+  pub fn contains(&self, idx: usize) -> bool {
+    idx >= self.offset && idx < self.extent
+  }
+  
+  pub fn pos(&self, width: usize, idx: usize) -> Option<Pos> {
+    if !self.contains(idx) {
+      return None;
+    }
+    let eix = idx - self.offset;
+    if eix < width {
+      Some(Pos{index: idx, x: eix, y: self.num})
+    }else{
+      Some(Pos{index: idx, x: width, y: self.num}) // end of visual line
+    }
   }
 }
 
@@ -113,32 +121,6 @@ impl Text {
   }
   
   fn reflow(&mut self) -> &mut Self {
-    return self.reflow_new(); // TESTING
-    //
-    let mut f: usize = 0;
-    let mut i: usize = 0;
-    let mut x: usize = 0;
-    let mut y: usize = 0;
-    let mut l: Vec<Line> = Vec::new();
-    for c in self.text.chars() {
-      i += 1;
-      x += if c != '\n' { 1 } else { 0 };
-      if c == '\n' || x >= self.width {
-        l.push(Line{num: y, offset: f, extent: f + i, chars: x, bytes: x});
-        f += i;
-        y += 1;
-        x  = 0;
-        i  = 0;
-      }
-    }
-    if i > 0 {
-      l.push(Line{num: y, offset: f, extent: f + i, chars: x, bytes: x});
-    }
-    self.lines = l;
-    self
-  }
-  
-  fn reflow_new(&mut self) -> &mut Self {
     let mut l: Vec<Line> = Vec::new();
     
     let mut ao: usize = 0; // absolute text offset
@@ -300,6 +282,8 @@ impl Text {
   }
   
   pub fn index(&mut self, idx: usize) -> Pos {
+    return self.index_new(idx); // TESTING
+    //
     if idx == 0 {
       return ZERO_POS;
     }
@@ -307,15 +291,15 @@ impl Text {
     let mut x: usize = 0;
     let mut y: usize = 0;
     let mut nl: bool = false;
-    for l in &self.lines {
-      y = l.num;
-      if idx >= l.offset && idx <= l.right() {
-        let slice = l.text(&self.text);
-        let eix = idx - l.offset;
+    for line in &self.lines {
+      y = line.num;
+      if line.contains(idx) {
+        let slice = line.text(&self.text);
+        let eix = idx - line.offset;
         nl = true;
         for (i, c) in slice.chars().enumerate() {
           if i == eix {
-            return Pos{x: i, y: l.num, index: idx};
+            return Pos{x: i, y: line.num, index: idx};
           }
           x = i;
           nl = c == '\n';
@@ -327,6 +311,27 @@ impl Text {
     }else{
       Pos{x: x+1, y: y, index: idx}
     }
+  }
+  
+  pub fn index_new(&mut self, idx: usize) -> Pos {
+    if idx == 0 {
+      return ZERO_POS;
+    }
+    let idx = min(self.len(), idx);
+    let mut x: usize = 0;
+    let mut y: usize = 0;
+    let mut nl: bool = false;
+    for line in &self.lines {
+      if let Some(pos) = line.pos(self.width, idx) {
+        return pos
+      }
+    }
+    // if nl || x + 1 > self.width {
+    //   Pos{x: 0, y: y+1, index: idx}
+    // }else{
+    //   Pos{x: x+1, y: y, index: idx}
+    // }
+    ZERO_POS
   }
   
   pub fn set_text(&mut self, text: String) {
