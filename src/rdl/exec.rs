@@ -270,8 +270,8 @@ mod tests {
   fn exec_simple() {
     let mut cxt = Context::new();
     cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(1.0));
-    cxt.set("c", unit::Unit::None(2.0));
+    cxt.set("b", unit::Unit::None(2.0));
+    cxt.set("c", unit::Unit::None(3.0));
     
     let n = Node::new_ident("a");
     assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
@@ -280,10 +280,22 @@ mod tests {
     assert_eq!(Ok(unit::Unit::None(1.25)), n.exec(&cxt));
     
     let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
-    assert_eq!(Ok(unit::Unit::None(2.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
     
     let n = Node::new_sub(Node::new_ident("a"), Node::new_ident("c"));
-    assert_eq!(Ok(unit::Unit::None(-1.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(-2.0)), n.exec(&cxt));
+    
+    let n = Node::new_mul(Node::new_ident("a"), Node::new_ident("c"));
+    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
+    
+    let n = Node::new_div(Node::new_ident("a"), Node::new_ident("b"));
+    assert_eq!(Ok(unit::Unit::None(0.5)), n.exec(&cxt));
+    
+    let n = Node::new_mod(Node::new_ident("c"), Node::new_ident("b"));
+    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+    
+    let n = Node::new_assign(Node::new_ident("d"), Node::new_number(123.0));
+    assert_eq!(Ok(unit::Unit::None(123.0)), n.exec(&cxt));
   }
   
 }

@@ -309,6 +309,19 @@ mod tests {
   }
   
   #[test]
+  fn parse_assign() {
+    let mut cxt = Context::new();
+    cxt.set("a", unit::Unit::None(1.0));
+    cxt.set("b", unit::Unit::None(2.0));
+    cxt.set("c", unit::Unit::None(3.0));
+    
+    let n = parse_expr(r#"(1)"#).expect("Could not parse");
+    assert_eq!(Node::new_number(1.0), n);
+    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &cxt));
+    
+  }
+  
+  #[test]
   fn parse_in_context() {
     let mut cxt = Context::new();
     cxt.set("a", unit::Unit::None(1.0));
