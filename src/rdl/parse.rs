@@ -265,10 +265,10 @@ mod tests {
     cxt.set("c", unit::Unit::None(3.0));
     
     let t = r#"100+200; 0"#;
-    assert_eq!("(100 + 200) → 300; 0 → 0", &exec_line(t, &cxt));
+    assert_eq!("(100 + 200) => 300; 0 => 0", &exec_line(t, &cxt));
     
     let t = r#"100 + (b * 100), but 0 is 0"#;
-    assert_eq!("(100 + (b * 100)) → 300; 0 → 0; 0 → 0", &exec_line(t, &cxt));
+    assert_eq!("(100 + (b * 100)) => 300; 0 => 0; 0 => 0", &exec_line(t, &cxt));
   }
   
   // #[test]
@@ -346,10 +346,10 @@ mod tests {
     let t = r#"100+200;0"#;
     let mut p = Parser::new(Scanner::new(t));
     let n = p.parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
+    println!(">>> [{}] => [{}]", t, n);
     
     let t = r#"100+200; 0"#;
-    assert_eq!("(100 + 200) → 300; 0 → 0", &exec_line(t, &cxt))
+    assert_eq!("(100 + 200) => 300; 0 => 0", &exec_line(t, &cxt))
   }
   
 }
