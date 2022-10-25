@@ -39,6 +39,7 @@ impl Context {
 pub enum NType {
   Ident,
   Number,
+  Assign,
   Add,
   Sub,
   Mul,
@@ -51,6 +52,7 @@ impl fmt::Display for NType {
     match self {
       NType::Ident  => write!(f, "ident"),
       NType::Number => write!(f, "value"),
+      NType::Assign => write!(f, "="),
       NType::Add    => write!(f, "+"),
       NType::Sub    => write!(f, "-"),
       NType::Mul    => write!(f, "*"),
@@ -94,6 +96,15 @@ impl Node {
       left: None, right: None,
       text: None,
       value: Some(value),
+    }
+  }
+  
+  pub fn new_assign(left: Node, right: Node) -> Node {
+    Node{
+      ntype: NType::Assign,
+      left: Some(Box::new(left)), right: Some(Box::new(right)),
+      text: Some("=".to_string()),
+      value: None,
     }
   }
   
@@ -142,19 +153,45 @@ impl Node {
     }
   }
   
+  fn text<'a>(&'a self) -> Result<&'a str, error::Error> {
+    match &self.text {
+      Some(text) => Ok(text),
+      None => Err(error::Error::InvalidASTNode(format!("{}: Expected text", self.ntype))),
+    }
+  }
+  
+  fn value(&self) -> Result<unit::Unit, error::Error> {
+    match self.value {
+      Some(value) => Ok(unit::Unit::None(value)),
+      None => Err(error::Error::InvalidASTNode(format!("{}: Expected value", self.ntype))),
+    }
+  }
+  
+  fn left<'a>(&'a self) -> Result<&'a Box<Node>, error::Error> {
+    match &self.left {
+      Some(left) => Ok(left),
+      None => Err(error::Error::InvalidASTNode(format!("{}: Expected left child", self.ntype))),
+    }
+  }
+  
+  fn right<'a>(&'a self) -> Result<&'a Box<Node>, error::Error> {
+    match &self.right {
+      Some(right) => Ok(right),
+      None => Err(error::Error::InvalidASTNode(format!("{}: Expected right child", self.ntype))),
+    }
+  }
+  
   pub fn exec(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
     match self.ntype {
       NType::Ident => self.exec_ident(cxt),
       NType::Number => self.exec_number(cxt),
+      NType::Assign => self.exec_assign(cxt),
       NType::Add | NType::Sub | NType::Mul | NType::Div | NType::Mod => self.exec_arith(cxt),
     }
   }
   
   fn exec_ident(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
-    let name = match &self.text {
-      Some(name) => name,
-      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected text", self.ntype))),
-    };
+    let name = self.text()?;
     match cxt.get(&name) {
       Some(v) => Ok(v),
       None => Err(error::Error::UnboundVariable(name.to_owned())),
@@ -162,26 +199,30 @@ impl Node {
   }
   
   fn exec_number(&self, _cxt: &Context) -> Result<unit::Unit, error::Error> {
-    match self.value {
-      Some(v) => Ok(unit::Unit::None(v)),
-      None => Err(error::Error::InvalidASTNode(format!("{}: Expected value", self.ntype))),
-    }
+    self.value()
+  }
+  
+  fn exec_assign(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
+    let left = self.left()?;
+    let right = self.right()?;
+    let ident = match left.ntype {
+      NType::Ident => left.text()?,
+      _ => return Err(error::Error::InvalidASTNode(format!("{}: Expected identifier as left child, got: {}", self.ntype, left.ntype))),
+    };
+    println!(">>>> >>>> ASSIGN {} = {}", ident, right.print()?);
+    let right = match right.exec(cxt) {
+      Ok(right) => right,
+      Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec right: {}", self.ntype, err))),
+    };
+    Ok(right)
   }
   
   fn exec_arith(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
-    let left = match &self.left {
-      Some(left) => left,
-      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected left child", self.ntype))),
-    };
-    let right = match &self.right {
-      Some(right) => right,
-      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected right child", self.ntype))),
-    };
-    let left = match left.exec(cxt) {
+    let left = match self.left()?.exec(cxt) {
       Ok(left) => left,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
     };
-    let right = match right.exec(cxt) {
+    let right = match self.right()?.exec(cxt) {
       Ok(right) => right,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec right: {}", self.ntype, err))),
     };
@@ -199,34 +240,25 @@ impl Node {
     match self.ntype {
       NType::Ident  => self.print_ident(),
       NType::Number => self.print_number(),
+      NType::Assign => self.print_assign(),
       NType::Add | NType::Sub | NType::Mul | NType::Div | NType::Mod => self.print_arith(),
     }
   }
   
   fn print_ident(&self) -> Result<String, error::Error> {
-    match &self.text {
-      Some(name) => Ok(name.to_owned()),
-      None => Err(error::Error::InvalidASTNode(format!("{}: Expected text", self.ntype))),
-    }
+    Ok(self.text()?.to_owned())
   }
   
   fn print_number(&self) -> Result<String, error::Error> {
-    match self.value {
-      Some(v) => Ok(format!("{}", v)),
-      None => Err(error::Error::InvalidASTNode(format!("{}: Expected value", self.ntype))),
-    }
+    Ok(format!("{}", self.value()?))
   }
   
   fn print_arith(&self) -> Result<String, error::Error> {
-    let left = match &self.left {
-      Some(left) => left,
-      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected left child", self.ntype))),
-    };
-    let right = match &self.right {
-      Some(right) => right,
-      None => return Err(error::Error::InvalidASTNode(format!("{}: Expected right child", self.ntype))),
-    };
-    Ok(format!("({} {} {})", left.print()?, self.ntype, right.print()?))
+    Ok(format!("({} {} {})", self.left()?.print()?, self.ntype, self.right()?.print()?))
+  }
+  
+  fn print_assign(&self) -> Result<String, error::Error> {
+    Ok(format!("({} {} {})", self.left()?.print()?, self.ntype, self.right()?.print()?))
   }
 }
 

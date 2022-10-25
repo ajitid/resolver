@@ -23,7 +23,46 @@ impl<'a> Parser<'a> {
   }
   
   fn parse_enter(&mut self) -> Result<Node, error::Error> {
-    self.parse_arith()
+    self.parse_assign()
+  }
+  
+  fn parse_assign(&mut self) -> Result<Node, error::Error> {
+    self.scan.discard(TType::Whitespace);
+
+    let ttype = match self.scan.la_type() {
+      Some(ttype) => ttype,
+      None => return Err(error::Error::EndOfInput),
+    };
+    if ttype != TType::Ident {
+      return self.parse_arith();
+    }
+    let left = match self.parse_ident() {
+      Ok(left) => left,
+      Err(err) => return Err(err.into()),
+    };
+    
+    self.scan.discard(TType::Whitespace);
+    
+    let ttype = match self.scan.la_type() {
+      Some(ttype) => ttype,
+      None => return Ok(left),
+    };
+    if ttype != TType::Assign {
+      return self.parse_arith_left(left);
+    }
+    let op = match self.scan.token() {
+      Ok(op) => op,
+      Err(err) => return Err(err.into()),
+    };
+    
+    self.scan.discard(TType::Whitespace);
+    
+    let right = match self.parse_arith() {
+      Ok(right) => right,
+      Err(_) => return Ok(left),
+    };
+    
+    Ok(Node::new_assign(left, right))
   }
   
   fn parse_arith(&mut self) -> Result<Node, error::Error> {
@@ -91,6 +130,18 @@ impl<'a> Parser<'a> {
       TType::Ident => Ok(Node::new_ident(&tok.ttext)),
       TType::Number => Ok(Node::new_number(tok.ttext.parse::<f64>()?)),
       TType::LParen => self.parse_expr(),
+      TType::End => Err(error::Error::EndOfInput),
+      _ => Err(error::Error::TokenNotMatched),
+    }
+  }
+  
+  fn parse_ident(&mut self) -> Result<Node, error::Error> {
+    let tok = match self.scan.token() {
+      Ok(tok) => tok,
+      Err(err) => return Err(err),
+    };
+    match tok.ttype {
+      TType::Ident => Ok(Node::new_ident(&tok.ttext)),
       TType::End => Err(error::Error::EndOfInput),
       _ => Err(error::Error::TokenNotMatched),
     }

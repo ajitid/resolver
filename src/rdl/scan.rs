@@ -29,6 +29,7 @@ pub enum TType {
   Number,
   String,
   Operator,
+  Assign,
   LParen,
   RParen,
   Symbol,
@@ -368,6 +369,7 @@ impl<'a> Scanner<'a> {
       let ttype = match c {
         LPAREN => TType::LParen,
         RPAREN => TType::RParen,
+        EQUAL  => TType::Assign,
         _      => TType::Symbol,
       };
       self.push(Token{
