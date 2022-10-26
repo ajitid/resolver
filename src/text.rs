@@ -29,7 +29,7 @@ impl Line {
   }
   
   pub fn width(&self) -> usize {
-    self.bytes
+    self.chars
   }
   
   pub fn left(&self) -> usize {
@@ -116,6 +116,51 @@ impl Text {
     self.lines.len()
   }
   
+  fn line_with_index<'a>(&'a self, index: usize) -> Option<(&'a Line, usize)> {
+    match self.lines.len() {
+      0 => return None,
+      1 => return if index < self.lines[0].chars { Some((&self.lines[0], 0)) } else { None },
+      _ => {}
+    }
+    
+    let mut co = 0;
+    let mut po = 0;
+    for (i, l) in self.lines.iter().enumerate() {
+      if i > 0 {
+        if index >= po && index < co {
+          return Some((&l, co));
+        }
+      }
+      po = co;
+      co = po + l.chars;
+    }
+    
+    None
+  }
+  
+  fn offset_for_index<'a>(&'a self, index: usize) -> Option<usize> {
+    let (line, chars) = match self.line_with_index(index) {
+      Some((line, chars)) => (line, chars),
+      None => return None,
+    };
+    
+    let mut rem = index - chars;
+    let mut off = 0;
+    for c in line.text(&self.text).chars() {
+      off += c.len_utf8();
+      rem -= 1;
+      if rem == 0 {
+        break
+      }
+    }
+    
+    if rem == 0 {
+      Some(line.offset + off)
+    }else{
+      None
+    }
+  }
+  
   pub fn read_line<'a>(&'a self, i: usize) -> Option<&'a str> {
     if i < self.lines.len() {
       Some(self.lines[i].text(&self.text))
@@ -173,7 +218,7 @@ impl Text {
       }
       
       lc += 1;
-      lb += 1;
+      lb += c.len_utf8();
       
       if hard || lc >= self.width {
         let br = if  hard || lw > 0 { lw } else { lc }; // break
@@ -649,6 +694,18 @@ mod tests {
     let mut t = Text::new(100);
     t.down_rel();
     assert_eq!(Pos{index: 0, x: 0, y: 0}, t.down_rel());
+  }
+  
+  #[test]
+  fn test_offsets() {
+    let t = "A → B"; // '→' is 3 UTF-8 bytes
+    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(0));
+    
+    let t = "A → B, très bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
+    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 19, chars: 16, bytes: 19, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(9));
+    
+    let t = "A → B\ntrès bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
+    assert_eq!(Some((&Line{num: 1, offset: 8, extent: 18, chars: 9, bytes: 10, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(8));
   }
   
 }
