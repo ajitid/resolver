@@ -32,16 +32,21 @@ impl<'a> Parser<'a> {
     
     let left = match self.parse_ident() {
       Ok(left) => left,
-      Err(err) => return self.parse_arith(),
+      Err(_)   => return self.parse_arith(),
     };
     
     self.scan.discard(TType::Whitespace);
-    self.scan.expect_token(TType::Assign)?;
+    
+    match self.scan.expect_token(TType::Assign) {
+      Ok(_)  => {},
+      Err(_) => return self.parse_arith_left(left),
+    };
+    
     self.scan.discard(TType::Whitespace);
     
     let right = match self.parse_arith() {
       Ok(right) => right,
-      Err(_) => return Ok(left),
+      Err(_)    => return self.parse_arith_left(left),
     };
     
     Ok(Node::new_assign(left, right))
@@ -83,7 +88,7 @@ impl<'a> Parser<'a> {
         scan::MUL => Ok(self.parse_arith_left(Node::new_mul(left, right))?),
         scan::DIV => Ok(self.parse_arith_left(Node::new_div(left, right))?),
         scan::MOD => Ok(self.parse_arith_left(Node::new_mod(left, right))?),
-        _ => Err(error::Error::TokenNotMatched),
+        _         => Err(error::Error::TokenNotMatched),
       },
       None => match opc {
         scan::ADD => Ok(Node::new_add(left, self.parse_arith()?)),
@@ -91,7 +96,7 @@ impl<'a> Parser<'a> {
         scan::MUL => Ok(Node::new_mul(left, self.parse_arith()?)),
         scan::DIV => Ok(Node::new_div(left, self.parse_arith()?)),
         scan::MOD => Ok(Node::new_mod(left, self.parse_arith()?)),
-        _ => Err(error::Error::TokenNotMatched),
+        _         => Err(error::Error::TokenNotMatched),
       },
     }
   }
@@ -110,22 +115,14 @@ impl<'a> Parser<'a> {
     }
   }
   
-  fn parse_ident(&mut self) -> Result<Node, error::Error> {
-    Ok(Node::new_ident(&self.scan.expect_token(TType::Ident)?.ttext))
-  }
-  
   fn parse_expr(&mut self) -> Result<Node, error::Error> {
     let expr = self.parse_enter()?;
-    let ttype = match self.scan.la() {
-      Some(ttype) => ttype,
-      None => return Err(error::Error::TokenNotMatched),
-    };
-    if ttype == TType::RParen {
-      self.scan.token()?;
-    }else{
-      return Err(error::Error::TokenNotMatched);
-    }
+    self.scan.expect_token(TType::RParen)?;
     Ok(expr)
+  }
+  
+  fn parse_ident(&mut self) -> Result<Node, error::Error> {
+    Ok(Node::new_ident(&self.scan.expect_token(TType::Ident)?.ttext))
   }
 }
 
