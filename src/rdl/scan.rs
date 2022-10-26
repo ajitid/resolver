@@ -179,24 +179,8 @@ impl<'a> Scanner<'a> {
     None
   }
   
-  /// Look ahead for the next token in the stream or an error if no token
-  /// can be produced. If there are no more tokens because the input stream
-  /// has been fully consumed, the End token is returned. The token is not
-  /// consumed.
-  pub fn _la(&mut self) -> Option<Token> {
-    if self.tokens.len() == 0 {
-      let _ = self.scan(); // ignore error, just produce none
-    }
-    if self.tokens.len() > 0 {
-      Some(self.tokens[0].clone())
-    }else{
-      None
-    }
-  }
-  
-  /// Look ahead for the next token type in the stream. This is equivalnt
-  /// to la() except only the type is returned.
-  pub fn la_type(&mut self) -> Option<TType> {
+  /// Look ahead for the next token type in the stream. Nothign is consumed.
+  pub fn la(&mut self) -> Option<TType> {
     if self.tokens.len() == 0 {
       let _ = self.scan(); // ignore error, just produce none
     }
@@ -232,7 +216,7 @@ impl<'a> Scanner<'a> {
   pub fn discard_fn(&mut self, check: impl Fn(TType) -> bool) -> usize {
     let mut n: usize = 0;
     loop {
-      match self.la_type() {
+      match self.la() {
         Some(next) => if check(next) {
           n += 1;
           self.step();
@@ -256,6 +240,28 @@ impl<'a> Scanner<'a> {
       Ok(self.tokens.remove(0))
     }else{
       Ok(Token::new(TType::End, ""))
+    }
+  }
+  
+  /// Look ahead for the next token type in the stream, expecting a certain
+  /// type. If the expected type is found, return it, otherwise nothing.
+  pub fn expect_token(&mut self, expect: TType) -> Result<Token, error::Error> {
+    self.expect_token_fn(|ttype| { ttype == expect })
+  }
+  
+  /// Look ahead for the next token type in the stream, expecting a certain
+  /// type. If the expected type is found, return it, otherwise nothing.
+  pub fn expect_token_fn(&mut self, check: impl Fn(TType) -> bool) -> Result<Token, error::Error> {
+    let ttype = match self.la() {
+      Some(ttype) => ttype,
+      None => return Err(error::Error::TokenNotMatched),
+    };
+    if ttype == TType::End {
+      Err(error::Error::EndOfInput)
+    }else if check(ttype) {
+      self.token()
+    }else{
+      Err(error::Error::TokenNotMatched)
     }
   }
   

@@ -17,7 +17,8 @@ impl<'a> Parser<'a> {
   
   pub fn parse(&mut self) -> Result<Node, error::Error> {
     self.scan.discard_fn(|ttype| {
-      ttype == TType::Whitespace || ttype == TType::Verbatim
+      ttype == TType::Whitespace ||
+      ttype == TType::Verbatim
     });
     self.parse_enter()
   }
@@ -28,33 +29,14 @@ impl<'a> Parser<'a> {
   
   fn parse_assign(&mut self) -> Result<Node, error::Error> {
     self.scan.discard(TType::Whitespace);
-
-    let ttype = match self.scan.la_type() {
-      Some(ttype) => ttype,
-      None => return Err(error::Error::EndOfInput),
-    };
-    if ttype != TType::Ident {
-      return self.parse_arith();
-    }
+    
     let left = match self.parse_ident() {
       Ok(left) => left,
-      Err(err) => return Err(err.into()),
+      Err(err) => return self.parse_arith(),
     };
     
     self.scan.discard(TType::Whitespace);
-    
-    let ttype = match self.scan.la_type() {
-      Some(ttype) => ttype,
-      None => return Ok(left),
-    };
-    if ttype != TType::Assign {
-      return self.parse_arith_left(left);
-    }
-    let op = match self.scan.token() {
-      Ok(op) => op,
-      Err(err) => return Err(err.into()),
-    };
-    
+    self.scan.expect_token(TType::Assign)?;
     self.scan.discard(TType::Whitespace);
     
     let right = match self.parse_arith() {
@@ -73,31 +55,24 @@ impl<'a> Parser<'a> {
   fn parse_arith_left(&mut self, left: Node) -> Result<Node, error::Error> {
     self.scan.discard(TType::Whitespace);
     
-    let ttype = match self.scan.la_type() {
-      Some(ttype) => ttype,
-      None => return Ok(left),
-    };
-    if ttype != TType::Operator {
-      return Ok(left);
-    }
-    let op = match self.scan.token() {
+    let op = match self.scan.expect_token(TType::Operator) {
       Ok(op) => op,
-      Err(err) => return Err(err.into()),
+      Err(_) => return Ok(left),
     };
     
     self.scan.discard(TType::Whitespace);
     
-    let ttype = match self.scan.la_type() {
+    let ttype = match self.scan.la() {
       Some(ttype) => ttype,
       None => return Ok(left),
     };
     let right = match ttype {
       TType::Verbatim => return Ok(left),
-      TType::End => return Ok(left),
-      TType::Ident => Some(self.parse_primary()?),
-      TType::Number => Some(self.parse_primary()?),
-      TType::LParen => Some(self.parse_primary()?),
-      _ => None,
+      TType::End      => return Ok(left),
+      TType::Ident    => Some(self.parse_primary()?),
+      TType::Number   => Some(self.parse_primary()?),
+      TType::LParen   => Some(self.parse_primary()?),
+      _               => return Ok(left),
     };
     
     let opc = op.ttext.chars().next().unwrap();
@@ -122,34 +97,26 @@ impl<'a> Parser<'a> {
   }
   
   fn parse_primary(&mut self) -> Result<Node, error::Error> {
-    let tok = match self.scan.token() {
-      Ok(tok) => tok,
-      Err(err) => return Err(err),
-    };
+    let tok = self.scan.expect_token_fn(|ttype| {
+      ttype == TType::Ident  ||
+      ttype == TType::Number ||
+      ttype == TType::LParen
+    })?;
     match tok.ttype {
-      TType::Ident => Ok(Node::new_ident(&tok.ttext)),
+      TType::Ident  => Ok(Node::new_ident(&tok.ttext)),
       TType::Number => Ok(Node::new_number(tok.ttext.parse::<f64>()?)),
       TType::LParen => self.parse_expr(),
-      TType::End => Err(error::Error::EndOfInput),
-      _ => Err(error::Error::TokenNotMatched),
+      _             => Err(error::Error::TokenNotMatched),
     }
   }
   
   fn parse_ident(&mut self) -> Result<Node, error::Error> {
-    let tok = match self.scan.token() {
-      Ok(tok) => tok,
-      Err(err) => return Err(err),
-    };
-    match tok.ttype {
-      TType::Ident => Ok(Node::new_ident(&tok.ttext)),
-      TType::End => Err(error::Error::EndOfInput),
-      _ => Err(error::Error::TokenNotMatched),
-    }
+    Ok(Node::new_ident(&self.scan.expect_token(TType::Ident)?.ttext))
   }
   
   fn parse_expr(&mut self) -> Result<Node, error::Error> {
     let expr = self.parse_enter()?;
-    let ttype = match self.scan.la_type() {
+    let ttype = match self.scan.la() {
       Some(ttype) => ttype,
       None => return Err(error::Error::TokenNotMatched),
     };
@@ -315,9 +282,9 @@ mod tests {
     cxt.set("b", unit::Unit::None(2.0));
     cxt.set("c", unit::Unit::None(3.0));
     
-    let n = parse_expr(r#"(1)"#).expect("Could not parse");
-    assert_eq!(Node::new_number(1.0), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &cxt));
+    let n = parse_expr(r#"d = 100"#).expect("Could not parse");
+    assert_eq!(Node::new_assign(Node::new_ident("d"), Node::new_number(100.0)), n);
+    assert_eq!(Ok(unit::Unit::None(100.0)), exec_node(n, &cxt));
     
   }
   
