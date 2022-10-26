@@ -34,7 +34,7 @@ impl<'a> Parser<'a> {
       Ok(left) => left,
       Err(_)   => return self.parse_arith(),
     };
-    
+
     self.scan.discard(TType::Whitespace);
     
     match self.scan.expect_token(TType::Assign) {
@@ -53,8 +53,10 @@ impl<'a> Parser<'a> {
   }
   
   fn parse_arith(&mut self) -> Result<Node, error::Error> {
-    let left = self.parse_primary()?;
-    self.parse_arith_left(left)
+    match self.parse_primary() {
+      Ok(left) => self.parse_arith_left(left),
+      Err(err) => Err(err.into()),
+    }
   }
   
   fn parse_arith_left(&mut self, left: Node) -> Result<Node, error::Error> {

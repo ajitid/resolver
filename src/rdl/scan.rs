@@ -421,11 +421,11 @@ impl<'a> Scanner<'a> {
   }
   
   fn is_operator(c: char) -> bool {
-    c == EQUAL || c == ADD || c == SUB || c == MUL || c == DIV || c == MOD
+    c == ADD || c == SUB || c == MUL || c == DIV || c == MOD
   }
   
   fn is_symbol(c: char) -> bool {
-    c == LPAREN || c == RPAREN
+    c == EQUAL || c == LPAREN || c == RPAREN
   }
   
   fn ident(&mut self) -> Result<String, error::Error> {
