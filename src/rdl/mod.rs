@@ -8,7 +8,7 @@ use scan::Scanner;
 use parse::Parser;
 use exec::Context;
 
-pub fn render(cxt: &Context, text: &str) -> String {
+pub fn render(cxt: &mut Context, text: &str) -> String {
   let mut g = String::new();
   let mut p = Parser::new(Scanner::new(text));
   let mut i = 0;
@@ -18,7 +18,7 @@ pub fn render(cxt: &Context, text: &str) -> String {
       Err(_)  => break,
     };
     
-    let res = match r.exec(&cxt) {
+    let res = match r.exec(cxt) {
       Ok(res) => res,
       Err(_)  => continue,
     };

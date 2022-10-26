@@ -60,10 +60,10 @@ impl Writer {
   
   fn draw_formula(_width: usize, _height: usize, text: &Text) -> String {
     let mut g = String::new();
-    let cxt = exec::Context::new_with_stdlib();
+    let mut cxt = exec::Context::new_with_stdlib();
     
     for l in text.lines() {
-      g.push_str(rdl::render(&cxt, l).as_ref());
+      g.push_str(rdl::render(&mut cxt, l).as_ref());
       g.push('\n');
     }
     

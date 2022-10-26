@@ -181,7 +181,7 @@ impl Node {
     }
   }
   
-  pub fn exec(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
+  pub fn exec(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
     match self.ntype {
       NType::Ident => self.exec_ident(cxt),
       NType::Number => self.exec_number(cxt),
@@ -190,7 +190,7 @@ impl Node {
     }
   }
   
-  fn exec_ident(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
+  fn exec_ident(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
     let name = self.text()?;
     match cxt.get(&name) {
       Some(v) => Ok(v),
@@ -198,26 +198,26 @@ impl Node {
     }
   }
   
-  fn exec_number(&self, _cxt: &Context) -> Result<unit::Unit, error::Error> {
+  fn exec_number(&self, _cxt: &mut Context) -> Result<unit::Unit, error::Error> {
     self.value()
   }
   
-  fn exec_assign(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
+  fn exec_assign(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
     let left = self.left()?;
     let right = self.right()?;
     let ident = match left.ntype {
       NType::Ident => left.text()?,
       _ => return Err(error::Error::InvalidASTNode(format!("{}: Expected identifier as left child, got: {}", self.ntype, left.ntype))),
     };
-    println!(">>>> >>>> ASSIGN {} = {}", ident, right.print()?);
     let right = match right.exec(cxt) {
       Ok(right) => right,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec right: {}", self.ntype, err))),
     };
+    cxt.set(ident, right);
     Ok(right)
   }
   
-  fn exec_arith(&self, cxt: &Context) -> Result<unit::Unit, error::Error> {
+  fn exec_arith(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
     let left = match self.left()?.exec(cxt) {
       Ok(left) => left,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
@@ -274,28 +274,28 @@ mod tests {
     cxt.set("c", unit::Unit::None(3.0));
     
     let n = Node::new_ident("a");
-    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&mut cxt));
     
     let n = Node::new_number(1.25);
-    assert_eq!(Ok(unit::Unit::None(1.25)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(1.25)), n.exec(&mut cxt));
     
     let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
-    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&mut cxt));
     
     let n = Node::new_sub(Node::new_ident("a"), Node::new_ident("c"));
-    assert_eq!(Ok(unit::Unit::None(-2.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(-2.0)), n.exec(&mut cxt));
     
     let n = Node::new_mul(Node::new_ident("a"), Node::new_ident("c"));
-    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&mut cxt));
     
     let n = Node::new_div(Node::new_ident("a"), Node::new_ident("b"));
-    assert_eq!(Ok(unit::Unit::None(0.5)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(0.5)), n.exec(&mut cxt));
     
     let n = Node::new_mod(Node::new_ident("c"), Node::new_ident("b"));
-    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&mut cxt));
     
     let n = Node::new_assign(Node::new_ident("d"), Node::new_number(123.0));
-    assert_eq!(Ok(unit::Unit::None(123.0)), n.exec(&cxt));
+    assert_eq!(Ok(unit::Unit::None(123.0)), n.exec(&mut cxt));
   }
   
 }
