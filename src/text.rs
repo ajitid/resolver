@@ -245,8 +245,8 @@ impl Text {
         });
         
         ly += 1;  // increment line number
-        ac += cc; // increment absolute offset
-        ab += cb; // increment absolute offset
+        ac += bc; // increment visual offset, in chars
+        ab += cb; // increment absolute offset, in bytes
         
         lc = lc - cc; // remaining in the current line to carry over, in chars
         lb = lb - cb; // remaining in the current line to carry over, in bytes
@@ -731,7 +731,7 @@ mod tests {
     let t = "A → B\ntrès bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
     let x = Text::new_with_str(100, t);
     assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent:  8, chars: 5, bytes:  7, hard: true}), x.line_with_index(1));
-    assert_eq!(Some(&Line{num: 0, coff: 5, boff: 8, extent: 18, chars: 9, bytes: 10, hard: false}), x.line_with_index(5));
+    assert_eq!(Some(&Line{num: 1, coff: 5, boff: 8, extent: 18, chars: 9, bytes: 10, hard: false}), x.line_with_index(5));
     assert_eq!(Some(1),  x.offset_for_index(1));
     assert_eq!(Some(5),  x.offset_for_index(3));
     assert_eq!(Some(8),  x.offset_for_index(5));
