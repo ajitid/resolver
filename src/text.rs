@@ -117,48 +117,48 @@ impl Text {
   }
   
   fn line_with_index<'a>(&'a self, index: usize) -> Option<(&'a Line, usize)> {
-    match self.lines.len() {
-      0 => return None,
-      1 => return if index < self.lines[0].chars { Some((&self.lines[0], 0)) } else { None },
-      _ => {}
+    if self.lines.len() == 0 {
+      return None;
     }
     
     let mut co = 0;
     let mut po = 0;
     for (i, l) in self.lines.iter().enumerate() {
-      if i > 0 {
-        if index >= po && index < co {
-          return Some((&l, co));
-        }
+      co = po + l.chars;
+      println!(">>> #{}: {} <= {} < {} @ {:?}", i, po, index, co, l);
+      if index >= po && index < co {
+        return Some((&l, po));
       }
       po = co;
-      co = po + l.chars;
     }
     
     None
   }
   
   fn offset_for_index<'a>(&'a self, index: usize) -> Option<usize> {
-    let (line, chars) = match self.line_with_index(index) {
-      Some((line, chars)) => (line, chars),
+    println!("@@@ #-: {}", index);
+    let (line, base) = match self.line_with_index(index) {
+      Some((line, base)) => (line, base),
       None => return None,
     };
     
-    let mut rem = index - chars;
-    let mut off = 0;
+    println!("@@@ #{}: {} <= {} < {} @ {:?}", line.num, base, index, base + line.chars, line);
+    
+    let mut rem = index - base;
+    if rem == 0 {
+      return Some(line.offset);
+    }
+    
+    let mut ecw = 0;
     for c in line.text(&self.text).chars() {
-      off += c.len_utf8();
+      ecw += c.len_utf8();
       rem -= 1;
       if rem == 0 {
-        break
+        return Some(line.offset + ecw);
       }
     }
     
-    if rem == 0 {
-      Some(line.offset + off)
-    }else{
-      None
-    }
+    None
   }
   
   pub fn read_line<'a>(&'a self, i: usize) -> Option<&'a str> {
@@ -181,11 +181,13 @@ impl Text {
   fn reflow(&mut self) -> &mut Self {
     let mut l: Vec<Line> = Vec::new();
     
-    let mut ao: usize = 0; // absolute text offset
-    let mut lc: usize = 0; // line width in chars
-    let mut lb: usize = 0; // line width in bytes
-    let mut lw: usize = 0; // line width to beginning of last whitespace
-    let mut lr: usize = 0; // line width to beginning of last non-whitespace
+    let mut ao: usize = 0; // absolute text offset, in bytes
+    let mut lc: usize = 0; // line width, in chars
+    let mut lb: usize = 0; // line width, in bytes
+    let mut wc: usize = 0; // line width to beginning of last whitespace, in chars
+    let mut wb: usize = 0; // line width to beginning of last whitespace, in bytes
+    let mut rc: usize = 0; // line width to beginning of last non-whitespace, in chars
+    let mut rb: usize = 0; // line width to beginning of last non-whitespace, in bytes
     let mut ly: usize = 0; // line number
     let mut p:  char = '\0'; // previous iteration character
     
@@ -201,19 +203,23 @@ impl Text {
       let hard = Self::is_break(c);
       if hard {
         if !p.is_whitespace() {
-          lr = lc;
+          rc = lc;
+          rb = lb;
         }
-        if lw == 0 { // no whitespace boundary; set to here
-          lw = lc;
+        if wc == 0 { // no whitespace boundary; set to here
+          wc = lc;
+          wb = lb;
         }
       }
       if c.is_whitespace() {
         if !p.is_whitespace() {
-          lw = lc;
+          wc = lc;
+          wb = lb;
         }
       }else{
         if p.is_whitespace() {
-          lr = lc;
+          rc = lc;
+          rb = lb;
         }
       }
       
@@ -221,26 +227,30 @@ impl Text {
       lb += c.len_utf8();
       
       if hard || lc >= self.width {
-        let br = if  hard || lw > 0 { lw } else { lc }; // break
-        let cw = if !hard && lr > 0 { lr } else { lc }; // consume width
+        let bc = if  hard || wc > 0 { wc } else { lc }; // break
+        let bb = if  hard || wb > 0 { wb } else { lb }; // break
+        let cc = if !hard && rc > 0 { rc } else { lc }; // consume width, in chars
+        let cb = if !hard && rb > 0 { rb } else { lb }; // consume width, in bytes
         
         l.push(Line{
           num:    ly,
           offset: ao,
-          extent: ao + cw, // abs offset to beginning of break point
-          chars:  br,      // width to break point
-          bytes:  br,      // same as chars for now
+          extent: ao + cb, // abs offset to beginning of break point, in bytes
+          chars:  bc,      // width to break point, in chars
+          bytes:  bb,      // width to break point, in bytes
           hard:   hard,    // is this a hard break that ends in a newline literal?
         });
         
         ly += 1;  // increment line number
-        ao += cw; // increment absolute offset
+        ao += cb; // increment absolute offset
         
-        let rm = lc - cw; // remaining in the current line to carry over
-        lc = rm;
-        lb = rm;
-        lw = 0;   // reset whitespace boundary
-        lr = 0;   // reset non-whitespace boundary
+        lc = lc - cc; // remaining in the current line to carry over, in chars
+        lb = lb - cb; // remaining in the current line to carry over, in bytes
+        
+        wc = 0;   // reset whitespace boundary, in chars
+        wb = 0;   // reset whitespace boundary, in bytes
+        rc = 0;   // reset non-whitespace boundary, in chars
+        rb = 0;   // reset non-whitespace boundary, in bytes
         
         p = '\0';
       }else{
@@ -253,8 +263,8 @@ impl Text {
         num:    ly,
         offset: ao,
         extent: ao + lb, // abs offset to end of text; last line trails whitespace
-        chars:  lc,      // width to end of text; last line trails whitespace
-        bytes:  lb,      // same as chars for now
+        chars:  lc,      // width to end of text, in chars; last line trails whitespace
+        bytes:  lb,      // width to end of text, in bytes; last line trails whitespace
         hard:   false,   // can't be a hard break here
       });
     }
@@ -700,12 +710,17 @@ mod tests {
   fn test_offsets() {
     let t = "A → B"; // '→' is 3 UTF-8 bytes
     assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(0));
+    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(1));
     
     let t = "A → B, très bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
     assert_eq!(Some((&Line{num: 0, offset: 0, extent: 19, chars: 16, bytes: 19, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(9));
     
     let t = "A → B\ntrès bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
-    assert_eq!(Some((&Line{num: 1, offset: 8, extent: 18, chars: 9, bytes: 10, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(8));
+    let x = Text::new_with_str(100, t);
+    println!(">>> TTT: {}", t);
+    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 8, chars: 6, bytes: 8, hard: true}, 0)), x.line_with_index(1));
+    assert_eq!(Some(1), x.offset_for_index(1));
+    assert_eq!(Some(5), x.offset_for_index(3));
   }
   
 }
