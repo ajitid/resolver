@@ -500,7 +500,7 @@ mod tests {
       8, "Hello there",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: false},
-        Line{num: 1, coff: 6, boff: 6, extent: 11, chars: 5, bytes: 5, hard: false},
+        Line{num: 1, coff: 5, boff: 6, extent: 11, chars: 5, bytes: 5, hard: false},
       ],
       vec![
         "Hello",
@@ -512,9 +512,9 @@ mod tests {
       8, "Hello there monchambo",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: false},
-        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 5, bytes: 5, hard: false},
-        Line{num: 2, coff: 12, boff: 12, extent: 20, chars: 8, bytes: 8, hard: false},
-        Line{num: 3, coff: 20, boff: 20, extent: 21, chars: 1, bytes: 1, hard: false},
+        Line{num: 1, coff: 5, boff: 6, extent: 12, chars: 5, bytes: 5, hard: false},
+        Line{num: 2, coff: 10, boff: 12, extent: 20, chars: 8, bytes: 8, hard: false},
+        Line{num: 3, coff: 18, boff: 20, extent: 21, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
