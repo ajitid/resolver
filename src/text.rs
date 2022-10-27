@@ -587,6 +587,18 @@ mod tests {
     );
 
     test_reflow_case!(
+      100, "Hello 😎\nMonchambo.",
+      vec![
+        Line{num: 0, coff: 0, boff: 0,  extent: 11, chars: 7,  bytes: 10, hard: true},
+        Line{num: 1, coff: 8, boff: 11, extent: 21, chars: 10, bytes: 10, hard: false},
+      ],
+      vec![
+        "Hello 😎",
+        "Monchambo.",
+      ]
+    );
+
+    test_reflow_case!(
       100, "Hello\nthere.\n",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
