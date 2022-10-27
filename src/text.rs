@@ -705,11 +705,15 @@ mod tests {
   #[test]
   fn test_offsets() {
     let t = "A → B"; // '→' is 3 UTF-8 bytes
-    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(0));
-    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(1));
+    let x = Text::new_with_str(100, t);
+    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), x.line_with_index(0));
+    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), x.line_with_index(1));
     
     let t = "A → B, très bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
-    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 19, chars: 16, bytes: 19, hard: false}, 0)), Text::new_with_str(100, t).line_with_index(9));
+    let x = Text::new_with_str(100, t);
+    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 19, chars: 16, bytes: 19, hard: false}, 0)), x.line_with_index(9));
+    assert_eq!(None, x.line_with_index(16));
+    assert_eq!(None, x.line_with_index(99));
     
     let t = "A → B\ntrès bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
     let x = Text::new_with_str(100, t);
@@ -718,6 +722,8 @@ mod tests {
     assert_eq!(Some(5),  x.offset_for_index(3));
     assert_eq!(Some(8),  x.offset_for_index(5));
     assert_eq!(Some(12), x.offset_for_index(8));
+    assert_eq!(None,     x.offset_for_index(16));
+    assert_eq!(None,     x.offset_for_index(99));
   }
   
 }
