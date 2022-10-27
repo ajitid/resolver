@@ -16,16 +16,17 @@ pub struct Pos {
 #[derive(Debug, Eq, PartialEq)]
 pub struct Line {
   num:    usize,
-  offset: usize,
-  extent: usize,
-  chars:  usize,
-  bytes:  usize,
-  hard:   bool, // does this line break at a literal newline?
+  coff:   usize, // line absolute lower bound, in chars
+  boff:   usize, // line absolute lower bound, in bytes
+  extent: usize, // line absolute upper bound, in bytes
+  chars:  usize, // visual width, in chars
+  bytes:  usize, // visual width, in bytes
+  hard:   bool,  // does this line break at a literal newline?
 }
 
 impl Line {
   pub fn text<'a>(&self, text: &'a str) -> &'a str {
-    &text[self.offset..self.offset + self.bytes]
+    &text[self.boff..self.boff + self.bytes]
   }
   
   pub fn width(&self) -> usize {
@@ -33,11 +34,11 @@ impl Line {
   }
   
   pub fn left(&self) -> usize {
-    self.offset
+    self.boff
   }
   
   pub fn right(&self) -> usize {
-    self.offset + self.bytes
+    self.boff + self.bytes
   }
   
   pub fn extent(&self) -> usize {
@@ -45,14 +46,14 @@ impl Line {
   }
   
   pub fn contains(&self, idx: usize) -> bool {
-    idx >= self.offset && idx < self.extent
+    idx >= self.boff && idx < self.extent
   }
   
   pub fn pos(&self, width: usize, idx: usize) -> Option<Pos> {
     if !self.contains(idx) {
       return None;
     }
-    let eix = idx - self.offset;
+    let eix = idx - self.boff;
     if eix < width {
       Some(Pos{index: idx, x: eix, y: self.num})
     }else{
@@ -116,33 +117,27 @@ impl Text {
     self.lines.len()
   }
   
-  fn line_with_index<'a>(&'a self, index: usize) -> Option<(&'a Line, usize)> {
+  fn line_with_index<'a>(&'a self, index: usize) -> Option<&'a Line> {
     if self.lines.len() == 0 {
       return None;
     }
-    
-    let mut co = 0;
-    let mut po = 0;
-    for (i, l) in self.lines.iter().enumerate() {
-      co = po + l.chars;
-      if index >= po && index < co {
-        return Some((&l, po));
+    for l in &self.lines {
+      if index >= l.coff && index < l.coff + l.chars {
+        return Some(l);
       }
-      po = co;
     }
-    
     None
   }
   
   fn offset_for_index<'a>(&'a self, index: usize) -> Option<usize> {
-    let (line, base) = match self.line_with_index(index) {
-      Some((line, base)) => (line, base),
+    let line = match self.line_with_index(index) {
+      Some(line) => line,
       None => return None,
     };
     
-    let mut rem = index - base;
+    let mut rem = index - line.coff;
     if rem == 0 {
-      return Some(line.offset);
+      return Some(line.boff);
     }
     
     let mut ecw = 0;
@@ -150,11 +145,21 @@ impl Text {
       ecw += c.len_utf8();
       rem -= 1;
       if rem == 0 {
-        return Some(line.offset + ecw);
+        return Some(line.boff + ecw);
       }
     }
     
     None
+  }
+  
+  fn next_offset<'a>(&'a self) -> usize {
+    let n = self.lines.len();
+    if n > 0 {
+      let l = &self.lines[n-1];
+      l.boff + l.extent
+    }else{
+      0
+    }
   }
   
   pub fn read_line<'a>(&'a self, i: usize) -> Option<&'a str> {
@@ -177,7 +182,8 @@ impl Text {
   fn reflow(&mut self) -> &mut Self {
     let mut l: Vec<Line> = Vec::new();
     
-    let mut ao: usize = 0; // absolute text offset, in bytes
+    let mut ac: usize = 0; // absolute text offset, in chars
+    let mut ab: usize = 0; // absolute text offset, in bytes
     let mut lc: usize = 0; // line width, in chars
     let mut lb: usize = 0; // line width, in bytes
     let mut wc: usize = 0; // line width to beginning of last whitespace, in chars
@@ -230,15 +236,17 @@ impl Text {
         
         l.push(Line{
           num:    ly,
-          offset: ao,
-          extent: ao + cb, // abs offset to beginning of break point, in bytes
+          coff:   ac,
+          boff:   ab,
+          extent: ab + cb, // abs offset to beginning of break point, in bytes
           chars:  bc,      // width to break point, in chars
           bytes:  bb,      // width to break point, in bytes
           hard:   hard,    // is this a hard break that ends in a newline literal?
         });
         
         ly += 1;  // increment line number
-        ao += cb; // increment absolute offset
+        ac += cc; // increment absolute offset
+        ab += cb; // increment absolute offset
         
         lc = lc - cc; // remaining in the current line to carry over, in chars
         lb = lb - cb; // remaining in the current line to carry over, in bytes
@@ -257,8 +265,9 @@ impl Text {
     if lc > 0 {
       l.push(Line{
         num:    ly,
-        offset: ao,
-        extent: ao + lb, // abs offset to end of text; last line trails whitespace
+        coff:   ac,
+        boff:   ab,
+        extent: ab + lb, // abs offset to end of text; last line trails whitespace
         chars:  lc,      // width to end of text, in chars; last line trails whitespace
         bytes:  lb,      // width to end of text, in bytes; last line trails whitespace
         hard:   false,   // can't be a hard break here
@@ -282,7 +291,7 @@ impl Text {
     let l = &self.lines[n];
     let w = l.width();
     if w > pos.x {
-      Pos{x: pos.x, y: n, index: l.offset + pos.x}
+      Pos{x: pos.x, y: n, index: l.boff + pos.x}
     }else{
       Pos{x: w, y: n, index: l.right()}
     }
@@ -313,7 +322,7 @@ impl Text {
     let line = &self.lines[n];
     let w = line.width();
     if w > pos.x {
-      Pos{x: pos.x, y: n, index: line.offset + pos.x}
+      Pos{x: pos.x, y: n, index: line.boff + pos.x}
     }else{
       Pos{x: w, y: n, index: line.right()}
     }
@@ -352,7 +361,7 @@ impl Text {
   pub fn home(&mut self, idx: usize) -> Pos {
     let pos = self.index(idx);
     let line = &self.lines[pos.y];
-    Pos{x: 0, y: pos.y, index: line.offset}
+    Pos{x: 0, y: pos.y, index: line.boff}
   }
   
   pub fn home_rel(&mut self) -> Pos {
@@ -405,7 +414,11 @@ impl Text {
   }
   
   pub fn insert(&mut self, idx: usize, c: char) -> Pos {
-    self.text.insert(idx, c);
+    let offset = match self.offset_for_index(idx) {
+      Some(offset) => offset,
+      None => self.next_offset(),
+    };
+    self.text.insert(offset, c);
     return self.reflow().index(idx + 1);
   }
   
@@ -464,7 +477,7 @@ mod tests {
     test_reflow_case!(
       100, "Hello",
       vec![
-        Line{num: 0, offset: 0, extent: 5, chars: 5, bytes: 5, hard: false,},
+        Line{num: 0, coff: 0, boff: 0, extent: 5, chars: 5, bytes: 5, hard: false,},
       ],
       vec![
         "Hello",
@@ -474,8 +487,8 @@ mod tests {
     test_reflow_case!(
       3, "Hello",
       vec![
-          Line{num: 0, offset: 0, extent: 3, chars: 3, bytes: 3, hard: false},
-          Line{num: 1, offset: 3, extent: 5, chars: 2, bytes: 2, hard: false},
+          Line{num: 0, coff: 0, boff: 0, extent: 3, chars: 3, bytes: 3, hard: false},
+          Line{num: 1, coff: 3, boff: 3, extent: 5, chars: 2, bytes: 2, hard: false},
       ],
       vec![
         "Hel",
@@ -486,8 +499,8 @@ mod tests {
     test_reflow_case!(
       8, "Hello there",
       vec![
-        Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
-        Line{num: 1, offset: 6, extent: 11, chars: 5, bytes: 5, hard: false},
+        Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: false},
+        Line{num: 1, coff: 6, boff: 6, extent: 11, chars: 5, bytes: 5, hard: false},
       ],
       vec![
         "Hello",
@@ -498,10 +511,10 @@ mod tests {
     test_reflow_case!(
       8, "Hello there monchambo",
       vec![
-        Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: false},
-        Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5, hard: false},
-        Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8, hard: false},
-        Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1, hard: false},
+        Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: false},
+        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 5, bytes: 5, hard: false},
+        Line{num: 2, coff: 12, boff: 12, extent: 20, chars: 8, bytes: 8, hard: false},
+        Line{num: 3, coff: 20, boff: 20, extent: 21, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -514,10 +527,10 @@ mod tests {
     test_reflow_case!(
       8, "Hello\nthere monchambo",
       vec![
-        Line{num: 0, offset: 0, extent: 6, chars: 5, bytes: 5, hard: true},
-        Line{num: 1, offset: 6, extent: 12, chars: 5, bytes: 5, hard: false},
-        Line{num: 2, offset: 12, extent: 20, chars: 8, bytes: 8, hard: false},
-        Line{num: 3, offset: 20, extent: 21, chars: 1, bytes: 1, hard: false},
+        Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 5, bytes: 5, hard: false},
+        Line{num: 2, coff: 12, boff: 12, extent: 20, chars: 8, bytes: 8, hard: false},
+        Line{num: 3, coff: 20, boff: 20, extent: 21, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -530,8 +543,8 @@ mod tests {
     test_reflow_case!(
       100, "Hello\nthere.",
       vec![
-        Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, offset: 6, extent: 12, chars: 6, bytes: 6, hard: false},
+        Line{num: 0, coff: 0, boff: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         "Hello",
@@ -542,8 +555,8 @@ mod tests {
     test_reflow_case!(
       100, "Hello\nthere.\n",
       vec![
-        Line{num: 0, offset: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, offset: 6, extent: 13, chars: 6, bytes: 6, hard: true},
+        Line{num: 0, coff: 0, boff: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6, boff: 6, extent: 13, chars: 6, bytes: 6, hard: true},
       ],
       vec![
         "Hello",
@@ -554,9 +567,9 @@ mod tests {
     test_reflow_case!(
       100, "Hello\nthere.\n!",
       vec![
-        Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, offset: 6,  extent: 13, chars: 6, bytes: 6, hard: true},
-        Line{num: 2, offset: 13, extent: 14, chars: 1, bytes: 1, hard: false},
+        Line{num: 0, coff: 0,  boff: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6,  boff: 6,  extent: 13, chars: 6, bytes: 6, hard: true},
+        Line{num: 2, coff: 13, boff: 13, extent: 14, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -568,9 +581,9 @@ mod tests {
     test_reflow_case!(
       100, "Hello\n there.\n!",
       vec![
-        Line{num: 0, offset: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, offset: 6,  extent: 14, chars: 7, bytes: 7, hard: true},
-        Line{num: 2, offset: 14, extent: 15, chars: 1, bytes: 1, hard: false},
+        Line{num: 0, coff: 0,  boff: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6,  boff: 6,  extent: 14, chars: 7, bytes: 7, hard: true},
+        Line{num: 2, coff: 14, boff: 14, extent: 15, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -582,10 +595,10 @@ mod tests {
     test_reflow_case!(
       100, " \n \n \nHello.",
       vec![
-        Line{num: 0, offset: 0, extent: 2,  chars: 1, bytes: 1, hard: true},
-        Line{num: 1, offset: 2, extent: 4,  chars: 1, bytes: 1, hard: true},
-        Line{num: 2, offset: 4, extent: 6,  chars: 1, bytes: 1, hard: true},
-        Line{num: 3, offset: 6, extent: 12, chars: 6, bytes: 6, hard: false},
+        Line{num: 0, coff: 0, boff: 0, extent: 2,  chars: 1, bytes: 1, hard: true},
+        Line{num: 1, coff: 2, boff: 2, extent: 4,  chars: 1, bytes: 1, hard: true},
+        Line{num: 2, coff: 4, boff: 4, extent: 6,  chars: 1, bytes: 1, hard: true},
+        Line{num: 3, coff: 6, boff: 6, extent: 12, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         " ",
@@ -598,10 +611,10 @@ mod tests {
     test_reflow_case!(
       100, "\n\n\nHello.",
       vec![
-        Line{num: 0, offset: 0, extent: 1, chars: 0, bytes: 0, hard: true},
-        Line{num: 1, offset: 1, extent: 2, chars: 0, bytes: 0, hard: true},
-        Line{num: 2, offset: 2, extent: 3, chars: 0, bytes: 0, hard: true},
-        Line{num: 3, offset: 3, extent: 9, chars: 6, bytes: 6, hard: false},
+        Line{num: 0, coff: 0, boff: 0, extent: 1, chars: 0, bytes: 0, hard: true},
+        Line{num: 1, coff: 1, boff: 1, extent: 2, chars: 0, bytes: 0, hard: true},
+        Line{num: 2, coff: 2, boff: 2, extent: 3, chars: 0, bytes: 0, hard: true},
+        Line{num: 3, coff: 3, boff: 3, extent: 9, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         "",
@@ -614,9 +627,9 @@ mod tests {
     test_reflow_case!(
       100, "\nHello.\nOk",
       vec![
-        Line{num: 0, offset: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
-        Line{num: 1, offset: 1, extent: 8,  chars: 6, bytes: 6, hard: true},
-        Line{num: 2, offset: 8, extent: 10, chars: 2, bytes: 2, hard: false},
+        Line{num: 0, coff: 0, boff: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
+        Line{num: 1, coff: 1, boff: 1, extent: 8,  chars: 6, bytes: 6, hard: true},
+        Line{num: 2, coff: 8, boff: 8, extent: 10, chars: 2, bytes: 2, hard: false},
       ],
       vec![
         "",
@@ -628,11 +641,11 @@ mod tests {
     test_reflow_case!(
       5, "\n\nHello.\nOk",
       vec![
-        Line{num: 0, offset: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
-        Line{num: 1, offset: 1, extent: 2,  chars: 0, bytes: 0, hard: true},
-        Line{num: 2, offset: 2, extent: 7,  chars: 5, bytes: 5, hard: false},
-        Line{num: 3, offset: 7, extent: 9,  chars: 1, bytes: 1, hard: true},
-        Line{num: 4, offset: 9, extent: 11, chars: 2, bytes: 2, hard: false},
+        Line{num: 0, coff: 0, boff: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
+        Line{num: 1, coff: 1, boff: 1, extent: 2,  chars: 0, bytes: 0, hard: true},
+        Line{num: 2, coff: 2, boff: 2, extent: 7,  chars: 5, bytes: 5, hard: false},
+        Line{num: 3, coff: 7, boff: 7, extent: 9,  chars: 1, bytes: 1, hard: true},
+        Line{num: 4, coff: 9, boff: 9, extent: 11, chars: 2, bytes: 2, hard: false},
       ],
       vec![
         "",
@@ -706,18 +719,19 @@ mod tests {
   fn test_offsets() {
     let t = "A → B"; // '→' is 3 UTF-8 bytes
     let x = Text::new_with_str(100, t);
-    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), x.line_with_index(0));
-    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 7, chars: 5, bytes: 7, hard: false}, 0)), x.line_with_index(1));
+    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent: 7, chars: 5, bytes: 7, hard: false}), x.line_with_index(0));
+    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent: 7, chars: 5, bytes: 7, hard: false}), x.line_with_index(1));
     
     let t = "A → B, très bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
     let x = Text::new_with_str(100, t);
-    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 19, chars: 16, bytes: 19, hard: false}, 0)), x.line_with_index(9));
+    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent: 19, chars: 16, bytes: 19, hard: false}), x.line_with_index(9));
     assert_eq!(None, x.line_with_index(16));
     assert_eq!(None, x.line_with_index(99));
     
     let t = "A → B\ntrès bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
     let x = Text::new_with_str(100, t);
-    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 8, chars: 5, bytes: 7, hard: true}, 0)), x.line_with_index(1));
+    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent:  8, chars: 5, bytes:  7, hard: true}), x.line_with_index(1));
+    assert_eq!(Some(&Line{num: 0, coff: 5, boff: 8, extent: 18, chars: 9, bytes: 10, hard: false}), x.line_with_index(5));
     assert_eq!(Some(1),  x.offset_for_index(1));
     assert_eq!(Some(5),  x.offset_for_index(3));
     assert_eq!(Some(8),  x.offset_for_index(5));
