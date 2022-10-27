@@ -125,7 +125,6 @@ impl Text {
     let mut po = 0;
     for (i, l) in self.lines.iter().enumerate() {
       co = po + l.chars;
-      println!(">>> #{}: {} <= {} < {} @ {:?}", i, po, index, co, l);
       if index >= po && index < co {
         return Some((&l, po));
       }
@@ -136,13 +135,10 @@ impl Text {
   }
   
   fn offset_for_index<'a>(&'a self, index: usize) -> Option<usize> {
-    println!("@@@ #-: {}", index);
     let (line, base) = match self.line_with_index(index) {
       Some((line, base)) => (line, base),
       None => return None,
     };
-    
-    println!("@@@ #{}: {} <= {} < {} @ {:?}", line.num, base, index, base + line.chars, line);
     
     let mut rem = index - base;
     if rem == 0 {
@@ -717,10 +713,11 @@ mod tests {
     
     let t = "A → B\ntrès bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
     let x = Text::new_with_str(100, t);
-    println!(">>> TTT: {}", t);
-    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 8, chars: 6, bytes: 8, hard: true}, 0)), x.line_with_index(1));
-    assert_eq!(Some(1), x.offset_for_index(1));
-    assert_eq!(Some(5), x.offset_for_index(3));
+    assert_eq!(Some((&Line{num: 0, offset: 0, extent: 8, chars: 5, bytes: 7, hard: true}, 0)), x.line_with_index(1));
+    assert_eq!(Some(1),  x.offset_for_index(1));
+    assert_eq!(Some(5),  x.offset_for_index(3));
+    assert_eq!(Some(8),  x.offset_for_index(5));
+    assert_eq!(Some(12), x.offset_for_index(8));
   }
   
 }
