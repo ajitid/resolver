@@ -528,9 +528,9 @@ mod tests {
       8, "Hello\nthere monchambo",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 5, bytes: 5, hard: false},
-        Line{num: 2, coff: 12, boff: 12, extent: 20, chars: 8, bytes: 8, hard: false},
-        Line{num: 3, coff: 20, boff: 20, extent: 21, chars: 1, bytes: 1, hard: false},
+        Line{num: 1, coff: 5, boff: 6, extent: 12, chars: 5, bytes: 5, hard: false},
+        Line{num: 2, coff: 10, boff: 12, extent: 20, chars: 8, bytes: 8, hard: false},
+        Line{num: 3, coff: 18, boff: 20, extent: 21, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -544,7 +544,7 @@ mod tests {
       100, "Hello\nthere.",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 6, bytes: 6, hard: false},
+        Line{num: 1, coff: 5, boff: 6, extent: 12, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         "Hello",
@@ -556,7 +556,7 @@ mod tests {
       100, "Hello\nthere.\n",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6, boff: 6, extent: 13, chars: 6, bytes: 6, hard: true},
+        Line{num: 1, coff: 5, boff: 6, extent: 13, chars: 6, bytes: 6, hard: true},
       ],
       vec![
         "Hello",
@@ -568,8 +568,8 @@ mod tests {
       100, "Hello\nthere.\n!",
       vec![
         Line{num: 0, coff: 0,  boff: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6,  boff: 6,  extent: 13, chars: 6, bytes: 6, hard: true},
-        Line{num: 2, coff: 13, boff: 13, extent: 14, chars: 1, bytes: 1, hard: false},
+        Line{num: 1, coff: 5,  boff: 6,  extent: 13, chars: 6, bytes: 6, hard: true},
+        Line{num: 2, coff: 11, boff: 13, extent: 14, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -582,8 +582,8 @@ mod tests {
       100, "Hello\n there.\n!",
       vec![
         Line{num: 0, coff: 0,  boff: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6,  boff: 6,  extent: 14, chars: 7, bytes: 7, hard: true},
-        Line{num: 2, coff: 14, boff: 14, extent: 15, chars: 1, bytes: 1, hard: false},
+        Line{num: 1, coff: 5,  boff: 6,  extent: 14, chars: 7, bytes: 7, hard: true},
+        Line{num: 2, coff: 12, boff: 14, extent: 15, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -596,9 +596,9 @@ mod tests {
       100, " \n \n \nHello.",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 2,  chars: 1, bytes: 1, hard: true},
-        Line{num: 1, coff: 2, boff: 2, extent: 4,  chars: 1, bytes: 1, hard: true},
-        Line{num: 2, coff: 4, boff: 4, extent: 6,  chars: 1, bytes: 1, hard: true},
-        Line{num: 3, coff: 6, boff: 6, extent: 12, chars: 6, bytes: 6, hard: false},
+        Line{num: 1, coff: 1, boff: 2, extent: 4,  chars: 1, bytes: 1, hard: true},
+        Line{num: 2, coff: 2, boff: 4, extent: 6,  chars: 1, bytes: 1, hard: true},
+        Line{num: 3, coff: 3, boff: 6, extent: 12, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         " ",
@@ -612,9 +612,9 @@ mod tests {
       100, "\n\n\nHello.",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 1, chars: 0, bytes: 0, hard: true},
-        Line{num: 1, coff: 1, boff: 1, extent: 2, chars: 0, bytes: 0, hard: true},
-        Line{num: 2, coff: 2, boff: 2, extent: 3, chars: 0, bytes: 0, hard: true},
-        Line{num: 3, coff: 3, boff: 3, extent: 9, chars: 6, bytes: 6, hard: false},
+        Line{num: 1, coff: 0, boff: 1, extent: 2, chars: 0, bytes: 0, hard: true},
+        Line{num: 2, coff: 0, boff: 2, extent: 3, chars: 0, bytes: 0, hard: true},
+        Line{num: 3, coff: 0, boff: 3, extent: 9, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         "",
@@ -628,8 +628,8 @@ mod tests {
       100, "\nHello.\nOk",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
-        Line{num: 1, coff: 1, boff: 1, extent: 8,  chars: 6, bytes: 6, hard: true},
-        Line{num: 2, coff: 8, boff: 8, extent: 10, chars: 2, bytes: 2, hard: false},
+        Line{num: 1, coff: 0, boff: 1, extent: 8,  chars: 6, bytes: 6, hard: true},
+        Line{num: 2, coff: 6, boff: 8, extent: 10, chars: 2, bytes: 2, hard: false},
       ],
       vec![
         "",
@@ -642,10 +642,10 @@ mod tests {
       5, "\n\nHello.\nOk",
       vec![
         Line{num: 0, coff: 0, boff: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
-        Line{num: 1, coff: 1, boff: 1, extent: 2,  chars: 0, bytes: 0, hard: true},
-        Line{num: 2, coff: 2, boff: 2, extent: 7,  chars: 5, bytes: 5, hard: false},
-        Line{num: 3, coff: 7, boff: 7, extent: 9,  chars: 1, bytes: 1, hard: true},
-        Line{num: 4, coff: 9, boff: 9, extent: 11, chars: 2, bytes: 2, hard: false},
+        Line{num: 1, coff: 0, boff: 1, extent: 2,  chars: 0, bytes: 0, hard: true},
+        Line{num: 2, coff: 0, boff: 2, extent: 7,  chars: 5, bytes: 5, hard: false},
+        Line{num: 3, coff: 5, boff: 7, extent: 9,  chars: 1, bytes: 1, hard: true},
+        Line{num: 4, coff: 6, boff: 9, extent: 11, chars: 2, bytes: 2, hard: false},
       ],
       vec![
         "",
