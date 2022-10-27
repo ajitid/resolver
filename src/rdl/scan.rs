@@ -545,18 +545,18 @@ mod tests {
     let s = r#"Hello=122"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
-    assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=")), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     
-    let s = r#"=+-*/%"#; // consuming operators is greedy
+    let s = r#"+-*/%"#; // consuming operators is greedy
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token::new(TType::Operator, "=+-*/%")), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "+-*/%")), t.token());
     
     let s = r#"Hello    = 122"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
     assert_eq!(Ok(Token::new(TType::Whitespace, "    ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=")), t.token());
     assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     
@@ -564,7 +564,7 @@ mod tests {
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
     assert_eq!(Ok(Token::new(TType::Verbatim, "? ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=")), t.token());
     assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
@@ -578,7 +578,7 @@ mod tests {
     assert_eq!(Ok(Token::new(TType::Verbatim, ", ")), t.token());
     assert_eq!(Ok(Token::new(TType::Ident, "Mr")), t.token());
     assert_eq!(Ok(Token::new(TType::Verbatim, ".")), t.token());
-    assert_eq!(Ok(Token::new(TType::Operator, "=")), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=")), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
     
     let s = r#"a + (1 * b)"#;
