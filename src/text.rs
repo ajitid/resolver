@@ -155,8 +155,7 @@ impl Text {
   fn next_offset<'a>(&'a self) -> usize {
     let n = self.lines.len();
     if n > 0 {
-      let l = &self.lines[n-1];
-      l.boff + l.extent
+      self.lines[n-1].extent
     }else{
       0
     }
@@ -419,7 +418,8 @@ impl Text {
       None => self.next_offset(),
     };
     self.text.insert(offset, c);
-    return self.reflow().index(idx + 1);
+    self.reflow();
+    return self.index(idx + 1);
   }
   
   pub fn insert_rel(&mut self, c: char) -> Pos {
@@ -740,7 +740,7 @@ mod tests {
     assert_eq!(Pos{index: 18, x: 8, y: 2}, Text::new_with_str(100, "Hello,\nto\nyourself").down(18));
   }
   
-  // #[test]
+  #[test]
   fn test_editing() {
     let mut t = Text::new(100);
     t.insert_rel('H');
