@@ -34,11 +34,11 @@ impl Line {
   }
   
   pub fn right(&self) -> usize {
-    self.boff + self.bytes
+    self.coff + self.chars
   }
   
   pub fn contains(&self, idx: usize) -> bool {
-    idx >= self.boff && idx < self.extent
+    idx >= self.coff && idx < (self.coff + self.chars)
   }
   
   pub fn pos(&self, width: usize, idx: usize) -> Option<Pos> {
@@ -94,7 +94,13 @@ impl Text {
   }
   
   pub fn len(&self) -> usize {
-    self.text.len()
+    match self.lines.len() {
+      0 => 0,
+      n => {
+        let l = &self.lines[n-1];
+        l.coff + l.chars
+      },
+    }
   }
   
   pub fn width(&self) -> usize {
@@ -282,7 +288,7 @@ impl Text {
     let l = &self.lines[n];
     let w = l.width();
     if w > pos.x {
-      Pos{x: pos.x, y: n, index: l.boff + pos.x}
+      Pos{x: pos.x, y: n, index: l.coff + pos.x}
     }else{
       Pos{x: w, y: n, index: l.right()}
     }
@@ -313,7 +319,7 @@ impl Text {
     let line = &self.lines[n];
     let w = line.width();
     if w > pos.x {
-      Pos{x: pos.x, y: n, index: line.boff + pos.x}
+      Pos{x: pos.x, y: n, index: line.coff + pos.x}
     }else{
       Pos{x: w, y: n, index: line.right()}
     }
@@ -352,7 +358,7 @@ impl Text {
   pub fn home(&mut self, idx: usize) -> Pos {
     let pos = self.index(idx);
     let line = &self.lines[pos.y];
-    Pos{x: 0, y: pos.y, index: line.boff}
+    Pos{x: 0, y: pos.y, index: line.coff}
   }
   
   pub fn home_rel(&mut self) -> Pos {
@@ -740,13 +746,15 @@ mod tests {
     t.insert_rel('l');
     t.insert_rel('l');
     t.insert_rel('o');
+    t.insert_rel(' ');
+    t.insert_rel('😎');
     t.insert_rel('\n');
     t.insert_rel('O');
     t.insert_rel('k');
     t.insert_rel('\n');
     t.down_rel();
     t.right_rel();
-    assert_eq!(Pos{index: 9, x: 0, y: 2}, t.right_rel());
+    assert_eq!(Pos{index: 10, x: 0, y: 2}, t.right_rel());
     
     let mut t = Text::new(100);
     t.down_rel();
