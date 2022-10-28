@@ -745,6 +745,8 @@ mod tests {
     t.insert_rel('e');
     t.insert_rel('l');
     t.insert_rel('l');
+    t.insert_rel('l');
+    t.backspace_rel();
     t.insert_rel('o');
     t.insert_rel(' ');
     t.insert_rel('😎');
