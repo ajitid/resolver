@@ -45,7 +45,7 @@ impl Line {
     if !self.contains(idx) {
       return None;
     }
-    let eix = idx - self.boff;
+    let eix = idx - self.coff;
     if eix < width {
       Some(Pos{index: idx, x: eix, y: self.num})
     }else{
