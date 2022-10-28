@@ -33,16 +33,8 @@ impl Line {
     self.chars
   }
   
-  pub fn left(&self) -> usize {
-    self.boff
-  }
-  
   pub fn right(&self) -> usize {
     self.boff + self.bytes
-  }
-  
-  pub fn extent(&self) -> usize {
-    self.extent
   }
   
   pub fn contains(&self, idx: usize) -> bool {
