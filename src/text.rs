@@ -748,13 +748,16 @@ mod tests {
     t.insert_rel('o');
     t.insert_rel(' ');
     t.insert_rel('😎');
+    t.insert_rel(' ');
+    t.insert_rel('d');
+    t.insert_rel('u');
+    t.insert_rel('d');
+    t.insert_rel('e');
     t.insert_rel('\n');
     t.insert_rel('O');
     t.insert_rel('k');
     t.insert_rel('\n');
-    t.down_rel();
-    t.right_rel();
-    assert_eq!(Pos{index: 10, x: 0, y: 2}, t.right_rel());
+    assert_eq!(Pos{index: 15, x: 0, y: 2}, t.right_rel());
     
     let mut t = Text::new(100);
     t.down_rel();
