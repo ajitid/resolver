@@ -160,21 +160,29 @@ impl Text {
     }
   }
   
-  pub fn read_line<'a>(&'a self, i: usize) -> Option<&'a str> {
+  fn get_line<'a>(&'a self, i: usize) -> Option<&'a Line> {
     if i < self.lines.len() {
-      Some(self.lines[i].text(&self.text))
+      Some(&self.lines[i])
     }else{
       None
     }
   }
   
-  pub fn write_line(&self, i: usize, b: &mut Buffer) -> usize {
-    let t = match self.read_line(i) {
-      Some(t) => t,
-      None => return 0,
+  pub fn read_line<'a>(&'a self, i: usize) -> Option<&'a str> {
+    match self.get_line(i) {
+      Some(l) => Some(l.text(&self.text)),
+      None => None,
+    }
+  }
+  
+  pub fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
+    let l = match self.get_line(i) {
+      Some(l) => l,
+      None => return (0, 0),
     };
+    let t = l.text(&self.text);
     b.push_str(t);
-    t.len()
+    (l.chars, t.len())
   }
   
   fn reflow(&mut self) -> &mut Self {
