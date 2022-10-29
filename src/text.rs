@@ -449,17 +449,14 @@ impl Text {
     };
     self.text.remove(offset);
     self.reflow();
-    println!(">>> 1. HEY FUCKER: {} {:?}", eix, self.index(eix));
     self.index(eix)
   }
   
   pub fn backspace_rel(&mut self) -> Pos {
-    println!(">>> 2. HEY FUCKER >>> {}", self.loc);
     if self.loc == 0 { // nothing to delete
       return ZERO_POS;
     }
     let pos = self.backspace(self.loc);
-    println!(">>> 2. HEY FUCKER: {} {:?}", self.loc, pos);
     self.loc = pos.index;
     pos
   }
