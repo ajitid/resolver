@@ -432,7 +432,7 @@ impl Text {
     };
     self.text.insert(offset, c);
     self.reflow();
-    return self.index(idx + 1);
+    self.index(idx + 1)
   }
   
   pub fn insert_rel(&mut self, c: char) -> Pos {
@@ -442,12 +442,13 @@ impl Text {
   }
   
   pub fn backspace(&mut self, idx: usize) -> Pos {
-    let offset = match self.offset_for_index(idx) {
+    let offset = match self.offset_for_index(idx - 1) {
       Some(offset) => offset,
       None => return ZERO_POS,
     };
     self.text.remove(offset);
-    return self.reflow().index(idx - 1);
+    self.reflow();
+    self.index(idx - 1)
   }
   
   pub fn backspace_rel(&mut self) -> Pos {
@@ -808,6 +809,13 @@ mod tests {
   #[test]
   fn test_editing() {
     let mut t = Text::new(100);
+    t.insert_rel('Y');
+    t.insert_rel('o');
+    t.insert_rel('!');
+    t.insert_rel('!');
+    assert_eq!(Pos{index: 3, x: 3, y: 0}, t.backspace_rel());
+    
+    let mut t = Text::new(100);
     t.insert_rel('H');
     t.insert_rel('e');
     t.insert_rel('l');
@@ -815,9 +823,7 @@ mod tests {
     t.insert_rel('l');
     t.backspace_rel();
     t.insert_rel('o');
-    println!(">>> >>> >>> {}", t.loc);
     t.insert_rel(' ');
-    println!(">>> >>> >>> {}", t.loc);
     t.insert_rel('😎');
     t.insert_rel(' ');
     t.insert_rel('d');
@@ -828,7 +834,6 @@ mod tests {
     t.insert_rel('O');
     t.insert_rel('k');
     t.insert_rel('\n');
-    println!(">>> >>> >>> {}", t.loc);
     assert_eq!(Pos{index: 16, x: 0, y: 2}, t.right_rel());
     
     let mut t = Text::new(100);
