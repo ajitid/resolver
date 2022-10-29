@@ -877,6 +877,10 @@ mod tests {
     t.insert_rel('\n');
     assert_eq!(Pos{index: 3, x: 3, y: 0}, t.backspace_rel());
     
+    let mut t = Text::new_with_str(100, "Hello.\népoustaflant!\nOk.\n");
+    t.loc = t.len();
+    assert_eq!(Pos{index: 24, x: 3, y: 2}, t.backspace_rel());
+    
     let mut t = Text::new(100);
     t.insert_rel('H');
     t.insert_rel('e');
