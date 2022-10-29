@@ -121,7 +121,7 @@ impl Text {
       return None;
     }
     for l in &self.lines {
-      if index >= l.coff && index < l.coff + l.chars {
+      if index >= l.coff && index < l.cext {
         return Some(l);
       }
     }
@@ -442,20 +442,24 @@ impl Text {
   }
   
   pub fn backspace(&mut self, idx: usize) -> Pos {
-    let offset = match self.offset_for_index(idx - 1) {
+    let eix = idx - 1;
+    let offset = match self.offset_for_index(eix) {
       Some(offset) => offset,
       None => return ZERO_POS,
     };
     self.text.remove(offset);
     self.reflow();
-    self.index(idx - 1)
+    println!(">>> 1. HEY FUCKER: {} {:?}", eix, self.index(eix));
+    self.index(eix)
   }
   
   pub fn backspace_rel(&mut self) -> Pos {
+    println!(">>> 2. HEY FUCKER >>> {}", self.loc);
     if self.loc == 0 { // nothing to delete
       return ZERO_POS;
     }
     let pos = self.backspace(self.loc);
+    println!(">>> 2. HEY FUCKER: {} {:?}", self.loc, pos);
     self.loc = pos.index;
     pos
   }
@@ -809,10 +813,13 @@ mod tests {
   #[test]
   fn test_editing() {
     let mut t = Text::new(100);
+    assert_eq!(Pos{index: 0, x: 0, y: 0}, t.backspace_rel());
     t.insert_rel('Y');
     t.insert_rel('o');
     t.insert_rel('!');
     t.insert_rel('!');
+    assert_eq!(Pos{index: 3, x: 3, y: 0}, t.backspace_rel());
+    t.insert_rel('\n');
     assert_eq!(Pos{index: 3, x: 3, y: 0}, t.backspace_rel());
     
     let mut t = Text::new(100);
@@ -871,12 +878,18 @@ mod tests {
     let x = Text::new_with_str(100, t);
     assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, cext:  6, bext:  8, chars: 5, bytes:  7, hard: true}), x.line_with_index(1));
     assert_eq!(Some(&Line{num: 1, coff: 6, boff: 8, cext: 15, bext: 18, chars: 9, bytes: 10, hard: false}), x.line_with_index(6));
+
     assert_eq!(Some(1),  x.offset_for_index(1));
     assert_eq!(Some(5),  x.offset_for_index(3));
     assert_eq!(Some(8),  x.offset_for_index(6));
     assert_eq!(Some(12), x.offset_for_index(9));
     assert_eq!(None,     x.offset_for_index(16));
     assert_eq!(None,     x.offset_for_index(99));
+
+    let t = "Yo!\n";
+    let x = Text::new_with_str(100, t);
+    assert_eq!(Some(3),  x.offset_for_index(3));
+    assert_eq!(None,     x.offset_for_index(4));
   }
   
 }
