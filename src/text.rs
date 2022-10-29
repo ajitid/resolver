@@ -15,13 +15,14 @@ pub struct Pos {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Line {
-  num:    usize,
-  coff:   usize, // line absolute lower bound, in chars
-  boff:   usize, // line absolute lower bound, in bytes
-  extent: usize, // line absolute upper bound, in bytes
-  chars:  usize, // visual width, in chars
-  bytes:  usize, // visual width, in bytes
-  hard:   bool,  // does this line break at a literal newline?
+  num:   usize,
+  coff:  usize, // line absolute lower bound, in chars
+  boff:  usize, // line absolute lower bound, in bytes
+  cext:  usize, // line absolute upper bound, in chars
+  bext:  usize, // line absolute upper bound, in bytes
+  chars: usize, // visual width, in chars
+  bytes: usize, // visual width, in bytes
+  hard:  bool,  // does this line break at a literal newline?
 }
 
 impl Line {
@@ -38,7 +39,7 @@ impl Line {
   }
   
   pub fn contains(&self, idx: usize) -> bool {
-    idx >= self.coff && idx < (self.coff + self.chars)
+    idx >= self.coff && idx < self.cext
   }
   
   pub fn pos(&self, width: usize, idx: usize) -> Option<Pos> {
@@ -98,7 +99,7 @@ impl Text {
       0 => 0,
       n => {
         let l = &self.lines[n-1];
-        l.coff + l.chars
+        l.cext
       },
     }
   }
@@ -153,7 +154,7 @@ impl Text {
   fn next_offset<'a>(&'a self) -> usize {
     let n = self.lines.len();
     if n > 0 {
-      self.lines[n-1].extent
+      self.lines[n-1].bext
     }else{
       0
     }
@@ -232,13 +233,14 @@ impl Text {
         let cb = if !hard && rb > 0 { rb } else { lb }; // consume width, in bytes
         
         l.push(Line{
-          num:    ly,
-          coff:   ac,
-          boff:   ab,
-          extent: ab + cb, // abs offset to beginning of break point, in bytes
-          chars:  bc,      // width to break point, in chars
-          bytes:  bb,      // width to break point, in bytes
-          hard:   hard,    // is this a hard break that ends in a newline literal?
+          num:   ly,
+          coff:  ac,
+          boff:  ab,
+          cext:  ac + cc, // abs offset to beginning of break point, in chars
+          bext:  ab + cb, // abs offset to beginning of break point, in bytes
+          chars: bc,      // width to break point, in chars
+          bytes: bb,      // width to break point, in bytes
+          hard:  hard,    // is this a hard break that ends in a newline literal?
         });
         
         ly += 1;  // increment line number
@@ -261,13 +263,14 @@ impl Text {
     
     if lc > 0 {
       l.push(Line{
-        num:    ly,
-        coff:   ac,
-        boff:   ab,
-        extent: ab + lb, // abs offset to end of text; last line trails whitespace
-        chars:  lc,      // width to end of text, in chars; last line trails whitespace
-        bytes:  lb,      // width to end of text, in bytes; last line trails whitespace
-        hard:   false,   // can't be a hard break here
+        num:   ly,
+        coff:  ac,
+        boff:  ab,
+        cext:  ac + lc, // abs offset to end of text, in chars; last line trails whitespace
+        bext:  ab + lb, // abs offset to end of text, in bytes; last line trails whitespace
+        chars: lc,      // width to end of text, in chars; last line trails whitespace
+        bytes: lb,      // width to end of text, in bytes; last line trails whitespace
+        hard:  false,   // can't be a hard break here
       });
     }
     
@@ -475,7 +478,7 @@ mod tests {
     test_reflow_case!(
       100, "😎",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 4, chars: 1, bytes: 4, hard: false,},
+        Line{num: 0, coff: 0, boff: 0, cext: 1, bext: 4, chars: 1, bytes: 4, hard: false,},
       ],
       vec![
         "😎",
@@ -485,7 +488,7 @@ mod tests {
     test_reflow_case!(
       100, "Hello",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 5, chars: 5, bytes: 5, hard: false,},
+        Line{num: 0, coff: 0, boff: 0, cext: 5, bext: 5, chars: 5, bytes: 5, hard: false,},
       ],
       vec![
         "Hello",
@@ -495,8 +498,8 @@ mod tests {
     test_reflow_case!(
       3, "Hello",
       vec![
-          Line{num: 0, coff: 0, boff: 0, extent: 3, chars: 3, bytes: 3, hard: false},
-          Line{num: 1, coff: 3, boff: 3, extent: 5, chars: 2, bytes: 2, hard: false},
+          Line{num: 0, coff: 0, boff: 0, cext: 3, bext: 3, chars: 3, bytes: 3, hard: false},
+          Line{num: 1, coff: 3, boff: 3, cext: 5, bext: 5, chars: 2, bytes: 2, hard: false},
       ],
       vec![
         "Hel",
@@ -507,8 +510,8 @@ mod tests {
     test_reflow_case!(
       5, "😎 Hello",
       vec![
-          Line{num: 0, coff: 0, boff: 0, extent: 5,  chars: 1, bytes: 4, hard: false},
-          Line{num: 1, coff: 2, boff: 5, extent: 10, chars: 5, bytes: 5, hard: false},
+          Line{num: 0, coff: 0, boff: 0, cext: 2,  bext: 5,  chars: 1, bytes: 4, hard: false},
+          Line{num: 1, coff: 2, boff: 5, cext: 10, bext: 10, chars: 5, bytes: 5, hard: false},
       ],
       vec![
         "😎",
@@ -519,8 +522,8 @@ mod tests {
     test_reflow_case!(
       10, "Époustouflant",
       vec![
-          Line{num: 0, coff: 0,  boff: 0,  extent: 11, chars: 10, bytes: 11, hard: false},
-          Line{num: 1, coff: 10, boff: 11, extent: 14, chars: 3,  bytes: 3, hard: false},
+          Line{num: 0, coff: 0,  boff: 0,  cext: 10, bext: 11, chars: 10, bytes: 11, hard: false},
+          Line{num: 1, coff: 10, boff: 11, cext: 14, bext: 14, chars: 3,  bytes: 3, hard: false},
       ],
       vec![
         "Époustoufl",
@@ -531,8 +534,8 @@ mod tests {
     test_reflow_case!(
       8, "Hello there",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: false},
-        Line{num: 1, coff: 6, boff: 6, extent: 11, chars: 5, bytes: 5, hard: false},
+        Line{num: 0, coff: 0, boff: 0, cext: 6, bext: 6, chars: 5, bytes: 5, hard: false},
+        Line{num: 1, coff: 6, boff: 6, cext: 11, bext: 11, chars: 5, bytes: 5, hard: false},
       ],
       vec![
         "Hello",
@@ -543,10 +546,10 @@ mod tests {
     test_reflow_case!(
       8, "Hello there monchambo",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: false},
-        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 5, bytes: 5, hard: false},
-        Line{num: 2, coff: 12, boff: 12, extent: 20, chars: 8, bytes: 8, hard: false},
-        Line{num: 3, coff: 20, boff: 20, extent: 21, chars: 1, bytes: 1, hard: false},
+        Line{num: 0, coff: 0, boff: 0, cext: 6, bext: 6, chars: 5, bytes: 5, hard: false},
+        Line{num: 1, coff: 6, boff: 6, cext: 12, bext: 12, chars: 5, bytes: 5, hard: false},
+        Line{num: 2, coff: 12, boff: 12, cext: 20, bext: 20, chars: 8, bytes: 8, hard: false},
+        Line{num: 3, coff: 20, boff: 20, cext: 21, bext: 21, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -559,10 +562,10 @@ mod tests {
     test_reflow_case!(
       8, "Hello\nthere monchambo",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 6, chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 5, bytes: 5, hard: false},
-        Line{num: 2, coff: 12, boff: 12, extent: 20, chars: 8, bytes: 8, hard: false},
-        Line{num: 3, coff: 20, boff: 20, extent: 21, chars: 1, bytes: 1, hard: false},
+        Line{num: 0, coff: 0, boff: 0, cext: 6, bext: 6, chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6, boff: 6, cext: 12, bext: 12, chars: 5, bytes: 5, hard: false},
+        Line{num: 2, coff: 12, boff: 12, cext: 20, bext: 20, chars: 8, bytes: 8, hard: false},
+        Line{num: 3, coff: 20, boff: 20, cext: 21, bext: 21, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -575,8 +578,8 @@ mod tests {
     test_reflow_case!(
       100, "Hello\nthere.",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6, boff: 6, extent: 12, chars: 6, bytes: 6, hard: false},
+        Line{num: 0, coff: 0, boff: 0, cext: 6,  bext: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6, boff: 6, cext: 12, bext: 12, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         "Hello",
@@ -587,8 +590,8 @@ mod tests {
     test_reflow_case!(
       100, "Hello 😎\nMonchambo.",
       vec![
-        Line{num: 0, coff: 0, boff: 0,  extent: 11, chars: 7,  bytes: 10, hard: true},
-        Line{num: 1, coff: 8, boff: 11, extent: 21, chars: 10, bytes: 10, hard: false},
+        Line{num: 0, coff: 0, boff: 0,  cext:  8, bext: 11, chars: 7,  bytes: 10, hard: true},
+        Line{num: 1, coff: 8, boff: 11, cext: 21, bext: 21, chars: 10, bytes: 10, hard: false},
       ],
       vec![
         "Hello 😎",
@@ -599,8 +602,8 @@ mod tests {
     test_reflow_case!(
       100, "Hello\nthere.\n",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6, boff: 6, extent: 13, chars: 6, bytes: 6, hard: true},
+        Line{num: 0, coff: 0, boff: 0, cext: 6,  bext: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6, boff: 6, cext: 13, bext: 13, chars: 6, bytes: 6, hard: true},
       ],
       vec![
         "Hello",
@@ -611,9 +614,9 @@ mod tests {
     test_reflow_case!(
       100, "Hello\nthere.\n!",
       vec![
-        Line{num: 0, coff: 0,  boff: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6,  boff: 6,  extent: 13, chars: 6, bytes: 6, hard: true},
-        Line{num: 2, coff: 13, boff: 13, extent: 14, chars: 1, bytes: 1, hard: false},
+        Line{num: 0, coff: 0,  boff: 0,  cext: 6,  bext: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6,  boff: 6,  cext: 13, bext: 13, chars: 6, bytes: 6, hard: true},
+        Line{num: 2, coff: 13, boff: 13, cext: 14, bext: 14, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -625,9 +628,9 @@ mod tests {
     test_reflow_case!(
       100, "Hello\n there.\n!",
       vec![
-        Line{num: 0, coff: 0,  boff: 0,  extent: 6,  chars: 5, bytes: 5, hard: true},
-        Line{num: 1, coff: 6,  boff: 6,  extent: 14, chars: 7, bytes: 7, hard: true},
-        Line{num: 2, coff: 14, boff: 14, extent: 15, chars: 1, bytes: 1, hard: false},
+        Line{num: 0, coff: 0,  boff: 0,  cext: 6,  bext: 6,  chars: 5, bytes: 5, hard: true},
+        Line{num: 1, coff: 6,  boff: 6,  cext: 14, bext: 14, chars: 7, bytes: 7, hard: true},
+        Line{num: 2, coff: 14, boff: 14, cext: 15, bext: 15, chars: 1, bytes: 1, hard: false},
       ],
       vec![
         "Hello",
@@ -639,10 +642,10 @@ mod tests {
     test_reflow_case!(
       100, " \n \n \nHello.",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 2,  chars: 1, bytes: 1, hard: true},
-        Line{num: 1, coff: 2, boff: 2, extent: 4,  chars: 1, bytes: 1, hard: true},
-        Line{num: 2, coff: 4, boff: 4, extent: 6,  chars: 1, bytes: 1, hard: true},
-        Line{num: 3, coff: 6, boff: 6, extent: 12, chars: 6, bytes: 6, hard: false},
+        Line{num: 0, coff: 0, boff: 0, cext: 2,  bext: 2,  chars: 1, bytes: 1, hard: true},
+        Line{num: 1, coff: 2, boff: 2, cext: 4,  bext: 4,  chars: 1, bytes: 1, hard: true},
+        Line{num: 2, coff: 4, boff: 4, cext: 6,  bext: 6,  chars: 1, bytes: 1, hard: true},
+        Line{num: 3, coff: 6, boff: 6, cext: 12, bext: 12, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         " ",
@@ -655,10 +658,10 @@ mod tests {
     test_reflow_case!(
       100, "\n\n\nHello.",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 1, chars: 0, bytes: 0, hard: true},
-        Line{num: 1, coff: 1, boff: 1, extent: 2, chars: 0, bytes: 0, hard: true},
-        Line{num: 2, coff: 2, boff: 2, extent: 3, chars: 0, bytes: 0, hard: true},
-        Line{num: 3, coff: 3, boff: 3, extent: 9, chars: 6, bytes: 6, hard: false},
+        Line{num: 0, coff: 0, boff: 0, cext: 1, bext: 1, chars: 0, bytes: 0, hard: true},
+        Line{num: 1, coff: 1, boff: 1, cext: 2, bext: 2, chars: 0, bytes: 0, hard: true},
+        Line{num: 2, coff: 2, boff: 2, cext: 3, bext: 3, chars: 0, bytes: 0, hard: true},
+        Line{num: 3, coff: 3, boff: 3, cext: 9, bext: 9, chars: 6, bytes: 6, hard: false},
       ],
       vec![
         "",
@@ -671,9 +674,9 @@ mod tests {
     test_reflow_case!(
       100, "\nHello.\nOk",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
-        Line{num: 1, coff: 1, boff: 1, extent: 8,  chars: 6, bytes: 6, hard: true},
-        Line{num: 2, coff: 8, boff: 8, extent: 10, chars: 2, bytes: 2, hard: false},
+        Line{num: 0, coff: 0, boff: 0, cext: 1,  bext: 1,  chars: 0, bytes: 0, hard: true},
+        Line{num: 1, coff: 1, boff: 1, cext: 8,  bext: 8,  chars: 6, bytes: 6, hard: true},
+        Line{num: 2, coff: 8, boff: 8, cext: 10, bext: 10, chars: 2, bytes: 2, hard: false},
       ],
       vec![
         "",
@@ -685,11 +688,11 @@ mod tests {
     test_reflow_case!(
       5, "\n\nHello.\nOk",
       vec![
-        Line{num: 0, coff: 0, boff: 0, extent: 1,  chars: 0, bytes: 0, hard: true},
-        Line{num: 1, coff: 1, boff: 1, extent: 2,  chars: 0, bytes: 0, hard: true},
-        Line{num: 2, coff: 2, boff: 2, extent: 7,  chars: 5, bytes: 5, hard: false},
-        Line{num: 3, coff: 7, boff: 7, extent: 9,  chars: 1, bytes: 1, hard: true},
-        Line{num: 4, coff: 9, boff: 9, extent: 11, chars: 2, bytes: 2, hard: false},
+        Line{num: 0, coff: 0, boff: 0, cext: 1,  bext: 1,  chars: 0, bytes: 0, hard: true},
+        Line{num: 1, coff: 1, boff: 1, cext: 2,  bext: 2,  chars: 0, bytes: 0, hard: true},
+        Line{num: 2, coff: 2, boff: 2, cext: 7,  bext: 7,  chars: 5, bytes: 5, hard: false},
+        Line{num: 3, coff: 7, boff: 7, cext: 9,  bext: 9,  chars: 1, bytes: 1, hard: true},
+        Line{num: 4, coff: 9, boff: 9, cext: 11, bext: 11, chars: 2, bytes: 2, hard: false},
       ],
       vec![
         "",
@@ -770,19 +773,19 @@ mod tests {
   fn test_offsets() {
     let t = "A → B"; // '→' is 3 UTF-8 bytes
     let x = Text::new_with_str(100, t);
-    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent: 7, chars: 5, bytes: 7, hard: false}), x.line_with_index(0));
-    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent: 7, chars: 5, bytes: 7, hard: false}), x.line_with_index(1));
+    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, cext: 5, bext: 7, chars: 5, bytes: 7, hard: false}), x.line_with_index(0));
+    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, cext: 5, bext: 7, chars: 5, bytes: 7, hard: false}), x.line_with_index(1));
     
     let t = "A → B, très bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
     let x = Text::new_with_str(100, t);
-    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent: 19, chars: 16, bytes: 19, hard: false}), x.line_with_index(9));
+    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, cext: 16, bext: 19, chars: 16, bytes: 19, hard: false}), x.line_with_index(9));
     assert_eq!(None, x.line_with_index(16));
     assert_eq!(None, x.line_with_index(99));
     
     let t = "A → B\ntrès bien"; // '→' is 3 UTF-8 bytes, 'è' is 2 UTF-8 bytes
     let x = Text::new_with_str(100, t);
-    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, extent:  8, chars: 5, bytes:  7, hard: true}), x.line_with_index(1));
-    assert_eq!(Some(&Line{num: 1, coff: 6, boff: 8, extent: 18, chars: 9, bytes: 10, hard: false}), x.line_with_index(6));
+    assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, cext:  6, bext:  8, chars: 5, bytes:  7, hard: true}), x.line_with_index(1));
+    assert_eq!(Some(&Line{num: 1, coff: 6, boff: 8, cext: 15, bext: 18, chars: 9, bytes: 10, hard: false}), x.line_with_index(6));
     assert_eq!(Some(1),  x.offset_for_index(1));
     assert_eq!(Some(5),  x.offset_for_index(3));
     assert_eq!(Some(8),  x.offset_for_index(6));
