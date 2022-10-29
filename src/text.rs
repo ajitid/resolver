@@ -762,7 +762,7 @@ mod tests {
     t.insert_rel('O');
     t.insert_rel('k');
     t.insert_rel('\n');
-    assert_eq!(Pos{index: 15, x: 0, y: 2}, t.right_rel());
+    assert_eq!(Pos{index: 16, x: 0, y: 2}, t.right_rel());
     
     let mut t = Text::new(100);
     t.down_rel();
