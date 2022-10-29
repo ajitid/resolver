@@ -28,10 +28,10 @@ pub struct Writer {
 impl Writer {
   pub fn new_with_size(size: (usize, usize), opts: options::Options) -> Self {
     Self{
-      opts: opts,
+      opts: opts.clone(),
       term_size: size,
       text_size: ((size.0 / 3) * 2, size.1 - 1),
-      frame: Frame::new(size.0),
+      frame: Frame::new(size.0, opts),
       buf: Buffer::new(),
     }
   }
@@ -92,7 +92,7 @@ impl Writer {
       vec![&gutter, &text, &ticker]
     };
     
-    self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf);
+    self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf, pos);
     queue!(self.buf, cursor::MoveTo((pos.x + ox) as u16, pos.y as u16), cursor::Show)?;
     self.buf.flush()
   }

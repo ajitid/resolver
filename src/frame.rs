@@ -1,20 +1,23 @@
-use crate::text::Text;
+use crate::text::{Text, Pos};
 use crate::buffer::Buffer;
+use crate::options;
 
 pub struct Frame {
+  opts: options::Options,
   width: usize,
   sep: char,
 }
 
 impl Frame {
-  pub fn new(width: usize) -> Self {
+  pub fn new(width: usize, opts: options::Options) -> Self {
     Frame{
+      opts: opts,
       width: width,
       sep: '┊',
     }
   }
   
-  pub fn write_cols(&self, cols: Vec<&Text>, height: usize, buf: &mut Buffer) -> usize {
+  pub fn write_cols(&self, cols: Vec<&Text>, height: usize, buf: &mut Buffer, vpos: &Pos) -> usize {
     let lines: Vec<usize> = cols.iter().map(|t| { t.num_lines() }).collect();
     let lmax: usize = match lines.iter().reduce(|a, b| {
       if a > b { a } else { b }
@@ -31,7 +34,9 @@ impl Frame {
           0
         };
         let (n, b) = c.write_line(i, buf);
-        buf.push_str(&format!(" {} {}", n, b));
+        if self.opts.debug_editor {
+          buf.push_str(&format!(" {} {} ({}, {})", n, b, vpos.x, vpos.y));
+        }
         let w = c.width();
         if n < w - adj {
           buf.push_str(&" ".repeat(w - adj - n));
