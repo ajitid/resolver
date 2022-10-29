@@ -837,11 +837,15 @@ mod tests {
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello").home(5));
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello\n").home(5));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Hello\n").home(6));
+    assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Hello\nthere").home(6));
+    assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Hello\nthere").home(99));
     
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Yo! 🤓").home(0));
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Yo! 🤓").home(5));
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Yo! 🤓\n").home(5));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤓\n").home(6));
+    assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤓\nthere").home(6));
+    assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤓\nthere").home(99));
   }
   
   #[test]
@@ -850,11 +854,15 @@ mod tests {
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello").end(5));
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello\n").end(5));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Hello\n").end(6));
+    assert_eq!(Pos{index: 11, x: 5, y: 1}, Text::new_with_str(100, "Hello\nthere").end(6));
+    assert_eq!(Pos{index: 11, x: 5, y: 1}, Text::new_with_str(100, "Hello\nthere").end(99));
     
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Yo! 🤓").end(0));
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Yo! 🤓").end(5));
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Yo! 🤓\n").end(5));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤓\n").end(6));
+    assert_eq!(Pos{index: 11, x: 5, y: 1}, Text::new_with_str(100, "Yo! 🤓\nthere").end(6));
+    assert_eq!(Pos{index: 11, x: 5, y: 1}, Text::new_with_str(100, "Yo! 🤓\nthere").end(99));
   }
   
   #[test]
