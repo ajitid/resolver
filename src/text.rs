@@ -437,7 +437,7 @@ impl Text {
   
   pub fn insert_rel(&mut self, c: char) -> Pos {
     let pos = self.insert(self.loc, c);
-    self.loc += 1;
+    self.loc = pos.index;
     pos
   }
   
@@ -447,15 +447,16 @@ impl Text {
       None => return ZERO_POS,
     };
     self.text.remove(offset);
-    return self.reflow().index(idx);
+    return self.reflow().index(idx - 1);
   }
   
   pub fn backspace_rel(&mut self) -> Pos {
     if self.loc == 0 { // nothing to delete
       return ZERO_POS;
     }
-    self.loc -= 1;
-    self.backspace(self.loc)
+    let pos = self.backspace(self.loc);
+    self.loc = pos.index;
+    pos
   }
 }
 
@@ -814,7 +815,9 @@ mod tests {
     t.insert_rel('l');
     t.backspace_rel();
     t.insert_rel('o');
+    println!(">>> >>> >>> {}", t.loc);
     t.insert_rel(' ');
+    println!(">>> >>> >>> {}", t.loc);
     t.insert_rel('😎');
     t.insert_rel(' ');
     t.insert_rel('d');
@@ -825,6 +828,7 @@ mod tests {
     t.insert_rel('O');
     t.insert_rel('k');
     t.insert_rel('\n');
+    println!(">>> >>> >>> {}", t.loc);
     assert_eq!(Pos{index: 16, x: 0, y: 2}, t.right_rel());
     
     let mut t = Text::new(100);
