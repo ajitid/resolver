@@ -30,7 +30,8 @@ impl Frame {
         }else{
           0
         };
-        let (n, _) = c.write_line(i, buf);
+        let (n, b) = c.write_line(i, buf);
+        buf.push_str(&format!(" {} {}", n, b));
         let w = c.width();
         if n < w - adj {
           buf.push_str(&" ".repeat(w - adj - n));

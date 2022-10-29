@@ -438,11 +438,15 @@ impl Text {
   }
   
   pub fn backspace(&mut self, idx: usize) -> Pos {
-    let l = self.text.len();
-    if l == 0 { // nothing to delete
-      return ZERO_POS;
-    }
-    self.text.remove(idx);
+    // let l = self.text.len();
+    // if l == 0 { // nothing to delete
+    //   return ZERO_POS;
+    // }
+    let offset = match self.offset_for_index(idx) {
+      Some(offset) => offset,
+      None => return ZERO_POS,
+    };
+    self.text.remove(offset);
     return self.reflow().index(idx);
   }
   
@@ -771,6 +775,19 @@ mod tests {
     t.insert_rel('k');
     t.insert_rel('\n');
     assert_eq!(Pos{index: 16, x: 0, y: 2}, t.right_rel());
+    
+    let mut t = Text::new(100);
+    t.insert_rel('H');
+    t.insert_rel('e');
+    t.insert_rel('l');
+    t.insert_rel('l');
+    t.insert_rel('o');
+    t.insert_rel(' ');
+    t.insert_rel('😎');
+    t.insert_rel(' ');
+    t.backspace_rel();
+    t.backspace_rel();
+    assert_eq!(Pos{index: 6, x: 6, y: 0}, t.right_rel());
     
     let mut t = Text::new(100);
     t.down_rel();
