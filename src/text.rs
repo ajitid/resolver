@@ -312,10 +312,10 @@ impl Text {
   }
   
   pub fn down(&mut self, idx: usize) -> Pos {
-    let nl = self.lines.len();
-    if nl == 0 {
-      return ZERO_POS; // no line data; we have no content
-    }
+    let nl = match self.lines.len() {
+      0 => return ZERO_POS, // no line data; we have no content
+      v => v,
+    };
     let pos = self.index(idx);
     let y = if nl > 0 {
       min(nl - 1, pos.y)
@@ -371,9 +371,16 @@ impl Text {
   }
   
   pub fn home(&mut self, idx: usize) -> Pos {
+    let nl = match self.lines.len() {
+      0 => return ZERO_POS, // no line data; we have no content
+      v => v,
+    };
     let pos = self.index(idx);
-    let line = &self.lines[pos.y];
-    Pos{x: 0, y: pos.y, index: line.coff}
+    if pos.y >= nl {
+      Pos{x: 0, y: nl, index: self.lines[nl - 1].cext}
+    }else{
+      Pos{x: 0, y: pos.y, index: self.lines[pos.y].coff}
+    }
   }
   
   pub fn home_rel(&mut self) -> Pos {
@@ -383,9 +390,17 @@ impl Text {
   }
   
   pub fn end(&mut self, idx: usize) -> Pos {
+    let nl = match self.lines.len() {
+      0 => return ZERO_POS, // no line data; we have no content
+      v => v,
+    };
     let pos = self.index(idx);
-    let line = &self.lines[pos.y];
-    Pos{x: line.width(), y: pos.y, index: line.right()}
+    if pos.y >= nl {
+      Pos{x: 0, y: nl, index: self.lines[nl - 1].cext}
+    } else {
+      let l = &self.lines[pos.y];
+      Pos{x: l.chars, y: pos.y, index: l.right()}
+    }
   }
   
   pub fn end_rel(&mut self) -> Pos {
@@ -751,7 +766,7 @@ mod tests {
   }
   
   #[test]
-  fn test_movement() {
+  fn test_movement_left() {
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello").left(0));
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello").left(1));
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello\n").left(6));
@@ -761,7 +776,10 @@ mod tests {
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Yo! 🤪").left(1));
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Yo! 🤪\n").left(6));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤪\nthere").left(7));
-
+  }
+  
+  #[test]
+  fn test_movement_right() {
     assert_eq!(Pos{index: 1,  x: 1, y: 0}, Text::new_with_str(100, "Hello").right(0));
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello\n").right(4));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Hello\n").right(5));
@@ -771,7 +789,10 @@ mod tests {
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Yo! 🤪\n").right(4));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤪\n").right(5));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤪\n").right(6));
+  }
     
+  #[test]
+  fn test_movement_up() {
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello\n").up(5));
     assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello\n").up(6));
 
@@ -787,7 +808,10 @@ mod tests {
     assert_eq!(Pos{index: 1,  x: 1, y: 0}, Text::new_with_str(100, "Yo! 🤪,\nto\nyourself").up(8));
     assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Yo! 🤪,\nto\nyourself").up(13));
     assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Yo! 🤪,\nto\nyourself").up(16));
-
+  }
+  
+  #[test]
+  fn test_movement_down() {
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello").down(0));
     assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello").down(1));
     assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Hello\n").down(5));
@@ -805,6 +829,32 @@ mod tests {
     assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Yo! 🤪,\nto\nyourself").down(2));
     assert_eq!(Pos{index: 9,  x: 2, y: 1}, Text::new_with_str(100, "Yo! 🤪,\nZO\nyourself").down(6));
     assert_eq!(Pos{index: 18, x: 8, y: 2}, Text::new_with_str(100, "Yo! 🤪,\nto\nyourself").down(18));
+  }
+  
+  #[test]
+  fn test_movement_home() {
+    assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello").home(0));
+    assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello").home(5));
+    assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Hello\n").home(5));
+    assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Hello\n").home(6));
+    
+    assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Yo! 🤓").home(0));
+    assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Yo! 🤓").home(5));
+    assert_eq!(Pos{index: 0,  x: 0, y: 0}, Text::new_with_str(100, "Yo! 🤓\n").home(5));
+    assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤓\n").home(6));
+  }
+  
+  #[test]
+  fn test_movement_end() {
+    assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello").end(0));
+    assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello").end(5));
+    assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Hello\n").end(5));
+    assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Hello\n").end(6));
+    
+    assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Yo! 🤓").end(0));
+    assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Yo! 🤓").end(5));
+    assert_eq!(Pos{index: 5,  x: 5, y: 0}, Text::new_with_str(100, "Yo! 🤓\n").end(5));
+    assert_eq!(Pos{index: 6,  x: 0, y: 1}, Text::new_with_str(100, "Yo! 🤓\n").end(6));
   }
   
   #[test]
