@@ -510,8 +510,8 @@ mod tests {
     test_reflow_case!(
       5, "😎 Hello",
       vec![
-          Line{num: 0, coff: 0, boff: 0, cext: 2,  bext: 5,  chars: 1, bytes: 4, hard: false},
-          Line{num: 1, coff: 2, boff: 5, cext: 10, bext: 10, chars: 5, bytes: 5, hard: false},
+          Line{num: 0, coff: 0, boff: 0, cext: 2, bext: 5,  chars: 1, bytes: 4, hard: false},
+          Line{num: 1, coff: 2, boff: 5, cext: 7, bext: 10, chars: 5, bytes: 5, hard: false},
       ],
       vec![
         "😎",
@@ -523,7 +523,7 @@ mod tests {
       10, "Époustouflant",
       vec![
           Line{num: 0, coff: 0,  boff: 0,  cext: 10, bext: 11, chars: 10, bytes: 11, hard: false},
-          Line{num: 1, coff: 10, boff: 11, cext: 14, bext: 14, chars: 3,  bytes: 3, hard: false},
+          Line{num: 1, coff: 10, boff: 11, cext: 13, bext: 14, chars: 3,  bytes: 3, hard: false},
       ],
       vec![
         "Époustoufl",
@@ -591,7 +591,7 @@ mod tests {
       100, "Hello 😎\nMonchambo.",
       vec![
         Line{num: 0, coff: 0, boff: 0,  cext:  8, bext: 11, chars: 7,  bytes: 10, hard: true},
-        Line{num: 1, coff: 8, boff: 11, cext: 21, bext: 21, chars: 10, bytes: 10, hard: false},
+        Line{num: 1, coff: 8, boff: 11, cext: 18, bext: 21, chars: 10, bytes: 10, hard: false},
       ],
       vec![
         "Hello 😎",
