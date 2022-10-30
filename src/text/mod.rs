@@ -223,6 +223,16 @@ impl Text {
     (l.chars, t.len())
   }
   
+  pub fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Vec<attrs::Span>) -> (usize, usize) {
+    let l = match self.get_line(i) {
+      Some(l) => l,
+      None => return (0, 0),
+    };
+    let t = attrs::render(l.text(&self.text), &attrs);
+    b.push_str(&t);
+    (l.chars, t.len())
+  }
+  
   fn reflow(&mut self) -> &mut Self {
     let mut l: Vec<Line> = Vec::new();
     

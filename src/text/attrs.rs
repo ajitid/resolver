@@ -168,7 +168,7 @@ mod tests {
     assert_eq!("<b><Blue>Hello</Blue></b>, there.", a.render_with_mode(Mode::Markup));
     
     let a = Attributed::new(t, vec![
-      Span::new(7..12, Attributes{bold:false, color: Some(Color::Green)}),
+      Span::new(7..12, Attributes{bold:false, color: Some(Color::Green)}), // deliberately out of order
       Span::new(0..5, Attributes{bold:true, color: Some(Color::Blue)})
     ]);
     assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", a.render_with_mode(Mode::Markup));
