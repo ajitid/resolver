@@ -148,7 +148,7 @@ impl Text {
       }
     }
     
-    None
+    Some(line.boff + line.bytes) // visual end of line
   }
   
   fn next_offset<'a>(&'a self) -> usize {
@@ -865,6 +865,14 @@ mod tests {
     assert_eq!(Pos{index: 11, x: 5, y: 1}, Text::new_with_str(100, "Yo! 🤓\nthere").end(99));
   }
   
+  fn edit_init_text(width: usize, text: &str) -> Text {
+    let mut t = Text::new(100);
+    for c in text.chars() {
+      t.insert_rel(c);
+    }
+    t
+  }
+  
   #[test]
   fn test_editing() {
     let mut t = Text::new(100);
@@ -877,9 +885,16 @@ mod tests {
     t.insert_rel('\n');
     assert_eq!(Pos{index: 3, x: 3, y: 0}, t.backspace_rel());
     
-    let mut t = Text::new_with_str(100, "Hello.\népoustaflant!\nOk.\n");
-    t.loc = t.len();
+    let mut t = edit_init_text(100, "Hello.\népoustaflant!\nOk.\n");
     assert_eq!(Pos{index: 24, x: 3, y: 2}, t.backspace_rel());
+    t.loc = 20;
+    assert_eq!(Some(&Line{num: 1, coff: 7, boff: 7, cext: 21,  bext: 22,  chars: 13, bytes: 14, hard: true}), t.line_with_index(t.loc));
+    t.insert_rel(' ');
+    t.insert_rel('Z');
+    t.insert_rel('o');
+    t.insert_rel('w');
+    t.insert_rel('.');
+    assert_eq!("Hello.\népoustaflant! Zow.\nOk.", t.text);
     
     let mut t = Text::new(100);
     t.insert_rel('H');
