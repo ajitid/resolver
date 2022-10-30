@@ -890,9 +890,13 @@ mod tests {
     t.loc = 20;
     assert_eq!(Some(&Line{num: 1, coff: 7, boff: 7, cext: 21,  bext: 22,  chars: 13, bytes: 14, hard: true}), t.line_with_index(t.loc));
     t.insert_rel(' ');
+    assert_eq!("Hello.\népoustaflant! \nOk.", t.text);
     t.insert_rel('Z');
+    assert_eq!("Hello.\népoustaflant! Z\nOk.", t.text);
     t.insert_rel('o');
+    assert_eq!("Hello.\népoustaflant! Zo\nOk.", t.text);
     t.insert_rel('w');
+    assert_eq!("Hello.\népoustaflant! Zow\nOk.", t.text);
     t.insert_rel('.');
     assert_eq!("Hello.\népoustaflant! Zow.\nOk.", t.text);
     
