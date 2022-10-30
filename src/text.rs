@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops;
 use std::str;
 use std::cmp::min;
 
@@ -52,6 +53,25 @@ impl Line {
     }else{
       Some(Pos{index: idx, x: width, y: self.num}) // end of visual line
     }
+  }
+  
+  pub fn debug_text<'a>(&self, text: &'a str, idx: usize) -> Option<String> {
+    self.debug_text_range(text, ops::Range{start: idx, end: idx + 1})
+  }
+  
+  pub fn debug_text_range<'a>(&self, text: &'a str, rng: ops::Range<usize>) -> Option<String> {
+    if !self.contains(rng.start) {
+      return None;
+    }
+    if rng.end < rng.start {
+      return None;
+    }
+    let mut dbg = String::new();
+    dbg.push_str(&text[self.boff..self.boff + self.bytes]);
+    dbg.push('\n');
+    dbg.push_str(&" ".repeat(rng.start - self.coff));
+    dbg.push_str(&"^".repeat(rng.end - rng.start));
+    Some(dbg)
   }
 }
 
@@ -116,25 +136,25 @@ impl Text {
     self.lines.len()
   }
   
-  fn line_with_index<'a>(&'a self, index: usize) -> Option<&'a Line> {
+  fn line_with_index<'a>(&'a self, idx: usize) -> Option<&'a Line> {
     if self.lines.len() == 0 {
       return None;
     }
     for l in &self.lines {
-      if index >= l.coff && index < l.cext {
+      if idx >= l.coff && idx < l.cext {
         return Some(l);
       }
     }
     None
   }
   
-  fn offset_for_index<'a>(&'a self, index: usize) -> Option<usize> {
-    let line = match self.line_with_index(index) {
+  fn offset_for_index<'a>(&'a self, idx: usize) -> Option<usize> {
+    let line = match self.line_with_index(idx) {
       Some(line) => line,
       None => return None,
     };
     
-    let mut rem = index - line.coff;
+    let mut rem = idx - line.coff;
     if rem == 0 {
       return Some(line.boff);
     }
@@ -149,6 +169,22 @@ impl Text {
     }
     
     Some(line.boff + line.bytes) // visual end of line
+  }
+  
+  fn debug_text_for_index<'a>(&self, idx: usize) -> Option<String> {
+    let line = match self.line_with_index(idx) {
+      Some(line) => line,
+      None => return None,
+    };
+    line.debug_text(&self.text, idx)
+  }
+  
+  fn debug_text_for_range<'a>(&self, rng: ops::Range<usize>) -> Option<String> {
+    let line = match self.line_with_index(rng.start) {
+      Some(line) => line,
+      None => return None,
+    };
+    line.debug_text_range(&self.text, rng)
   }
   
   fn next_offset<'a>(&'a self) -> usize {
@@ -214,10 +250,9 @@ impl Text {
           rc = lc;
           rb = lb;
         }
-        if wc == 0 { // no whitespace boundary; set to here
-          wc = lc;
-          wb = lb;
-        }
+        // set whitespace boundary to here
+        wc = lc;
+        wb = lb;
       }
       if c.is_whitespace() {
         if !p.is_whitespace() {
@@ -447,6 +482,9 @@ impl Text {
     };
     self.text.insert(offset, c);
     self.reflow();
+    if let Some(dbg) = self.debug_text_for_index(idx) {
+      println!(">>> INSERT >>> {:?} @ {} ({}):\n{}", c, idx, offset, dbg);
+    }
     self.index(idx + 1)
   }
   
@@ -865,71 +903,37 @@ mod tests {
     assert_eq!(Pos{index: 11, x: 5, y: 1}, Text::new_with_str(100, "Yo! 🤓\nthere").end(99));
   }
   
-  fn edit_init_text(width: usize, text: &str) -> Text {
-    let mut t = Text::new(100);
+  fn text_init(width: usize, text: &str) -> Text {
+    let mut dst = Text::new(100);
     for c in text.chars() {
-      t.insert_rel(c);
+      dst.insert_rel(c);
     }
-    t
+    dst
+  }
+  
+  fn text_insert(into: &mut Text, text: &str) {
+    for c in text.chars() {
+      into.insert_rel(c);
+    }
   }
   
   #[test]
   fn test_editing() {
     let mut t = Text::new(100);
     assert_eq!(Pos{index: 0, x: 0, y: 0}, t.backspace_rel());
-    t.insert_rel('Y');
-    t.insert_rel('o');
-    t.insert_rel('!');
-    t.insert_rel('!');
+    text_insert(&mut t, "Yo!!");
     assert_eq!(Pos{index: 3, x: 3, y: 0}, t.backspace_rel());
     t.insert_rel('\n');
     assert_eq!(Pos{index: 3, x: 3, y: 0}, t.backspace_rel());
-    
-    let mut t = edit_init_text(100, "Hello.\népoustaflant!\nOk.\n");
-    assert_eq!(Pos{index: 24, x: 3, y: 2}, t.backspace_rel());
-    t.loc = 20;
-    assert_eq!(Some(&Line{num: 1, coff: 7, boff: 7, cext: 21,  bext: 22,  chars: 13, bytes: 14, hard: true}), t.line_with_index(t.loc));
-    t.insert_rel(' ');
-    assert_eq!("Hello.\népoustaflant! \nOk.", t.text);
-    t.insert_rel('Z');
-    assert_eq!("Hello.\népoustaflant! Z\nOk.", t.text);
-    t.insert_rel('o');
-    assert_eq!("Hello.\népoustaflant! Zo\nOk.", t.text);
-    t.insert_rel('w');
-    assert_eq!("Hello.\népoustaflant! Zow\nOk.", t.text);
-    t.insert_rel('.');
-    assert_eq!("Hello.\népoustaflant! Zow.\nOk.", t.text);
     
     let mut t = Text::new(100);
-    t.insert_rel('H');
-    t.insert_rel('e');
-    t.insert_rel('l');
-    t.insert_rel('l');
-    t.insert_rel('l');
+    text_insert(&mut t, "Helll");
     t.backspace_rel();
-    t.insert_rel('o');
-    t.insert_rel(' ');
-    t.insert_rel('😎');
-    t.insert_rel(' ');
-    t.insert_rel('d');
-    t.insert_rel('u');
-    t.insert_rel('d');
-    t.insert_rel('e');
-    t.insert_rel('\n');
-    t.insert_rel('O');
-    t.insert_rel('k');
-    t.insert_rel('\n');
+    text_insert(&mut t, "o 😎 dude\nOk\n");
     assert_eq!(Pos{index: 16, x: 0, y: 2}, t.right_rel());
     
     let mut t = Text::new(100);
-    t.insert_rel('H');
-    t.insert_rel('e');
-    t.insert_rel('l');
-    t.insert_rel('l');
-    t.insert_rel('o');
-    t.insert_rel(' ');
-    t.insert_rel('😎');
-    t.insert_rel(' ');
+    text_insert(&mut t, "Hello 😎 ");
     t.backspace_rel();
     t.backspace_rel();
     assert_eq!(Pos{index: 6, x: 6, y: 0}, t.right_rel());
@@ -937,6 +941,29 @@ mod tests {
     let mut t = Text::new(100);
     t.down_rel();
     assert_eq!(Pos{index: 0, x: 0, y: 0}, t.down_rel());
+  }
+  
+  #[test]
+  fn test_insert_at_line_boundary() {
+    let mut t = text_init(100, "Hello.\nÉpoustouflant!\nOk.\n");
+    assert_eq!(Pos{index: 25, x: 3, y: 2}, t.backspace_rel());
+    t.loc = 21;
+    assert_eq!(Some(&Line{num: 1, coff: 7, boff: 7, cext: 22,  bext: 23,  chars: 14, bytes: 15, hard: true}), t.line_with_index(t.loc));
+    t.insert_rel(' ');
+    assert_eq!(22, t.loc);
+    assert_eq!("Hello.\nÉpoustouflant! \nOk.", t.text);
+    t.insert_rel('Z');
+    assert_eq!(23, t.loc);
+    assert_eq!("Hello.\nÉpoustouflant! Z\nOk.", t.text);
+    t.insert_rel('o');
+    assert_eq!(24, t.loc);
+    assert_eq!("Hello.\nÉpoustouflant! Zo\nOk.", t.text);
+    t.insert_rel('w');
+    assert_eq!(25, t.loc);
+    assert_eq!("Hello.\nÉpoustouflant! Zow\nOk.", t.text);
+    t.insert_rel('.');
+    assert_eq!(26, t.loc);
+    assert_eq!("Hello.\nÉpoustouflant! Zow.\nOk.", t.text);
   }
   
   #[test]
