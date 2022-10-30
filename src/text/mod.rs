@@ -214,21 +214,19 @@ impl Text {
   }
   
   pub fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
+    self.write_line_with_attrs(i, b, None)
+  }
+  
+  pub fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<Vec<attrs::Span>>) -> (usize, usize) {
     let l = match self.get_line(i) {
       Some(l) => l,
       None => return (0, 0),
     };
     let t = l.text(&self.text);
-    b.push_str(t);
-    (l.chars, t.len())
-  }
-  
-  pub fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Vec<attrs::Span>) -> (usize, usize) {
-    let l = match self.get_line(i) {
-      Some(l) => l,
-      None => return (0, 0),
+    let t = match &attrs {
+      Some(attrs) => attrs::render(t, attrs),
+      None => t.to_string(),
     };
-    let t = attrs::render(l.text(&self.text), &attrs);
     b.push_str(&t);
     (l.chars, t.len())
   }
