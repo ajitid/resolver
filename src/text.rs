@@ -482,9 +482,6 @@ impl Text {
     };
     self.text.insert(offset, c);
     self.reflow();
-    if let Some(dbg) = self.debug_text_for_index(idx) {
-      println!(">>> INSERT >>> {:?} @ {} ({}):\n{}", c, idx, offset, dbg);
-    }
     self.index(idx + 1)
   }
   
