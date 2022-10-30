@@ -64,11 +64,11 @@ impl Writer {
     let mut g = String::new();
     let mut cxt = exec::Context::new_with_stdlib();
     let style = vec![
-      attrs::Attrs{bold: true, color: Some(Color::Magenta)},
-      attrs::Attrs{bold: true, color: Some(Color::Yellow)},
-      attrs::Attrs{bold: true, color: Some(Color::Cyan)},
-      attrs::Attrs{bold: true, color: Some(Color::Green)},
-      attrs::Attrs{bold: true, color: Some(Color::Blue)},
+      attrs::Attributes{bold: true, color: Some(Color::Magenta)},
+      attrs::Attributes{bold: true, color: Some(Color::Yellow)},
+      attrs::Attributes{bold: true, color: Some(Color::Cyan)},
+      attrs::Attributes{bold: true, color: Some(Color::Green)},
+      attrs::Attributes{bold: true, color: Some(Color::Blue)},
     ];
     
     for l in text.lines() {

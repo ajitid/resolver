@@ -14,7 +14,7 @@ pub fn render(cxt: &mut Context, text: &str) -> String {
   render_with_attrs(cxt, text, None)
 }
 
-pub fn render_with_attrs(cxt: &mut Context, text: &str, attrs: Option<&Vec<attrs::Attrs>>) -> String {
+pub fn render_with_attrs(cxt: &mut Context, text: &str, attrs: Option<&Vec<attrs::Attributes>>) -> String {
   let mut g = String::new();
   let mut p = Parser::new(Scanner::new(text));
   let mut i = 0;

@@ -10,12 +10,12 @@ pub enum Mode {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Attrs {
+pub struct Attributes {
   pub bold: bool,
   pub color: Option<Color>,
 }
 
-impl Attrs {
+impl Attributes {
   pub fn render(&self, text: &str) -> String {
     self.render_with_mode(text, Mode::Terminal)
   }
@@ -60,7 +60,7 @@ impl Attrs {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Span {
   range: ops::Range<usize>,
-  attrs: Attrs,
+  attrs: Attributes,
 }
 
 impl PartialOrd for Span {
@@ -76,7 +76,7 @@ impl Ord for Span {
 }
 
 impl Span {
-  pub fn new(range: ops::Range<usize>, attrs: Attrs) -> Span {
+  pub fn new(range: ops::Range<usize>, attrs: Attributes) -> Span {
     Span{
       range: range,
       attrs: attrs,
@@ -84,11 +84,34 @@ impl Span {
   }
 }
 
-pub fn render(text: &str, spans: Vec<Span>) -> String {
+#[derive(Debug, Clone)]
+pub struct Attributed<'a> {
+  text: &'a str,
+  spans: Vec<Span>,
+}
+
+impl<'a> Attributed<'a> {
+  pub fn new(text: &'a str, spans: Vec<Span>) -> Attributed<'a> {
+    Attributed{
+      text: text,
+      spans: spans,
+    }
+  }
+  
+  pub fn render(&self) -> String {
+    self.render_with_mode(Mode::Terminal)
+  }
+  
+  fn render_with_mode(&self, mode: Mode) -> String {
+    render_with_mode(self.text, &self.spans, mode)
+  }
+}
+
+pub fn render(text: &str, spans: &Vec<Span>) -> String {
   render_with_mode(text, spans, Mode::Terminal)
 }
 
-fn render_with_mode(text: &str, spans: Vec<Span>, mode: Mode) -> String {
+fn render_with_mode(text: &str, spans: &Vec<Span>, mode: Mode) -> String {
   let mut dup = spans.clone();
   dup.sort();
   
@@ -118,14 +141,37 @@ mod tests {
   use super::*;
   
   #[test]
-  fn render_attrs() {
+  fn render_attributes() {
     let t = "Hello, there.";
-    let a = vec![Span::new(0..5, Attrs{bold:true, color: None})];
-    assert_eq!("<b>Hello</b>, there.", render_with_mode(t, a, Mode::Markup));
-    let a = vec![Span::new(0..5, Attrs{bold:true, color: Some(Color::Blue)})];
-    assert_eq!("<b><Blue>Hello</Blue></b>, there.", render_with_mode(t, a, Mode::Markup));
-    let a = vec![Span::new(7..12, Attrs{bold:false, color: Some(Color::Green)}), Span::new(0..5, Attrs{bold:true, color: Some(Color::Blue)})];
-    assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", render_with_mode(t, a, Mode::Markup));
+
+    let a = vec![Span::new(0..5, Attributes{bold:true, color: None})];
+    assert_eq!("<b>Hello</b>, there.", render_with_mode(t, &a, Mode::Markup));
+
+    let a = vec![Span::new(0..5, Attributes{bold:true, color: Some(Color::Blue)})];
+    assert_eq!("<b><Blue>Hello</Blue></b>, there.", render_with_mode(t, &a, Mode::Markup));
+
+    let a = vec![Span::new(7..12, Attributes{bold:false, color: Some(Color::Green)}), Span::new(0..5, Attributes{bold:true, color: Some(Color::Blue)})];
+    assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", render_with_mode(t, &a, Mode::Markup));
+  }
+  
+  #[test]
+  fn render_attributed() {
+    let t = "Hello, there.";
+
+    let a = Attributed::new(t, vec![Span::new(0..5, Attributes{bold:true, color: None})]);
+    assert_eq!("<b>Hello</b>, there.", a.render_with_mode(Mode::Markup));
+
+    let a = Attributed::new(t, vec![Span::new(0..5, Attributes{bold:true, color: None})]);
+    assert_eq!("<b>Hello</b>, there.", a.render_with_mode(Mode::Markup));
+
+    let a = Attributed::new(t, vec![Span::new(0..5, Attributes{bold:true, color: Some(Color::Blue)})]);
+    assert_eq!("<b><Blue>Hello</Blue></b>, there.", a.render_with_mode(Mode::Markup));
+    
+    let a = Attributed::new(t, vec![
+      Span::new(7..12, Attributes{bold:false, color: Some(Color::Green)}),
+      Span::new(0..5, Attributes{bold:true, color: Some(Color::Blue)})
+    ]);
+    assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", a.render_with_mode(Mode::Markup));
   }
   
 }
