@@ -3,26 +3,31 @@ use std::cmp::{min, Ordering};
 
 use crossterm::style::{Stylize, Color};
 
+#[derive(Debug, Clone, Copy)]
 pub enum Mode {
   Terminal,
   Markup,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-struct Attrs {
-  bold: bool,
-  color: Option<Color>,
+pub struct Attrs {
+  pub bold: bool,
+  pub color: Option<Color>,
 }
 
 impl Attrs {
-  fn apply(&self, text: &str, mode: &Mode) -> String {
+  pub fn render(&self, text: &str) -> String {
+    self.render_with_mode(text, Mode::Terminal)
+  }
+  
+  fn render_with_mode(&self, text: &str, mode: Mode) -> String {
     match mode {
-      Mode::Terminal => self.apply_term(text),
-      Mode::Markup   => self.apply_html(text),
+      Mode::Terminal => self.render_term(text),
+      Mode::Markup   => self.render_html(text),
     }
   }
   
-  fn apply_term(&self, text: &str) -> String {
+  fn render_term(&self, text: &str) -> String {
     let mut styled = text.stylize();
     if self.bold {
       styled = styled.bold();
@@ -30,10 +35,10 @@ impl Attrs {
     if let Some(color) = self.color {
       styled = styled.with(color);
     }
-    text.to_string()
+    styled.to_string()
   }
   
-  fn apply_html(&self, text: &str) -> String {
+  fn render_html(&self, text: &str) -> String {
     let mut attrd = String::new();
     if self.bold {
       attrd.push_str("<b>");
@@ -53,7 +58,7 @@ impl Attrs {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-struct Span {
+pub struct Span {
   range: ops::Range<usize>,
   attrs: Attrs,
 }
@@ -79,7 +84,11 @@ impl Span {
   }
 }
 
-fn apply(text: &str, spans: Vec<Span>, mode: Mode) -> String {
+pub fn render(text: &str, spans: Vec<Span>) -> String {
+  render_with_mode(text, spans, Mode::Terminal)
+}
+
+fn render_with_mode(text: &str, spans: Vec<Span>, mode: Mode) -> String {
   let mut dup = spans.clone();
   dup.sort();
   
@@ -93,7 +102,7 @@ fn apply(text: &str, spans: Vec<Span>, mode: Mode) -> String {
     }
     let end = min(span.range.end, len);
     if end > start { // copy attributed range
-      attrd.push_str(&span.attrs.apply(&text[start..end], &mode));
+      attrd.push_str(&span.attrs.render_with_mode(&text[start..end], mode));
     }
     x = end;
   }
@@ -109,14 +118,14 @@ mod tests {
   use super::*;
   
   #[test]
-  fn apply_attrs() {
+  fn render_attrs() {
     let t = "Hello, there.";
     let a = vec![Span::new(0..5, Attrs{bold:true, color: None})];
-    assert_eq!("<b>Hello</b>, there.", apply(t, a, Mode::Markup));
+    assert_eq!("<b>Hello</b>, there.", render_with_mode(t, a, Mode::Markup));
     let a = vec![Span::new(0..5, Attrs{bold:true, color: Some(Color::Blue)})];
-    assert_eq!("<b><Blue>Hello</Blue></b>, there.", apply(t, a, Mode::Markup));
+    assert_eq!("<b><Blue>Hello</Blue></b>, there.", render_with_mode(t, a, Mode::Markup));
     let a = vec![Span::new(7..12, Attrs{bold:false, color: Some(Color::Green)}), Span::new(0..5, Attrs{bold:true, color: Some(Color::Blue)})];
-    assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", apply(t, a, Mode::Markup));
+    assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", render_with_mode(t, a, Mode::Markup));
   }
   
 }

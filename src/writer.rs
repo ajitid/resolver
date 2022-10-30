@@ -6,10 +6,12 @@ use crossterm::queue;
 use crossterm::cursor;
 use crossterm::execute;
 use crossterm::terminal;
+use crossterm::style::Color;
 
 use crate::options;
 use crate::buffer::Buffer;
 use crate::text::{Text, Pos};
+use crate::text::attrs;
 use crate::frame::Frame;
 
 use crate::rdl;
@@ -61,9 +63,16 @@ impl Writer {
   fn draw_formula(_width: usize, _height: usize, text: &Text) -> String {
     let mut g = String::new();
     let mut cxt = exec::Context::new_with_stdlib();
+    let style = vec![
+      attrs::Attrs{bold: true, color: Some(Color::Magenta)},
+      attrs::Attrs{bold: true, color: Some(Color::Yellow)},
+      attrs::Attrs{bold: true, color: Some(Color::Cyan)},
+      attrs::Attrs{bold: true, color: Some(Color::Green)},
+      attrs::Attrs{bold: true, color: Some(Color::Blue)},
+    ];
     
     for l in text.lines() {
-      g.push_str(rdl::render(&mut cxt, l).as_ref());
+      g.push_str(rdl::render_with_attrs(&mut cxt, l, Some(&style)).as_ref());
       g.push('\n');
     }
     
