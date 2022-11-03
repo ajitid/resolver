@@ -11,34 +11,39 @@ use exec::Context;
 use crate::text::attrs;
 
 pub fn render(cxt: &mut Context, text: &str) -> String {
-  render_with_attrs(cxt, text, None)
+  render_with_attrs(cxt, text, 0, None).text().to_owned()
 }
 
-pub fn render_with_attrs(cxt: &mut Context, text: &str, attrs: Option<&Vec<attrs::Attributes>>) -> String {
+pub fn render_with_attrs(cxt: &mut Context, text: &str, offset: usize, attrs: Option<&Vec<attrs::Attributes>>) -> attrs::Attributed {
   let mut g = String::new();
+  let mut s: Vec<attrs::Span> = Vec::new();
   let mut p = Parser::new(Scanner::new(text));
   let mut i = 0;
   loop {
-    let r = match p.parse() {
-      Ok(r) => r,
+    let exp = match p.parse() {
+      Ok(exp) => exp,
       Err(_)  => break,
     };
     
-    let res = match r.exec(cxt) {
-      Ok(res) => res,
+    let res = match exp.exec(cxt) {
+      Ok(res) => res.to_string(),
       Err(_)  => continue,
     };
     
-    let res = match &attrs {
-      Some(attrs) => attrs[i % attrs.len()].render(&res.to_string()),
-      None => res.to_string(),
-    };
+    if i > 0 {
+      g.push_str("; ");
+    }
     
-    if i > 0 { g.push_str("; "); }
-    g.push_str(&format!("{}", r));
-    g.push_str(&format!(" → {}", res));
+    g.push_str(&format!("{} → ", exp));
+    
+    if let Some(attrs) = &attrs {
+      let l = offset + g.len();
+      s.push(attrs::Span::new(l..l+res.len(), attrs[i % attrs.len()].clone()));
+    }
+    
+    g.push_str(&format!("{}", res));
     
     i += 1;
   }
-  g
+  attrs::Attributed::new_with_string(g, s)
 }

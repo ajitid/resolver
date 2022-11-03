@@ -60,8 +60,8 @@ impl Writer {
     g
   }
   
-  fn draw_formula(_width: usize, _height: usize, text: &Text) -> String {
-    let mut g = String::new();
+  fn draw_formula(_width: usize, _height: usize, text: &Text) -> attrs::Attributed {
+    let mut atx = attrs::Attributed::new();
     let mut cxt = exec::Context::new_with_stdlib();
     let style = vec![
       attrs::Attributes{bold: true, color: Some(Color::Magenta)},
@@ -72,11 +72,11 @@ impl Writer {
     ];
     
     for l in text.lines() {
-      g.push_str(rdl::render_with_attrs(&mut cxt, l, Some(&style)).as_ref());
-      g.push('\n');
+      atx.push(&rdl::render_with_attrs(&mut cxt, l, atx.len(), Some(&style)));
+      atx.push_str("\n");
     }
     
-    g
+    atx
   }
   
   fn draw_gutter(_width: usize, height: usize) -> String {
@@ -94,7 +94,7 @@ impl Writer {
     let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
     
     let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize));
-    let ticker = Text::new_with_string(tw, Writer::draw_formula(tw, self.term_size.1 as usize, text));
+    let ticker = Text::new_with_attributed(tw, Writer::draw_formula(tw, self.term_size.1 as usize, text));
     let cols: Vec<&Text> = if self.opts.debug_editor {
       vec![&text]
     }else{

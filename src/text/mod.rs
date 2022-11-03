@@ -81,6 +81,7 @@ pub struct Text {
   text: String,
   width: usize,
   lines: Vec<Line>,
+  spans: Option<Vec<attrs::Span>>,
   loc: usize,
 }
 
@@ -90,6 +91,7 @@ impl Text {
       text: String::new(),
       width: width,
       lines: Vec::new(),
+      spans: None,
       loc: 0,
     }
   }
@@ -99,6 +101,7 @@ impl Text {
       text: text.to_owned(),
       width: width,
       lines: Vec::new(),
+      spans: None,
       loc: 0,
     };
     c.reflow();
@@ -110,6 +113,21 @@ impl Text {
       text: text, // no copy
       width: width,
       lines: Vec::new(),
+      spans: None,
+      loc: 0,
+    };
+    c.reflow();
+    c
+  }
+  
+  pub fn new_with_attributed(width: usize, text: attrs::Attributed) -> Text {
+    let mut s = text.spans().clone();
+    s.sort();
+    let mut c = Text{
+      text: text.text().to_owned(),
+      width: width,
+      lines: Vec::new(),
+      spans: Some(s),
       loc: 0,
     };
     c.reflow();
@@ -214,17 +232,20 @@ impl Text {
   }
   
   pub fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
-    self.write_line_with_attrs(i, b, None)
+    match &self.spans {
+      Some(spans) => self.write_line_with_attrs(i, b, Some(spans)),
+      None => self.write_line_with_attrs(i, b, None),
+    }
   }
   
-  pub fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<Vec<attrs::Span>>) -> (usize, usize) {
+  pub fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize) {
     let l = match self.get_line(i) {
       Some(l) => l,
       None => return (0, 0),
     };
     let t = l.text(&self.text);
     let t = match &attrs {
-      Some(attrs) => attrs::render(t, attrs),
+      Some(attrs) => attrs::render_with_offset(t, l.boff, attrs),
       None => t.to_string(),
     };
     b.push_str(&t);
@@ -911,7 +932,7 @@ mod tests {
   }
   
   fn text_init(width: usize, text: &str) -> Text {
-    let mut dst = Text::new(100);
+    let mut dst = Text::new(width);
     for c in text.chars() {
       dst.insert_rel(c);
     }

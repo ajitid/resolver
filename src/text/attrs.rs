@@ -85,17 +85,54 @@ impl Span {
 }
 
 #[derive(Debug, Clone)]
-pub struct Attributed<'a> {
-  text: &'a str,
+pub struct Attributed {
+  text: String,
   spans: Vec<Span>,
 }
 
-impl<'a> Attributed<'a> {
-  pub fn new(text: &'a str, spans: Vec<Span>) -> Attributed<'a> {
+impl Attributed {
+  pub fn new() -> Attributed {
+    Attributed{
+      text: String::new(),
+      spans: Vec::new(),
+    }
+  }
+  
+  pub fn new_with_str(text: &str, spans: Vec<Span>) -> Attributed {
+    Attributed{
+      text: text.to_string(),
+      spans: spans,
+    }
+  }
+  
+  pub fn new_with_string(text: String, spans: Vec<Span>) -> Attributed {
     Attributed{
       text: text,
       spans: spans,
     }
+  }
+  
+  pub fn len(&self) -> usize {
+    self.text.len()
+  }
+  
+  pub fn text<'a>(&'a self) -> &'a str {
+    &self.text
+  }
+  
+  pub fn spans<'a>(&'a self) -> &'a Vec<Span> {
+    &self.spans
+  }
+  
+  pub fn push(&mut self, another: &Attributed) {
+    self.text.push_str(&another.text);
+    for e in &another.spans {
+      self.spans.push(e.clone());
+    }
+  }
+  
+  pub fn push_str(&mut self, text: &str) {
+    self.text.push_str(text);
   }
   
   pub fn render(&self) -> String {
@@ -103,7 +140,7 @@ impl<'a> Attributed<'a> {
   }
   
   fn render_with_mode(&self, mode: Mode) -> String {
-    render_with_mode(self.text, &self.spans, mode)
+    render_with_mode(&self.text, &self.spans, mode)
   }
 }
 
@@ -111,19 +148,30 @@ pub fn render(text: &str, spans: &Vec<Span>) -> String {
   render_with_mode(text, spans, Mode::Terminal)
 }
 
+pub fn render_with_offset(text: &str, boff: usize, spans: &Vec<Span>) -> String {
+  render_with_offset_mode(text, boff, spans, Mode::Terminal)
+}
+
 fn render_with_mode(text: &str, spans: &Vec<Span>, mode: Mode) -> String {
+  render_with_offset_mode(text, 0, spans, mode)
+}
+
+fn render_with_offset_mode(text: &str, boff: usize, spans: &Vec<Span>, mode: Mode) -> String {
   let mut dup = spans.clone();
   dup.sort();
   
   let len = text.len();
-  let mut x = 0;
+  let mut x = boff;
   let mut attrd = String::new();
   for span in dup {
     let start = min(span.range.start, len);
+    let end = min(span.range.end, len);
+    if x > end { // skip spans that end before the current offset
+      continue;
+    }
     if span.range.start > x { // copy before span starts
       attrd.push_str(&text[x..start]);
     }
-    let end = min(span.range.end, len);
     if end > start { // copy attributed range
       attrd.push_str(&span.attrs.render_with_mode(&text[start..end], mode));
     }
@@ -155,19 +203,28 @@ mod tests {
   }
   
   #[test]
+  fn render_attributes_with_offset() {
+    let t = "Hello, there.";
+    let x = 7;
+    
+    let a = vec![Span::new(7..12, Attributes{bold:false, color: Some(Color::Green)})];
+    assert_eq!("<Green>there</Green>.", render_with_offset_mode(t, x, &a, Mode::Markup));
+  }
+  
+  #[test]
   fn render_attributed() {
     let t = "Hello, there.";
 
-    let a = Attributed::new(t, vec![Span::new(0..5, Attributes{bold:true, color: None})]);
+    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, color: None})]);
     assert_eq!("<b>Hello</b>, there.", a.render_with_mode(Mode::Markup));
 
-    let a = Attributed::new(t, vec![Span::new(0..5, Attributes{bold:true, color: None})]);
+    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, color: None})]);
     assert_eq!("<b>Hello</b>, there.", a.render_with_mode(Mode::Markup));
 
-    let a = Attributed::new(t, vec![Span::new(0..5, Attributes{bold:true, color: Some(Color::Blue)})]);
+    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, color: Some(Color::Blue)})]);
     assert_eq!("<b><Blue>Hello</Blue></b>, there.", a.render_with_mode(Mode::Markup));
     
-    let a = Attributed::new(t, vec![
+    let a = Attributed::new_with_str(t, vec![
       Span::new(7..12, Attributes{bold:false, color: Some(Color::Green)}), // deliberately out of order
       Span::new(0..5, Attributes{bold:true, color: Some(Color::Blue)})
     ]);
