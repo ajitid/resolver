@@ -103,31 +103,33 @@ impl<'a> Scanner<'a> {
   
   pub fn peek(&mut self) -> Option<char> {
     if self.peek == None {
-      self.peek = self.data.next();
+      self.peek = self.read();
     }
     self.peek
   }
   
   pub fn skip(&mut self) {
     self.peek = self.read();
+    if self.peek != None {
+      self.index += 1;
+    }
   }
   
   pub fn next(&mut self) -> Option<char> {
     let n = self.peek();
     if n != None {
       self.peek = self.read();
+      self.index += 1;
     }
     n
   }
   
+  pub fn index(&self) -> usize {
+    self.index
+  }
+  
   fn read(&mut self) -> Option<char> {
-    match self.data.next() {
-      Some(c) => {
-        self.index += 1;
-        Some(c)
-      },
-      None => None,
-    }
+    self.data.next()
   }
   
   /// Determine if the next char in the stream passes the provided check.

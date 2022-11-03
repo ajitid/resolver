@@ -1,8 +1,15 @@
+use std::ops;
+
 use crate::rdl;
 use crate::rdl::scan::{self, Scanner, TType};
 use crate::rdl::exec::{Context, Node};
 use crate::rdl::unit;
 use crate::rdl::error;
+
+pub struct Expr {
+  pub range: ops::Range<usize>,
+  pub ast: Node,
+}
 
 pub struct Parser<'a> {
   scan: Scanner<'a>,
@@ -13,6 +20,20 @@ impl<'a> Parser<'a> {
     Parser{
       scan: scan,
     }
+  }
+  
+  pub fn parse_with_meta(&mut self) -> Result<Expr, error::Error> {
+    self.scan.discard_fn(|ttype| {
+      ttype == TType::Whitespace ||
+      ttype == TType::Verbatim
+    });
+    let s = self.scan.index();
+    let n = self.parse_enter()?;
+    let e = self.scan.index();
+    Ok(Expr{
+      range: s..e,
+      ast: n,
+    })
   }
   
   pub fn parse(&mut self) -> Result<Node, error::Error> {
