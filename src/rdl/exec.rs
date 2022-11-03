@@ -62,7 +62,7 @@ impl fmt::Display for NType {
   }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Node {
   ntype: NType,
   left:  Option<Box<Node>>,

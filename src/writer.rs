@@ -64,8 +64,8 @@ impl Writer {
     let mut atx = attrs::Attributed::new();
     let mut cxt = exec::Context::new_with_stdlib();
     let style = vec![
-      attrs::Attributes{bold: true, color: Some(Color::Magenta)},
       attrs::Attributes{bold: true, color: Some(Color::Yellow)},
+      attrs::Attributes{bold: true, color: Some(Color::Magenta)},
       attrs::Attributes{bold: true, color: Some(Color::Cyan)},
       attrs::Attributes{bold: true, color: Some(Color::Green)},
       attrs::Attributes{bold: true, color: Some(Color::Blue)},

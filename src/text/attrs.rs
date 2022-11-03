@@ -1,5 +1,5 @@
 use std::ops;
-use std::cmp::{min, Ordering};
+use std::cmp::{min, max, Ordering};
 
 use crossterm::style::{Stylize, Color};
 
@@ -149,29 +149,29 @@ pub fn render(text: &str, spans: &Vec<Span>) -> String {
 }
 
 pub fn render_with_offset(text: &str, boff: usize, spans: &Vec<Span>) -> String {
-  render_with_offset_mode(text, boff, spans, Mode::Terminal)
+  render_with_options(text, boff, spans, Mode::Terminal)
 }
 
 fn render_with_mode(text: &str, spans: &Vec<Span>, mode: Mode) -> String {
-  render_with_offset_mode(text, 0, spans, mode)
+  render_with_options(text, 0, spans, mode)
 }
 
-fn render_with_offset_mode(text: &str, boff: usize, spans: &Vec<Span>, mode: Mode) -> String {
+fn render_with_options(text: &str, boff: usize, spans: &Vec<Span>, mode: Mode) -> String {
   let mut dup = spans.clone();
   dup.sort();
   
   let len = text.len();
-  let mut x = boff;
+  let mut x = 0;
   let mut attrd = String::new();
   for span in dup {
-    let start = min(span.range.start, len);
-    let end = min(span.range.end, len);
-    if x > end { // skip spans that end before the current offset
+    if span.range.end < boff { // skip spans that end before the current offset
       continue;
     }
-    if span.range.start > x { // copy before span starts
+    let start = min(max(boff, span.range.start) - boff, len);
+    if start > x { // copy before span starts
       attrd.push_str(&text[x..start]);
     }
+    let end = min(span.range.end - boff, len);
     if end > start { // copy attributed range
       attrd.push_str(&span.attrs.render_with_mode(&text[start..end], mode));
     }
@@ -206,9 +206,10 @@ mod tests {
   fn render_attributes_with_offset() {
     let t = "Hello, there.";
     let x = 7;
+    let p = &t[x..];
     
-    let a = vec![Span::new(7..12, Attributes{bold:false, color: Some(Color::Green)})];
-    assert_eq!("<Green>there</Green>.", render_with_offset_mode(t, x, &a, Mode::Markup));
+    let a = vec![Span::new(7..12, Attributes{bold:false, color: Some(Color::Green)}), Span::new(12..13, Attributes{bold:true, color: None})];
+    assert_eq!("<Green>there</Green><b>.</b>", render_with_options(p, x, &a, Mode::Markup));
   }
   
   #[test]
