@@ -40,13 +40,15 @@ pub enum TType {
 pub struct Token {
   pub ttype: TType,
   pub ttext: String,
+  pub range: ops::Range<usize>,
 }
 
 impl Token {
-  pub fn new(ttype: TType, ttext: &str) -> Token {
+  pub fn new(ttype: TType, ttext: &str, range: ops::Range<usize>) -> Token {
     Token{
       ttype: ttype,
       ttext: ttext.to_string(),
+      range: range,
     }
   }
   
@@ -109,18 +111,15 @@ impl<'a> Scanner<'a> {
   }
   
   pub fn skip(&mut self) {
-    self.peek = self.read();
     if self.peek != None {
       self.index += 1;
     }
+    self.peek = self.read();
   }
   
   pub fn next(&mut self) -> Option<char> {
     let n = self.peek();
-    if n != None {
-      self.peek = self.read();
-      self.index += 1;
-    }
+    self.skip();
     n
   }
   
@@ -241,7 +240,7 @@ impl<'a> Scanner<'a> {
     if self.tokens.len() > 0 {
       Ok(self.tokens.remove(0))
     }else{
-      Ok(Token::new(TType::End, ""))
+      Ok(Token::new(TType::End, "", 0..0))
     }
   }
   
@@ -300,6 +299,7 @@ impl<'a> Scanner<'a> {
   }
   
   fn scan_verbatim(&mut self) -> Result<(), error::Error> {
+    let idx = self.index;
     let mut buf = String::new();
     loop {
       if let Some(c) = self.peek() {
@@ -324,29 +324,35 @@ impl<'a> Scanner<'a> {
     self.push(Token{
       ttype: TType::Verbatim,
       ttext: buf,
+      range: idx..self.index,
     });
     Ok(())
   }
   
   fn scan_ident(&mut self) -> Result<(), error::Error> {
+    let idx = self.index;
     let name = self.ident()?;
     self.push(Token{
       ttype: TType::Ident,
       ttext: name,
+      range: idx..self.index,
     });
     Ok(())
   }
   
   fn scan_number(&mut self) -> Result<(), error::Error> {
+    let idx = self.index;
     let val = self.number()?;
     self.push(Token{
       ttype: TType::Number,
       ttext: val,
+      range: idx..self.index,
     });
     Ok(())
   }
   
   fn scan_operator(&mut self) -> Result<(), error::Error> {
+    let idx = self.index;
     let mut buf = String::new();
     while let Some(c) = self.peek() {
       if Self::is_operator(c) {
@@ -359,20 +365,24 @@ impl<'a> Scanner<'a> {
     self.push(Token{
       ttype: TType::Operator,
       ttext: buf,
+      range: idx..self.index,
     });
     Ok(())
   }
   
   fn scan_whitespace(&mut self) -> Result<(), error::Error> {
+    let idx = self.index;
     let ws = self.whitespace()?;
     self.push(Token{
       ttype: TType::Whitespace,
       ttext: ws,
+      range: idx..self.index,
     });
     Ok(())
   }
   
   fn scan_symbol(&mut self) -> Result<(), error::Error> {
+    let idx = self.index;
     if let Some(c) = self.next() {
       let ttype = match c {
         LPAREN => TType::LParen,
@@ -383,6 +393,7 @@ impl<'a> Scanner<'a> {
       self.push(Token{
         ttype: ttype,
         ttext: c.to_string(),
+        range: idx..self.index,
       });
     }
     Ok(())
@@ -540,61 +551,61 @@ mod tests {
   fn next_token() {
     let s = r#"Hello 122"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 5..6)), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122", 6..9)), t.token());
     
     let s = r#"Hello=122"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
-    assert_eq!(Ok(Token::new(TType::Assign, "=")), t.token());
-    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=", 5..6)), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122", 6..9)), t.token());
     
     let s = r#"+-*/%"#; // consuming operators is greedy
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token::new(TType::Operator, "+-*/%")), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "+-*/%", 0..5)), t.token());
     
     let s = r#"Hello    = 122"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, "    ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Assign, "=")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, "    ", 5..9)), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=", 9..10)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 10..11)), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122", 11..14)), t.token());
     
     let s = r#"Hello? = 122 kg"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, "? ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Assign, "=")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Ident, "kg")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, "? ", 5..7)), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=", 7..8)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 8..9)), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122", 9..12)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 12..13)), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "kg", 13..15)), t.token());
     
     let s = r#"Hello, there, Mr.=122"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token::new(TType::Ident, "Hello")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, ", ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Ident, "there")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, ", ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Ident, "Mr")), t.token());
-    assert_eq!(Ok(Token::new(TType::Verbatim, ".")), t.token());
-    assert_eq!(Ok(Token::new(TType::Assign, "=")), t.token());
-    assert_eq!(Ok(Token::new(TType::Number, "122")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, ", ", 5..7)), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "there", 7..12)), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, ", ", 12..14)), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "Mr", 14..16)), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, ".", 16..17)), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=", 17..18)), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122", 18..21)), t.token());
     
     let s = r#"a + (1 * b)"#;
     let mut t = Scanner::new(s);
-    assert_eq!(Ok(Token::new(TType::Ident, "a")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Operator, "+")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
-    assert_eq!(Ok(Token::new(TType::LParen, "(")), t.token());
-    assert_eq!(Ok(Token::new(TType::Number, "1")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Operator, "*")), t.token());
-    assert_eq!(Ok(Token::new(TType::Whitespace, " ")), t.token());
-    assert_eq!(Ok(Token::new(TType::Ident, "b")), t.token());
-    assert_eq!(Ok(Token::new(TType::RParen, ")")), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "a", 0..1)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 1..2)), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "+", 2..3)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 3..4)), t.token());
+    assert_eq!(Ok(Token::new(TType::LParen, "(", 4..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "1", 5..6)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 6..7)), t.token());
+    assert_eq!(Ok(Token::new(TType::Operator, "*", 7..8)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 8..9)), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "b", 9..10)), t.token());
+    assert_eq!(Ok(Token::new(TType::RParen, ")", 10..11)), t.token());
   }
 }
