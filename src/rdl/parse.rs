@@ -1,3 +1,4 @@
+use std::fmt;
 use std::ops;
 
 use crate::rdl;
@@ -6,9 +7,16 @@ use crate::rdl::exec::{Context, Node};
 use crate::rdl::unit;
 use crate::rdl::error;
 
+#[derive(Debug, PartialEq)]
 pub struct Expr {
   pub range: ops::Range<usize>,
   pub ast: Node,
+}
+
+impl fmt::Display for Expr {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    self.ast.fmt(f)
+  }
 }
 
 pub struct Parser<'a> {
@@ -22,21 +30,7 @@ impl<'a> Parser<'a> {
     }
   }
   
-  pub fn parse_with_meta(&mut self) -> Result<Expr, error::Error> {
-    self.scan.discard_fn(|ttype| {
-      ttype == TType::Whitespace ||
-      ttype == TType::Verbatim
-    });
-    let s = self.scan.index();
-    let n = self.parse_enter()?;
-    let e = self.scan.index();
-    Ok(Expr{
-      range: s..e,
-      ast: n,
-    })
-  }
-  
-  pub fn parse(&mut self) -> Result<Node, error::Error> {
+  pub fn parse(&mut self) -> Result<Expr, error::Error> {
     self.scan.discard_fn(|ttype| {
       ttype == TType::Whitespace ||
       ttype == TType::Verbatim
@@ -44,11 +38,11 @@ impl<'a> Parser<'a> {
     self.parse_enter()
   }
   
-  fn parse_enter(&mut self) -> Result<Node, error::Error> {
+  fn parse_enter(&mut self) -> Result<Expr, error::Error> {
     self.parse_assign()
   }
   
-  fn parse_assign(&mut self) -> Result<Node, error::Error> {
+  fn parse_assign(&mut self) -> Result<Expr, error::Error> {
     self.scan.discard(TType::Whitespace);
     
     let left = match self.parse_ident() {
@@ -70,17 +64,20 @@ impl<'a> Parser<'a> {
       Err(_)    => return self.parse_arith_left(left),
     };
     
-    Ok(Node::new_assign(left, right))
+    Ok(Expr{
+      range: left.range.start..right.range.end,
+      ast: Node::new_assign(left.ast, right.ast),
+    })
   }
   
-  fn parse_arith(&mut self) -> Result<Node, error::Error> {
+  fn parse_arith(&mut self) -> Result<Expr, error::Error> {
     match self.parse_primary() {
       Ok(left) => self.parse_arith_left(left),
       Err(err) => Err(err.into()),
     }
   }
   
-  fn parse_arith_left(&mut self, left: Node) -> Result<Node, error::Error> {
+  fn parse_arith_left(&mut self, left: Expr) -> Result<Expr, error::Error> {
     self.scan.discard(TType::Whitespace);
     
     let op = match self.scan.expect_token(TType::Operator) {
@@ -106,46 +103,92 @@ impl<'a> Parser<'a> {
     let opc = op.ttext.chars().next().unwrap();
     match right {
       Some(right) => match opc {
-        scan::ADD => Ok(self.parse_arith_left(Node::new_add(left, right))?),
-        scan::SUB => Ok(self.parse_arith_left(Node::new_sub(left, right))?),
-        scan::MUL => Ok(self.parse_arith_left(Node::new_mul(left, right))?),
-        scan::DIV => Ok(self.parse_arith_left(Node::new_div(left, right))?),
-        scan::MOD => Ok(self.parse_arith_left(Node::new_mod(left, right))?),
-        _         => Err(error::Error::TokenNotMatched),
+        scan::ADD => Ok(self.parse_arith_left(Expr{
+          range: left.range.start..right.range.end,
+          ast: Node::new_add(left.ast, right.ast)
+        })?),
+        scan::SUB => Ok(self.parse_arith_left(Expr{
+          range: left.range.start..right.range.end,
+          ast: Node::new_sub(left.ast, right.ast)
+        })?),
+        scan::MUL => Ok(self.parse_arith_left(Expr{
+          range: left.range.start..right.range.end,
+          ast: Node::new_mul(left.ast, right.ast)
+        })?),
+        scan::DIV => Ok(self.parse_arith_left(Expr{
+          range: left.range.start..right.range.end,
+          ast: Node::new_div(left.ast, right.ast)
+        })?),
+        scan::MOD => Ok(self.parse_arith_left(Expr{
+          range: left.range.start..right.range.end,
+          ast: Node::new_mod(left.ast, right.ast)
+        })?),
+        _ => Err(error::Error::TokenNotMatched),
       },
-      None => match opc {
-        scan::ADD => Ok(Node::new_add(left, self.parse_arith()?)),
-        scan::SUB => Ok(Node::new_sub(left, self.parse_arith()?)),
-        scan::MUL => Ok(Node::new_mul(left, self.parse_arith()?)),
-        scan::DIV => Ok(Node::new_div(left, self.parse_arith()?)),
-        scan::MOD => Ok(Node::new_mod(left, self.parse_arith()?)),
-        _         => Err(error::Error::TokenNotMatched),
+      None => {
+        let right = self.parse_arith()?;
+        match opc {
+          scan::ADD => Ok(Expr{
+            range: left.range.start..right.range.end,
+            ast: Node::new_add(left.ast, right.ast),
+          }),
+          scan::SUB => Ok(Expr{
+            range: left.range.start..right.range.end,
+            ast: Node::new_sub(left.ast, right.ast),
+          }),
+          scan::MUL => Ok(Expr{
+            range: left.range.start..right.range.end,
+            ast: Node::new_mul(left.ast, right.ast),
+          }),
+          scan::DIV => Ok(Expr{
+            range: left.range.start..right.range.end,
+            ast: Node::new_div(left.ast, right.ast),
+          }),
+          scan::MOD => Ok(Expr{
+            range: left.range.start..right.range.end,
+            ast: Node::new_mod(left.ast, right.ast),
+          }),
+          _ => Err(error::Error::TokenNotMatched),
+        }
       },
     }
   }
   
-  fn parse_primary(&mut self) -> Result<Node, error::Error> {
+  fn parse_primary(&mut self) -> Result<Expr, error::Error> {
     let tok = self.scan.expect_token_fn(|ttype| {
       ttype == TType::Ident  ||
       ttype == TType::Number ||
       ttype == TType::LParen
     })?;
     match tok.ttype {
-      TType::Ident  => Ok(Node::new_ident(&tok.ttext)),
-      TType::Number => Ok(Node::new_number(tok.ttext.parse::<f64>()?)),
+      TType::Ident  => Ok(Expr{
+        range: tok.range,
+        ast: Node::new_ident(&tok.ttext),
+      }),
+      TType::Number => Ok(Expr{
+        range: tok.range,
+        ast: Node::new_number(tok.ttext.parse::<f64>()?),
+      }),
       TType::LParen => self.parse_expr(),
       _             => Err(error::Error::TokenNotMatched),
     }
   }
   
-  fn parse_expr(&mut self) -> Result<Node, error::Error> {
+  fn parse_expr(&mut self) -> Result<Expr, error::Error> {
     let expr = self.parse_enter()?;
-    self.scan.expect_token(TType::RParen)?;
-    Ok(expr)
+    let tok = self.scan.expect_token(TType::RParen)?;
+    Ok(Expr{
+      range: expr.range.start..tok.range.end,
+      ast: expr.ast,
+    })
   }
   
-  fn parse_ident(&mut self) -> Result<Node, error::Error> {
-    Ok(Node::new_ident(&self.scan.expect_token(TType::Ident)?.ttext))
+  fn parse_ident(&mut self) -> Result<Expr, error::Error> {
+    let tok = self.scan.expect_token(TType::Ident)?;
+    Ok(Expr{
+      range: tok.range,
+      ast: Node::new_ident(&tok.ttext),
+    })
   }
 }
 
@@ -154,9 +197,9 @@ mod tests {
   use super::*;
   
   fn parse_expr(t: &str) -> Result<Node, error::Error> {
-    let n = Parser::new(Scanner::new(t)).parse()?;
-    println!(">>> [{}] → [{}]", t, n);
-    Ok(n)
+    let e = Parser::new(Scanner::new(t)).parse()?;
+    println!(">>> [{}] → [{}]", t, e.ast);
+    Ok(e.ast)
   }
   
   fn exec_node(n: Node, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
@@ -320,91 +363,36 @@ mod tests {
     cxt.set("c", unit::Unit::None(3.0));
     
     let t = r#"100+200; 0"#;
-    assert_eq!("(100 + 200) => 300; 0 => 0", &exec_line(t, &mut cxt));
+    assert_eq!("(100 + 200) → 300; 0 → 0", &exec_line(t, &mut cxt));
     
     let t = r#"100 + (b * 100), but 0 is 0"#;
-    assert_eq!("(100 + (b * 100)) => 300; 0 => 0; 0 => 0", &exec_line(t, &mut cxt));
+    assert_eq!("(100 + (b * 100)) → 300; 0 → 0; 0 → 0", &exec_line(t, &mut cxt));
   }
   
   // #[test]
-  fn parse_simple() {
-    let mut cxt = Context::new();
-    cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(1.0));
-    cxt.set("c", unit::Unit::None(2.0));
+  // fn parse_incremental() {
+  //   let t = r#"c - (1.25 + a) + 10 and then 20 - 10 - 1"#;
+  //   let mut p = Parser::new(Scanner::new(t));
+  //   let n = p.parse().expect("Could not parse");
+  //   println!(">>> [{}] → [{}]", t, n);
+  //   assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&mut cxt));
+  //   let n = p.parse().expect("Could not parse");
+  //   println!(">>> [{}] → [{}]", t, n);
+  //   assert_eq!(Err(error::Error::UnboundVariable("and".to_string())), n.exec(&mut cxt));
+  //   let n = p.parse().expect("Could not parse");
+  //   println!(">>> [{}] → [{}]", t, n);
+  //   assert_eq!(Err(error::Error::UnboundVariable("then".to_string())), n.exec(&mut cxt));
+  //   let n = p.parse().expect("Could not parse");
+  //   println!(">>> [{}] → [{}]", t, n);
+  //   assert_eq!(Ok(unit::Unit::None(9.0)), n.exec(&mut cxt));
     
-    let t = r#"1"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&mut cxt));
+  //   let t = r#"100+200;0"#;
+  //   let mut p = Parser::new(Scanner::new(t));
+  //   let n = p.parse().expect("Could not parse");
+  //   println!(">>> [{}] => [{}]", t, n);
     
-    let t = r#"1+c"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&mut cxt));
-    
-    let t = r#"1.25+c"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(3.25)), n.exec(&mut cxt));
-    
-    let t = r#"1.25-c"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(-0.75)), n.exec(&mut cxt));
-    
-    let t = r#"1.25 - c"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(-0.75)), n.exec(&mut cxt));
-    
-    let t = r#"c - 1.25"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(0.75)), n.exec(&mut cxt));
-    
-    let t = r#"c - 1.25 + a"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(1.75)), n.exec(&mut cxt));
-    
-    let t = r#"c - (1.25 + a)"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(-0.25)), n.exec(&mut cxt));
-    
-    let t = r#"c - (1.25 + a) + 10"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&mut cxt));
-    
-    let t = r#"c - (1.25 + a) + 10, and then this text follows"#;
-    let n = Parser::new(Scanner::new(t)).parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&mut cxt));
-    
-    let t = r#"c - (1.25 + a) + 10 and then 20 - 10 - 1"#;
-    let mut p = Parser::new(Scanner::new(t));
-    let n = p.parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&mut cxt));
-    let n = p.parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Err(error::Error::UnboundVariable("and".to_string())), n.exec(&mut cxt));
-    let n = p.parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Err(error::Error::UnboundVariable("then".to_string())), n.exec(&mut cxt));
-    let n = p.parse().expect("Could not parse");
-    println!(">>> [{}] → [{}]", t, n);
-    assert_eq!(Ok(unit::Unit::None(9.0)), n.exec(&mut cxt));
-    
-    let t = r#"100+200;0"#;
-    let mut p = Parser::new(Scanner::new(t));
-    let n = p.parse().expect("Could not parse");
-    println!(">>> [{}] => [{}]", t, n);
-    
-    let t = r#"100+200; 0"#;
-    assert_eq!("(100 + 200) => 300; 0 => 0", &exec_line(t, &mut cxt))
-  }
+  //   let t = r#"100+200; 0"#;
+  //   assert_eq!("(100 + 200) => 300; 0 => 0", &exec_line(t, &mut cxt))
+  // }
   
 }

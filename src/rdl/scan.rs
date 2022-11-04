@@ -192,6 +192,18 @@ impl<'a> Scanner<'a> {
     }
   }
   
+  /// Look ahead for the next token type in the stream. Nothign is consumed.
+  pub fn la_range(&mut self) -> Option<ops::Range<usize>> {
+    if self.tokens.len() == 0 {
+      let _ = self.scan(); // ignore error, just produce none
+    }
+    if self.tokens.len() > 0 {
+      Some(self.tokens[0].range.clone())
+    }else{
+      None
+    }
+  }
+  
   /// Step over and consume the next token that has already been scanned.
   /// This can be used to discard a token that has already been obtained
   /// via la(). If no token exists in the look-ahead buffer, this method

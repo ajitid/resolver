@@ -20,7 +20,7 @@ pub fn render_with_attrs(cxt: &mut Context, text: &str, offset: usize, attrs: Op
   let mut p = Parser::new(Scanner::new(text));
   let mut i = 0;
   loop {
-    let exp = match p.parse_with_meta() {
+    let exp = match p.parse() {
       Ok(exp) => exp,
       Err(_)  => break,
     };
@@ -34,7 +34,6 @@ pub fn render_with_attrs(cxt: &mut Context, text: &str, offset: usize, attrs: Op
       g.push_str("; ");
     }
     
-    g.push_str(&format!("({:?}) ", exp.range));
     g.push_str(&format!("{} → ", exp.ast));
     
     if let Some(attrs) = &attrs {
