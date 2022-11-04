@@ -10,7 +10,7 @@ use crossterm::style::Color;
 
 use crate::options;
 use crate::buffer::Buffer;
-use crate::text::{Text, Renderable, Pos};
+use crate::text::{Text, Content, Storage, Renderable, Pos};
 use crate::text::attrs;
 use crate::frame::Frame;
 
@@ -60,10 +60,13 @@ impl Writer {
     g
   }
   
-  fn draw_formula(_width: usize, _height: usize, text: &Text) -> (Vec<attrs::Span>, attrs::Attributed) {
-    let mut atx = attrs::Attributed::new();
-    let mut spn: Vec<attrs::Span> = Vec::new();
+  fn draw_formula(width: usize, _height: usize, text: &Text) -> (Content, Content) {
+    let mut edit_text = String::new();
+    let mut edit_spns: Vec<attrs::Span> = Vec::new();
+    let mut fmla_text = String::new();
+    let mut fmla_spns: Vec<attrs::Span> = Vec::new();
     let mut cxt = exec::Context::new_with_stdlib();
+    
     let style = vec![
       attrs::Attributes{bold: true, color: Some(Color::Yellow)},
       attrs::Attributes{bold: true, color: Some(Color::Magenta)},
@@ -74,14 +77,23 @@ impl Writer {
     
     let mut boff0 = 0;
     for l in text.lines() {
-      let (mut txt, exp) = rdl::render_with_attrs(&mut cxt, l, boff0, atx.len(), Some(&style));
-      spn.append(txt.spans_mut());
-      atx.push(&exp);
-      atx.push_str("\n");
+      let (mut txt, mut exp) = rdl::render_with_attrs(&mut cxt, l, boff0, fmla_text.len(), Some(&style));
+      
+      edit_text.push_str(txt.text());
+      edit_text.push_str("\n");
+      edit_spns.append(txt.spans_mut());
+      
+      fmla_text.push_str(exp.text());
+      fmla_text.push_str("\n");
+      fmla_spns.append(exp.spans_mut());
+      
       boff0 += txt.len() + 1 /* newline */;
     }
     
-    (spn, atx)
+    (
+      Content::new_with_attributed(edit_text, edit_spns, text.width()),
+      Content::new_with_attributed(fmla_text, fmla_spns, width)
+    )
   }
   
   fn draw_gutter(_width: usize, height: usize) -> String {
@@ -98,14 +110,12 @@ impl Writer {
     let gw = if self.opts.debug_editor { 0 }else{ 5 };
     let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
     
-    let (_, formula) = Writer::draw_formula(tw, self.term_size.1 as usize, text);
-    
-    let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize));
-    let ticker = Text::new_with_attributed(tw, formula);
+    let (edit, fmla) = Writer::draw_formula(tw, self.term_size.1 as usize, text);
+    let gutter = Content::new_with_string(Writer::draw_gutter(gw, self.term_size.1 as usize), gw);
     let cols: Vec<&dyn Renderable> = if self.opts.debug_editor {
-      vec![text]
+      vec![&edit]
     }else{
-      vec![&gutter, text, &ticker]
+      vec![&gutter, &edit, &fmla]
     };
     
     self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf, pos);

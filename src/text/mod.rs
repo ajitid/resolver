@@ -103,11 +103,21 @@ impl Content {
   }
   
   pub fn new_with_string(text: String, width: usize) -> Content {
-    let spans = layout::layout(&text, width);
+    let lines = layout::layout(&text, width);
     Content{
       text: text,
-      lines: spans,
+      lines: lines,
       spans: None,
+      width: width,
+    }
+  }
+  
+  pub fn new_with_attributed(text: String, spans: Vec<attrs::Span>, width: usize) -> Content {
+    let lines = layout::layout(&text, width);
+    Content{
+      text: text,
+      lines: lines,
+      spans: Some(spans),
       width: width,
     }
   }

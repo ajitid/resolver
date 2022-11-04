@@ -128,17 +128,6 @@ impl Attributed {
     &mut self.spans
   }
   
-  pub fn push(&mut self, another: &Attributed) {
-    self.text.push_str(&another.text);
-    for e in &another.spans {
-      self.spans.push(e.clone());
-    }
-  }
-  
-  pub fn push_str(&mut self, text: &str) {
-    self.text.push_str(text);
-  }
-  
   pub fn render(&self) -> String {
     self.render_with_mode(Mode::Terminal)
   }
