@@ -1,4 +1,5 @@
 pub mod attrs;
+pub mod layout;
 
 use std::fmt;
 use std::ops;
@@ -16,7 +17,7 @@ pub struct Pos {
   pub y: usize,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Line {
   num:   usize,
   coff:  usize, // line absolute lower bound, in chars
@@ -77,11 +78,87 @@ impl Line {
   }
 }
 
-pub trait Renderable {
+pub trait Storage {
   fn width(&self) -> usize;
   fn num_lines(&self) -> usize;
+  fn line_metrics<'a>(&'a self, i: usize) -> Option<&'a Line>;
+  fn line_text<'a>(&'a self, i: usize) -> Option<&'a str>;
+}
+
+pub trait Renderable: Storage {
   fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize);
   fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize);
+}
+
+pub struct Content {
+  text: String,
+  lines: Vec<Line>,
+  spans: Option<Vec<attrs::Span>>,
+  width: usize,
+}
+
+impl Content {
+  pub fn new_with_str(text: &str, width: usize) -> Content {
+    Self::new_with_string(text.to_owned(), width)
+  }
+  
+  pub fn new_with_string(text: String, width: usize) -> Content {
+    let spans = layout::layout(&text, width);
+    Content{
+      text: text,
+      lines: spans,
+      spans: None,
+      width: width,
+    }
+  }
+}
+
+impl Storage for Content {
+  fn width(&self) -> usize {
+    self.width
+  }
+  
+  fn num_lines(&self) -> usize {
+    self.lines.len()
+  }
+  
+  fn line_metrics<'a>(&'a self, i: usize) -> Option<&'a Line> {
+    if i < self.lines.len() {
+      Some(&self.lines[i])
+    }else{
+      None
+    }
+  }
+  
+  fn line_text<'a>(&'a self, i: usize) -> Option<&'a str> {
+    match self.line_metrics(i) {
+      Some(l) => Some(l.text(&self.text)),
+      None => None,
+    }
+  }
+}
+
+impl Renderable for Content {
+  fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
+    match &self.spans {
+      Some(spans) => self.write_line_with_attrs(i, b, Some(spans)),
+      None => self.write_line_with_attrs(i, b, None),
+    }
+  }
+  
+  fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize) {
+    let l = match self.line_metrics(i) {
+      Some(l) => l,
+      None => return (0, 0),
+    };
+    let t = l.text(&self.text);
+    let t = match &attrs {
+      Some(attrs) => attrs::render_with_offset(t, l.boff, attrs),
+      None => t.to_string(),
+    };
+    b.push_str(&t);
+    (l.chars, t.len())
+  }
 }
 
 pub struct Text {
@@ -92,7 +169,7 @@ pub struct Text {
   loc: usize,
 }
 
-impl Renderable for Text {
+impl Storage for Text {
   fn width(&self) -> usize {
     self.width
   }
@@ -101,6 +178,23 @@ impl Renderable for Text {
     self.lines.len()
   }
   
+  fn line_metrics<'a>(&'a self, i: usize) -> Option<&'a Line> {
+    if i < self.lines.len() {
+      Some(&self.lines[i])
+    }else{
+      None
+    }
+  }
+  
+  fn line_text<'a>(&'a self, i: usize) -> Option<&'a str> {
+    match self.line_metrics(i) {
+      Some(l) => Some(l.text(&self.text)),
+      None => None,
+    }
+  }
+}
+
+impl Renderable for Text {
   fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
     match &self.spans {
       Some(spans) => self.write_line_with_attrs(i, b, Some(spans)),
@@ -109,7 +203,7 @@ impl Renderable for Text {
   }
   
   fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize) {
-    let l = match self.get_line(i) {
+    let l = match self.line_metrics(i) {
       Some(l) => l,
       None => return (0, 0),
     };
@@ -246,123 +340,9 @@ impl Text {
     }
   }
   
-  fn get_line<'a>(&'a self, i: usize) -> Option<&'a Line> {
-    if i < self.lines.len() {
-      Some(&self.lines[i])
-    }else{
-      None
-    }
-  }
-  
-  pub fn read_line<'a>(&'a self, i: usize) -> Option<&'a str> {
-    match self.get_line(i) {
-      Some(l) => Some(l.text(&self.text)),
-      None => None,
-    }
-  }
-  
   fn reflow(&mut self) -> &mut Self {
-    let mut l: Vec<Line> = Vec::new();
-    
-    let mut ac: usize = 0; // absolute text offset, in chars
-    let mut ab: usize = 0; // absolute text offset, in bytes
-    let mut lc: usize = 0; // line width, in chars
-    let mut lb: usize = 0; // line width, in bytes
-    let mut wc: usize = 0; // line width to beginning of last whitespace, in chars
-    let mut wb: usize = 0; // line width to beginning of last whitespace, in bytes
-    let mut rc: usize = 0; // line width to beginning of last non-whitespace, in chars
-    let mut rb: usize = 0; // line width to beginning of last non-whitespace, in bytes
-    let mut ly: usize = 0; // line number
-    let mut p:  char = '\0'; // previous iteration character
-    
-    // 0             16
-    //             w
-    // ┌───────────┐ r
-    // ┌─────────────┐
-    // Hello this is some text.
-    // └──────────────┘
-    //                b/c
-    
-    for c in self.text.chars() {
-      let hard = Self::is_break(c);
-      if hard {
-        if !p.is_whitespace() {
-          rc = lc;
-          rb = lb;
-        }
-        // set whitespace boundary to here
-        wc = lc;
-        wb = lb;
-      }
-      if c.is_whitespace() {
-        if !p.is_whitespace() {
-          wc = lc;
-          wb = lb;
-        }
-      }else{
-        if p.is_whitespace() {
-          rc = lc;
-          rb = lb;
-        }
-      }
-      
-      lc += 1;
-      lb += c.len_utf8();
-      
-      if hard || lc >= self.width {
-        let bc = if  hard || wc > 0 { wc } else { lc }; // break
-        let bb = if  hard || wb > 0 { wb } else { lb }; // break
-        let cc = if !hard && rc > 0 { rc } else { lc }; // consume width, in chars
-        let cb = if !hard && rb > 0 { rb } else { lb }; // consume width, in bytes
-        
-        l.push(Line{
-          num:   ly,
-          coff:  ac,
-          boff:  ab,
-          cext:  ac + cc, // abs offset to beginning of break point, in chars
-          bext:  ab + cb, // abs offset to beginning of break point, in bytes
-          chars: bc,      // width to break point, in chars
-          bytes: bb,      // width to break point, in bytes
-          hard:  hard,    // is this a hard break that ends in a newline literal?
-        });
-        
-        ly += 1;  // increment line number
-        ac += cc; // increment absolute offset, in chars
-        ab += cb; // increment absolute offset, in bytes
-        
-        lc = lc - cc; // remaining in the current line to carry over, in chars
-        lb = lb - cb; // remaining in the current line to carry over, in bytes
-        
-        wc = 0;   // reset whitespace boundary, in chars
-        wb = 0;   // reset whitespace boundary, in bytes
-        rc = 0;   // reset non-whitespace boundary, in chars
-        rb = 0;   // reset non-whitespace boundary, in bytes
-        
-        p = '\0';
-      }else{
-        p = c
-      }
-    }
-    
-    if lc > 0 {
-      l.push(Line{
-        num:   ly,
-        coff:  ac,
-        boff:  ab,
-        cext:  ac + lc, // abs offset to end of text, in chars; last line trails whitespace
-        bext:  ab + lb, // abs offset to end of text, in bytes; last line trails whitespace
-        chars: lc,      // width to end of text, in chars; last line trails whitespace
-        bytes: lb,      // width to end of text, in bytes; last line trails whitespace
-        hard:  false,   // can't be a hard break here
-      });
-    }
-    
-    self.lines = l;
+    self.lines = layout::layout(&self.text, self.width);
     self
-  }
-  
-  fn is_break(c: char) -> bool {
-    c == '\n'
   }
   
   pub fn up(&mut self, idx: usize) -> Pos {
@@ -556,7 +536,7 @@ impl fmt::Display for Text {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let n = self.num_lines();
     for i in 0..n {
-      if let Some(l) = self.read_line(i) {
+      if let Some(l) = self.line_text(i) {
         write!(f, "{}\r\n", l)?;
       }
     }
