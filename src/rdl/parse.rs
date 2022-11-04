@@ -369,30 +369,4 @@ mod tests {
     assert_eq!("(100 + (b * 100)) → 300; 0 → 0; 0 → 0", &exec_line(t, &mut cxt));
   }
   
-  // #[test]
-  // fn parse_incremental() {
-  //   let t = r#"c - (1.25 + a) + 10 and then 20 - 10 - 1"#;
-  //   let mut p = Parser::new(Scanner::new(t));
-  //   let n = p.parse().expect("Could not parse");
-  //   println!(">>> [{}] → [{}]", t, n);
-  //   assert_eq!(Ok(unit::Unit::None(9.75)), n.exec(&mut cxt));
-  //   let n = p.parse().expect("Could not parse");
-  //   println!(">>> [{}] → [{}]", t, n);
-  //   assert_eq!(Err(error::Error::UnboundVariable("and".to_string())), n.exec(&mut cxt));
-  //   let n = p.parse().expect("Could not parse");
-  //   println!(">>> [{}] → [{}]", t, n);
-  //   assert_eq!(Err(error::Error::UnboundVariable("then".to_string())), n.exec(&mut cxt));
-  //   let n = p.parse().expect("Could not parse");
-  //   println!(">>> [{}] → [{}]", t, n);
-  //   assert_eq!(Ok(unit::Unit::None(9.0)), n.exec(&mut cxt));
-    
-  //   let t = r#"100+200;0"#;
-  //   let mut p = Parser::new(Scanner::new(t));
-  //   let n = p.parse().expect("Could not parse");
-  //   println!(">>> [{}] => [{}]", t, n);
-    
-  //   let t = r#"100+200; 0"#;
-  //   assert_eq!("(100 + 200) => 300; 0 => 0", &exec_line(t, &mut cxt))
-  // }
-  
 }

@@ -124,6 +124,10 @@ impl Attributed {
     &self.spans
   }
   
+  pub fn spans_mut<'a>(&'a mut self) -> &'a mut Vec<Span> {
+    &mut self.spans
+  }
+  
   pub fn push(&mut self, another: &Attributed) {
     self.text.push_str(&another.text);
     for e in &another.spans {

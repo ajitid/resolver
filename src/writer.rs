@@ -62,6 +62,7 @@ impl Writer {
   
   fn draw_formula(_width: usize, _height: usize, text: &Text) -> attrs::Attributed {
     let mut atx = attrs::Attributed::new();
+    let mut spn: Vec<attrs::Span> = Vec::new();
     let mut cxt = exec::Context::new_with_stdlib();
     let style = vec![
       attrs::Attributes{bold: true, color: Some(Color::Yellow)},
@@ -71,9 +72,13 @@ impl Writer {
       attrs::Attributes{bold: true, color: Some(Color::Blue)},
     ];
     
+    let mut boff0 = 0;
     for l in text.lines() {
-      atx.push(&rdl::render_with_attrs(&mut cxt, l, atx.len(), Some(&style)));
+      let (mut txt, exp) = rdl::render_with_attrs(&mut cxt, l, boff0, atx.len(), Some(&style));
+      spn.append(txt.spans_mut());
+      atx.push(&exp);
       atx.push_str("\n");
+      boff0 += txt.len() + 1 /* newline */;
     }
     
     atx
