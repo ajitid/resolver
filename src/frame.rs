@@ -1,4 +1,4 @@
-use crate::text::{Text, Pos};
+use crate::text::{Renderable, Pos};
 use crate::buffer::Buffer;
 use crate::options;
 
@@ -17,7 +17,7 @@ impl Frame {
     }
   }
   
-  pub fn write_cols(&self, cols: Vec<&Text>, height: usize, buf: &mut Buffer, vpos: &Pos) -> usize {
+  pub fn write_cols(&self, cols: Vec<&dyn Renderable>, height: usize, buf: &mut Buffer, vpos: &Pos) -> usize {
     let lines: Vec<usize> = cols.iter().map(|t| { t.num_lines() }).collect();
     let lmax: usize = match lines.iter().reduce(|a, b| {
       if a > b { a } else { b }

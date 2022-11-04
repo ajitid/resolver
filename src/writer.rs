@@ -10,7 +10,7 @@ use crossterm::style::Color;
 
 use crate::options;
 use crate::buffer::Buffer;
-use crate::text::{Text, Pos};
+use crate::text::{Text, Renderable, Pos};
 use crate::text::attrs;
 use crate::frame::Frame;
 
@@ -60,7 +60,7 @@ impl Writer {
     g
   }
   
-  fn draw_formula(_width: usize, _height: usize, text: &Text) -> attrs::Attributed {
+  fn draw_formula(_width: usize, _height: usize, text: &Text) -> (Vec<attrs::Span>, attrs::Attributed) {
     let mut atx = attrs::Attributed::new();
     let mut spn: Vec<attrs::Span> = Vec::new();
     let mut cxt = exec::Context::new_with_stdlib();
@@ -81,7 +81,7 @@ impl Writer {
       boff0 += txt.len() + 1 /* newline */;
     }
     
-    atx
+    (spn, atx)
   }
   
   fn draw_gutter(_width: usize, height: usize) -> String {
@@ -98,12 +98,14 @@ impl Writer {
     let gw = if self.opts.debug_editor { 0 }else{ 5 };
     let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
     
+    let (_, formula) = Writer::draw_formula(tw, self.term_size.1 as usize, text);
+    
     let gutter = Text::new_with_string(gw, Writer::draw_gutter(gw, self.term_size.1 as usize));
-    let ticker = Text::new_with_attributed(tw, Writer::draw_formula(tw, self.term_size.1 as usize, text));
-    let cols: Vec<&Text> = if self.opts.debug_editor {
-      vec![&text]
+    let ticker = Text::new_with_attributed(tw, formula);
+    let cols: Vec<&dyn Renderable> = if self.opts.debug_editor {
+      vec![text]
     }else{
-      vec![&gutter, &text, &ticker]
+      vec![&gutter, text, &ticker]
     };
     
     self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf, pos);

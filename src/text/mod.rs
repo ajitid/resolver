@@ -77,12 +77,50 @@ impl Line {
   }
 }
 
+pub trait Renderable {
+  fn width(&self) -> usize;
+  fn num_lines(&self) -> usize;
+  fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize);
+  fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize);
+}
+
 pub struct Text {
   text: String,
   width: usize,
   lines: Vec<Line>,
   spans: Option<Vec<attrs::Span>>,
   loc: usize,
+}
+
+impl Renderable for Text {
+  fn width(&self) -> usize {
+    self.width
+  }
+  
+  fn num_lines(&self) -> usize {
+    self.lines.len()
+  }
+  
+  fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
+    match &self.spans {
+      Some(spans) => self.write_line_with_attrs(i, b, Some(spans)),
+      None => self.write_line_with_attrs(i, b, None),
+    }
+  }
+  
+  fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize) {
+    let l = match self.get_line(i) {
+      Some(l) => l,
+      None => return (0, 0),
+    };
+    let t = l.text(&self.text);
+    let t = match &attrs {
+      Some(attrs) => attrs::render_with_offset(t, l.boff, attrs),
+      None => t.to_string(),
+    };
+    b.push_str(&t);
+    (l.chars, t.len())
+  }
 }
 
 impl Text {
@@ -144,16 +182,8 @@ impl Text {
     }
   }
   
-  pub fn width(&self) -> usize {
-    self.width
-  }
-  
   pub fn lines<'a>(&'a self) -> str::Lines<'a> {
     self.text.lines()
-  }
-  
-  pub fn num_lines(&self) -> usize {
-    self.lines.len()
   }
   
   fn line_with_index<'a>(&'a self, idx: usize) -> Option<&'a Line> {
@@ -229,27 +259,6 @@ impl Text {
       Some(l) => Some(l.text(&self.text)),
       None => None,
     }
-  }
-  
-  pub fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
-    match &self.spans {
-      Some(spans) => self.write_line_with_attrs(i, b, Some(spans)),
-      None => self.write_line_with_attrs(i, b, None),
-    }
-  }
-  
-  pub fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize) {
-    let l = match self.get_line(i) {
-      Some(l) => l,
-      None => return (0, 0),
-    };
-    let t = l.text(&self.text);
-    let t = match &attrs {
-      Some(attrs) => attrs::render_with_offset(t, l.boff, attrs),
-      None => t.to_string(),
-    };
-    b.push_str(&t);
-    (l.chars, t.len())
   }
   
   fn reflow(&mut self) -> &mut Self {
