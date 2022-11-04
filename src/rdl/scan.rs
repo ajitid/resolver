@@ -79,7 +79,7 @@ pub struct Scanner<'a> {
   data: str::Chars<'a>,
   tokens: Vec<Token>,
   peek: Option<char>,
-  index: usize,
+  index: usize, // index in text, in bytes
 }
 
 impl<'a> fmt::Display for Scanner<'a> {
@@ -111,8 +111,8 @@ impl<'a> Scanner<'a> {
   }
   
   pub fn skip(&mut self) {
-    if self.peek != None {
-      self.index += 1;
+    if let Some(c) = self.peek {
+      self.index += c.len_utf8();
     }
     self.peek = self.read();
   }

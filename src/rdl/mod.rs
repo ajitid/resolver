@@ -34,6 +34,7 @@ pub fn render_with_attrs(cxt: &mut Context, text: &str, offset: usize, attrs: Op
       g.push_str("; ");
     }
     
+    g.push_str(&format!("({:?}) ", exp.range));
     g.push_str(&format!("{} → ", exp.ast));
     
     if let Some(attrs) = &attrs {
