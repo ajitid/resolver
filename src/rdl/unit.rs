@@ -20,6 +20,16 @@ pub enum Unit {
   Kilogram(f64),    // 1000x grams
 }
 
+macro_rules! unit_reduce {
+  ($curr: ident, $pack: ident, $amount: expr, $reduce: expr) => {
+    if $curr < $amount {
+      return $pack;
+    }else{
+      $pack = $reduce;
+    }
+  };
+}
+
 impl Unit {
   pub fn from(q: f64, n: Option<String>) -> Option<Unit> {
     if let Some(n) = n {
@@ -75,13 +85,7 @@ impl Unit {
       match u {
         Self::None(n) => return Self::None(n),
 
-        Self::Teaspoon(n) => {
-          if n < 3.0 {
-            return u;
-          }else{
-            u = Self::Tablespoon(n / 3.0);
-          }
-        },
+        Self::Teaspoon(n) => unit_reduce!(n, u, 3.0, Self::Tablespoon(n / 3.0)),
         Self::Tablespoon(n) => {
           if n < 4.0 {
             return u;
