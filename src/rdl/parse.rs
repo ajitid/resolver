@@ -352,7 +352,6 @@ mod tests {
     let n = parse_expr(r#"d"#).expect("Could not parse");
     assert_eq!(Node::new_ident("d"), n); // value is now set for 'd'
     assert_eq!(Ok(unit::Unit::None(100.0)), exec_node(n, &mut cxt));
-    
   }
   
   #[test]
