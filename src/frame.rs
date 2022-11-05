@@ -13,7 +13,6 @@ impl Frame {
     Frame{
       opts: opts,
       width: width,
-      // sep: '│',
       sep: '┊',
     }
   }
