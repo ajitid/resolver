@@ -216,7 +216,7 @@ impl ops::Rem<Unit> for Unit {
 impl fmt::Display for Unit {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self.pack() {
-      Self::None(n)       => write!(f, "{}", format_qty(n)),
+      Self::None(n)       => write!(f, "{}", n),
       
       Self::Teaspoon(n)   => write!(f, "{} {}", format_qty(n), "tsp"),
       Self::Tablespoon(n) => write!(f, "{} {}", format_qty(n), "tbsp"),
