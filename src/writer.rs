@@ -18,12 +18,11 @@ use crate::frame::Frame;
 use crate::rdl;
 use crate::rdl::exec;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+const _VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct Writer {
   opts: options::Options,
   term_size: (usize, usize),
-  text_size: (usize, usize),
   frame: Frame,
   buf: Buffer,
 }
@@ -33,7 +32,6 @@ impl Writer {
     Self{
       opts: opts.clone(),
       term_size: size,
-      text_size: ((size.0 / 3) * 2, size.1 - 1),
       frame: Frame::new(size.0, opts),
       buf: Buffer::new(),
     }
@@ -43,22 +41,6 @@ impl Writer {
     execute!(stdout(), terminal::Clear(terminal::ClearType::All))?;
     execute!(stdout(), cursor::MoveTo(0, 0))?;
     Ok(())
-  }
-  
-  fn _draw_welcome(_width: usize, height: usize) -> String {
-    let mut g = String::new();
-    for i in 0..height {
-      g.push('~');
-      if i == 2 {
-        g.push_str(" RESOLVER. The 'Soulver' in your terminal.");
-      }else if i == 3 {
-        g.push_str(&format!(" v{}", VERSION));
-      }else if i == 5 {
-        g.push_str(" Cool formula output will go on this side. Eventually.");
-      }
-      g.push('\n');
-    }
-    g
   }
   
   fn draw_formula(&self, width: usize, _height: usize, text: &Text) -> (Content, Content) {

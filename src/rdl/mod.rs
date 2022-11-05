@@ -15,14 +15,6 @@ pub struct Options {
   pub debug: bool,   // enable debugging
 }
 
-pub fn render(cxt: &mut Context, text: &str) -> String {
-  render_with_attrs(cxt, text, 0, 0, None).1.text().to_owned()
-}
-
-pub fn render_with_attrs(cxt: &mut Context, text: &str, boff0: usize, boff1: usize, attrs: Option<&Vec<attrs::Attributes>>) -> (attrs::Attributed, attrs::Attributed) {
-  render_with_options(cxt, text, boff0, boff1, attrs, None)
-}
-
 pub fn render_with_options(cxt: &mut Context, text: &str, boff0: usize, boff1: usize, attrs: Option<&Vec<attrs::Attributes>>, opts: Option<&Options>) -> (attrs::Attributed, attrs::Attributed) {
   let mut g = String::new();
   let mut s0: Vec<attrs::Span> = Vec::new();

@@ -10,7 +10,7 @@ use crate::options;
 pub struct Frame {
   opts: options::Options,
   clear_on_write: bool,
-  width: usize,
+  _width: usize,
   sep: char,
 }
 
@@ -19,7 +19,7 @@ impl Frame {
     Frame{
       opts: opts,
       clear_on_write: true,
-      width: width,
+      _width: width,
       sep: '┊',
     }
   }

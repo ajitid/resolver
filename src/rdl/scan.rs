@@ -52,7 +52,7 @@ impl Token {
     }
   }
   
-  pub fn styled(&self) -> Option<String> {
+  pub fn _styled(&self) -> Option<String> {
     let ttext: &str = self.ttext.as_ref();
     match self.ttype {
       TType::Verbatim => Some(format!("{}", ttext.reset())),
@@ -123,10 +123,6 @@ impl<'a> Scanner<'a> {
     n
   }
   
-  pub fn index(&self) -> usize {
-    self.index
-  }
-  
   fn read(&mut self) -> Option<char> {
     self.data.next()
   }
@@ -187,18 +183,6 @@ impl<'a> Scanner<'a> {
     }
     if self.tokens.len() > 0 {
       Some(self.tokens[0].ttype)
-    }else{
-      None
-    }
-  }
-  
-  /// Look ahead for the next token type in the stream. Nothign is consumed.
-  pub fn la_range(&mut self) -> Option<ops::Range<usize>> {
-    if self.tokens.len() == 0 {
-      let _ = self.scan(); // ignore error, just produce none
-    }
-    if self.tokens.len() > 0 {
-      Some(self.tokens[0].range.clone())
     }else{
       None
     }

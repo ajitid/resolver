@@ -202,32 +202,6 @@ impl Text {
     c
   }
   
-  pub fn new_with_string(width: usize, text: String) -> Text {
-    let mut c = Text{
-      text: text, // no copy
-      width: width,
-      lines: Vec::new(),
-      spans: None,
-      loc: 0,
-    };
-    c.reflow();
-    c
-  }
-  
-  pub fn new_with_attributed(width: usize, text: attrs::Attributed) -> Text {
-    let mut s = text.spans().clone();
-    s.sort();
-    let mut c = Text{
-      text: text.text().to_owned(),
-      width: width,
-      lines: Vec::new(),
-      spans: Some(s),
-      loc: 0,
-    };
-    c.reflow();
-    c
-  }
-  
   pub fn len(&self) -> usize {
     match self.lines.len() {
       0 => 0,

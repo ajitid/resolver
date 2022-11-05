@@ -20,7 +20,6 @@ use clap::Parser;
 
 use editor::Editor;
 use writer::Writer;
-use text::attrs;
 
 struct Finalize {
   opts: options::Options,
