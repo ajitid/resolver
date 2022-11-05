@@ -35,8 +35,8 @@ pub fn render_with_attrs(cxt: &mut Context, text: &str, boff0: usize, boff1: usi
       g.push_str("; ");
     }
     
-    g.push_str(&format!("({:?}) ", boff0+exp.range.start..boff0+exp.range.end));
-    g.push_str(&format!("{} → ", exp.ast));
+    // g.push_str(&format!("({:?}) ", boff0+exp.range.start..boff0+exp.range.end));
+    // g.push_str(&format!("{} → ", exp.ast));
     
     if let Some(attrs) = &attrs {
       let l = boff1 + g.len();
@@ -45,7 +45,8 @@ pub fn render_with_attrs(cxt: &mut Context, text: &str, boff0: usize, boff1: usi
       s1.push(attrs::Span::new(l..l+res.len(), a.clone()));
     }
     
-    g.push_str(&format!("{}", res));
+    g.push_str(&res);
+    // g.push_str(&format!("{}", res));
     
     i += 1;
   }

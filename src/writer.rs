@@ -105,7 +105,6 @@ impl Writer {
   }
   
   pub fn refresh(&mut self, pos: &Pos, text: &Text) -> crossterm::Result<()> {
-    queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     let tw = (self.term_size.0 / 3) - 6;
     let gw = if self.opts.debug_editor { 0 }else{ 5 };
     let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
@@ -118,6 +117,7 @@ impl Writer {
       vec![&gutter, &edit, &fmla]
     };
     
+    queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf, pos);
     queue!(self.buf, cursor::MoveTo((pos.x + ox) as u16, pos.y as u16), cursor::Show)?;
     self.buf.flush()
