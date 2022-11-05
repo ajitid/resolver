@@ -1,8 +1,8 @@
 use crossterm::event;
 
 use crate::Reader;
-use crate::text;
-use crate::text::{Text, Pos};
+use crate::error;
+use crate::text::{self, Text, Pos};
 use crate::writer::Writer;
 use crate::options;
 
@@ -86,12 +86,12 @@ impl Editor {
     Ok(true)
   }
   
-  pub fn draw(&mut self) -> crossterm::Result<bool> {
+  pub fn draw(&mut self) -> Result<bool, error::Error> {
     self.writer.refresh(&self.pos, &self.text)?;
     Ok(true)
   }
   
-  pub fn step(&mut self) -> crossterm::Result<bool> {
+  pub fn step(&mut self) -> Result<bool, error::Error> {
     let res = self.key()?;
     self.draw()?;
     Ok(res)

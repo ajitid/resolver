@@ -9,6 +9,7 @@ use crossterm::terminal;
 use crossterm::style::Color;
 
 use crate::options;
+use crate::error;
 use crate::buffer::Buffer;
 use crate::text::{Text, Content, Storage, Renderable, Pos};
 use crate::text::attrs;
@@ -60,7 +61,7 @@ impl Writer {
     g
   }
   
-  fn draw_formula(width: usize, _height: usize, text: &Text) -> (Content, Content) {
+  fn draw_formula(&self, width: usize, _height: usize, text: &Text) -> (Content, Content) {
     let mut edit_text = String::new();
     let mut edit_spns: Vec<attrs::Span> = Vec::new();
     let mut fmla_text = String::new();
@@ -75,9 +76,14 @@ impl Writer {
       attrs::Attributes{bold: true, color: Some(Color::Blue)},
     ];
     
+    let opts = rdl::Options{
+      verbose: self.opts.debug,
+      debug: self.opts.debug,
+    };
+    
     let mut boff0 = 0;
     for l in text.lines() {
-      let (mut txt, mut exp) = rdl::render_with_attrs(&mut cxt, l, boff0, fmla_text.len(), Some(&style));
+      let (mut txt, mut exp) = rdl::render_with_options(&mut cxt, l, boff0, fmla_text.len(), Some(&style), Some(&opts));
       
       edit_text.push_str(txt.text());
       edit_text.push_str("\n");
@@ -96,7 +102,7 @@ impl Writer {
     )
   }
   
-  fn draw_gutter(_width: usize, height: usize) -> String {
+  fn draw_gutter(&self, _width: usize, height: usize) -> String {
     let mut g = String::new();
     for i in 0..height {
       g.push_str(&format!(" {:>3}\n", i+1));
@@ -104,22 +110,25 @@ impl Writer {
     g
   }
   
-  pub fn refresh(&mut self, pos: &Pos, text: &Text) -> crossterm::Result<()> {
+  pub fn refresh(&mut self, pos: &Pos, text: &Text) -> Result<(), error::Error> {
     let tw = (self.term_size.0 / 3) - 6;
     let gw = if self.opts.debug_editor { 0 }else{ 5 };
     let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
     
-    let (edit, fmla) = Writer::draw_formula(tw, self.term_size.1 as usize, text);
-    let gutter = Content::new_with_string(Writer::draw_gutter(gw, self.term_size.1 as usize), gw);
+    let (edit, fmla) = self.draw_formula(tw, self.term_size.1 as usize, text);
+    let gutter = Content::new_with_string(self.draw_gutter(gw, self.term_size.1 as usize), gw);
     let cols: Vec<&dyn Renderable> = if self.opts.debug_editor {
       vec![&edit]
     }else{
       vec![&gutter, &edit, &fmla]
     };
     
-    queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
-    self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf, pos);
+    // queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
+    queue!(self.buf, cursor::Hide)?;
+    self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf, pos)?;
     queue!(self.buf, cursor::MoveTo((pos.x + ox) as u16, pos.y as u16), cursor::Show)?;
-    self.buf.flush()
+    self.buf.flush()?;
+    
+    Ok(())
   }
 }

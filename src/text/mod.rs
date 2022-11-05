@@ -179,54 +179,6 @@ pub struct Text {
   loc: usize,
 }
 
-impl Storage for Text {
-  fn width(&self) -> usize {
-    self.width
-  }
-  
-  fn num_lines(&self) -> usize {
-    self.lines.len()
-  }
-  
-  fn line_metrics<'a>(&'a self, i: usize) -> Option<&'a Line> {
-    if i < self.lines.len() {
-      Some(&self.lines[i])
-    }else{
-      None
-    }
-  }
-  
-  fn line_text<'a>(&'a self, i: usize) -> Option<&'a str> {
-    match self.line_metrics(i) {
-      Some(l) => Some(l.text(&self.text)),
-      None => None,
-    }
-  }
-}
-
-impl Renderable for Text {
-  fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
-    match &self.spans {
-      Some(spans) => self.write_line_with_attrs(i, b, Some(spans)),
-      None => self.write_line_with_attrs(i, b, None),
-    }
-  }
-  
-  fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize) {
-    let l = match self.line_metrics(i) {
-      Some(l) => l,
-      None => return (0, 0),
-    };
-    let t = l.text(&self.text);
-    let t = match &attrs {
-      Some(attrs) => attrs::render_with_offset(t, l.boff, attrs),
-      None => t.to_string(),
-    };
-    b.push_str(&t);
-    (l.chars, t.len())
-  }
-}
-
 impl Text {
   pub fn new(width: usize) -> Text {
     Text{
@@ -539,6 +491,54 @@ impl Text {
     let pos = self.backspace(self.loc);
     self.loc = pos.index;
     pos
+  }
+}
+
+impl Storage for Text {
+  fn width(&self) -> usize {
+    self.width
+  }
+  
+  fn num_lines(&self) -> usize {
+    self.lines.len()
+  }
+  
+  fn line_metrics<'a>(&'a self, i: usize) -> Option<&'a Line> {
+    if i < self.lines.len() {
+      Some(&self.lines[i])
+    }else{
+      None
+    }
+  }
+  
+  fn line_text<'a>(&'a self, i: usize) -> Option<&'a str> {
+    match self.line_metrics(i) {
+      Some(l) => Some(l.text(&self.text)),
+      None => None,
+    }
+  }
+}
+
+impl Renderable for Text {
+  fn write_line(&self, i: usize, b: &mut Buffer) -> (usize, usize) {
+    match &self.spans {
+      Some(spans) => self.write_line_with_attrs(i, b, Some(spans)),
+      None => self.write_line_with_attrs(i, b, None),
+    }
+  }
+  
+  fn write_line_with_attrs(&self, i: usize, b: &mut Buffer, attrs: Option<&Vec<attrs::Span>>) -> (usize, usize) {
+    let l = match self.line_metrics(i) {
+      Some(l) => l,
+      None => return (0, 0),
+    };
+    let t = l.text(&self.text);
+    let t = match &attrs {
+      Some(attrs) => attrs::render_with_offset(t, l.boff, attrs),
+      None => t.to_string(),
+    };
+    b.push_str(&t);
+    (l.chars, t.len())
   }
 }
 

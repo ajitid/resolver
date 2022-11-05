@@ -3,6 +3,7 @@ mod editor;
 mod writer;
 mod frame;
 mod options;
+mod error;
 mod rdl;
 mod text;
 
@@ -51,7 +52,7 @@ impl Reader {
   }
 }
 
-fn main() -> crossterm::Result<()> {
+fn main() -> Result<(), error::Error> {
   let opts = options::Options::parse();
   let _cleanup = Finalize{opts: opts.clone()};
   execute!(stdout(), terminal::EnterAlternateScreen)?;

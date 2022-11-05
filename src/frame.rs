@@ -1,9 +1,15 @@
+use crossterm::queue;
+use crossterm::cursor;
+use crossterm::terminal;
+
+use crate::error;
 use crate::text::{Renderable, Pos};
 use crate::buffer::Buffer;
 use crate::options;
 
 pub struct Frame {
   opts: options::Options,
+  clear_on_write: bool,
   width: usize,
   sep: char,
 }
@@ -12,20 +18,24 @@ impl Frame {
   pub fn new(width: usize, opts: options::Options) -> Self {
     Frame{
       opts: opts,
+      clear_on_write: true,
       width: width,
       sep: '┊',
     }
   }
   
-  pub fn write_cols(&self, cols: Vec<&dyn Renderable>, height: usize, buf: &mut Buffer, vpos: &Pos) -> usize {
+  pub fn write_cols(&self, cols: Vec<&dyn Renderable>, height: usize, buf: &mut Buffer, vpos: &Pos) -> Result<usize, error::Error> {
     let lines: Vec<usize> = cols.iter().map(|t| { t.num_lines() }).collect();
     let lmax: usize = match lines.iter().reduce(|a, b| {
       if a > b { a } else { b }
     }) {
       Some(v) => *v,
-      None => return 0, // nothing to do
+      None => return Ok(0), // nothing to do
     };
     for i in 0..lmax { // until all content is consumed
+      if self.clear_on_write {
+        queue!(buf, cursor::MoveTo(0, i as u16), terminal::Clear(terminal::ClearType::CurrentLine))?;
+      }
       for (x, c) in cols.iter().enumerate() {
         let adj = if x > 0 {
           buf.push(self.sep);
@@ -46,6 +56,6 @@ impl Frame {
         buf.push_str("\r\n");
       }
     }
-    lmax
+    Ok(lmax)
   }
 }
