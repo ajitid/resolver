@@ -209,9 +209,9 @@ mod tests {
   }
   
   fn exec_line(text: &str, cxt: &mut Context) -> String {
-    let res = rdl::render(cxt, text);
-    println!("*** [{}] → [{}]", text, res);
-    res
+    let (_, res) = rdl::render_with_options(cxt, text, 0, 0, None, Some(&rdl::Options{verbose: true, debug: false}));
+    println!("*** [{}] → [{}]", text, res.text());
+    res.text().to_owned()
   }
   
   #[test]

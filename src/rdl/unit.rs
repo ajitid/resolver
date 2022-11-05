@@ -83,63 +83,21 @@ impl Unit {
     let mut u = *self;
     loop {
       match u {
-        Self::None(n) => return Self::None(n),
-
-        Self::Teaspoon(n) => unit_reduce!(n, u, 3.0, Self::Tablespoon(n / 3.0)),
-        Self::Tablespoon(n) => {
-          if n < 4.0 {
-            return u;
-          }else{
-            u = Self::Cup(n / 16.0);
-          }
-        },
-        Self::Cup(n) => {
-          if n < 4.0 {
-            return u;
-          }else{
-            u = Self::Quart(n / 4.0);
-          }
-        },
-        Self::Quart(n) => {
-          if n < 4.0 {
-            return u;
-          }else{
-            u = Self::Gallon(n / 4.0);
-          }
-        },
-        Self::Gallon(n) => return Self::Gallon(n),
-
-        Self::Milliliter(n) => {
-          if n < 10.0 {
-            return u;
-          }else{
-            u = Self::Centiliter(n / 10.0);
-          }
-        },
-        Self::Centiliter(n) => {
-          if n < 10.0 {
-            return u;
-          }else{
-            u = Self::Deciliter(n / 10.0);
-          }
-        },
-        Self::Deciliter(n) => {
-          if n < 10.0 {
-            return u;
-          }else{
-            u = Self::Liter(n / 10.0);
-          }
-        },
-        Self::Liter(n) => return Self::Liter(n),
+        Self::None(n)       => return Self::None(n),
         
-        Self::Gram(n) => {
-          if n < 1000.0 {
-            return u;
-          }else{
-            u = Self::Kilogram(n / 1000.0);
-          }
-        },
-        Self::Kilogram(n) => return Self::Kilogram(n),
+        Self::Teaspoon(n)   => unit_reduce!(n, u, 3.0, Self::Tablespoon(n / 3.0)),
+        Self::Tablespoon(n) => unit_reduce!(n, u, 4.0, Self::Cup(n / 16.0)),
+        Self::Cup(n)        => unit_reduce!(n, u, 4.0, Self::Quart(n / 4.0)),
+        Self::Quart(n)      => unit_reduce!(n, u, 4.0, Self::Gallon(n / 4.0)),
+        Self::Gallon(n)     => return Self::Gallon(n),
+        
+        Self::Milliliter(n) => unit_reduce!(n, u, 10.0, Self::Centiliter(n / 10.0)),
+        Self::Centiliter(n) => unit_reduce!(n, u, 10.0, Self::Deciliter(n / 10.0)),
+        Self::Deciliter(n)  => unit_reduce!(n, u, 10.0, Self::Liter(n / 10.0)),
+        Self::Liter(n)      => return Self::Liter(n),
+        
+        Self::Gram(n)       => unit_reduce!(n, u, 1000.0, Self::Kilogram(n / 1000.0)),
+        Self::Kilogram(n)   => return Self::Kilogram(n),
       };
     }
   }
