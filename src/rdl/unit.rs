@@ -31,9 +31,9 @@ macro_rules! unit_reduce {
 }
 
 impl Unit {
-  pub fn from(q: f64, n: Option<String>) -> Option<Unit> {
+  pub fn from(q: f64, n: Option<&str>) -> Option<Unit> {
     if let Some(n) = n {
-      match n.as_str() {
+      match n {
         "none"    => Some(Self::None(q)),
         
         "tsp"     => Some(Self::Teaspoon(q)),

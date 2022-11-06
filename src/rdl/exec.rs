@@ -230,7 +230,20 @@ impl Node {
   }
   
   fn exec_typecast(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
-    let left = self.left()?.exec(cxt)?;
+    let left = self.left()?;
+    let right = self.right()?;
+    let tcast = match right.ntype {
+      NType::Ident => right.text()?,
+      _ => return Err(error::Error::InvalidASTNode(format!("{}: Expected identifier as right child, got: {}", self.ntype, right.ntype))),
+    };
+    let left = match left.exec(cxt) {
+      Ok(left) => left,
+      Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
+    };
+    let res = match unit::Unit::from(1.0, Some(tcast)) {
+      Some(res) => res,
+      None => return Err(error::Error::InvalidASTNode(format!("{}: No such type: {}", self.ntype, tcast))),
+    };
     Ok(left) // ignore cast for now, just use the main expression
   }
   
