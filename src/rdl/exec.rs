@@ -5,7 +5,7 @@ use crate::rdl::unit;
 use crate::rdl::error;
 
 pub struct Context {
-  vars: HashMap<String, unit::Unit>,
+  vars: HashMap<String, unit::Value>,
 }
 
 impl Context {
@@ -17,17 +17,17 @@ impl Context {
   
   pub fn new_with_stdlib() -> Context {
     let mut vars = HashMap::new();
-    vars.insert("pi".to_string(), unit::Unit::None(std::f64::consts::PI));
+    vars.insert("pi".to_string(), unit::Value::raw(std::f64::consts::PI));
     Context{
       vars: vars,
     }
   }
   
-  pub fn set(&mut self, key: &str, val: unit::Unit) {
+  pub fn set(&mut self, key: &str, val: unit::Value) {
     self.vars.insert(key.to_string(), val);
   }
   
-  pub fn get(&self, key: &str) -> Option<unit::Unit> {
+  pub fn get(&self, key: &str) -> Option<unit::Value> {
     match self.vars.get(key) {
       Some(v) => Some(*v),
       None => None,
@@ -171,9 +171,9 @@ impl Node {
     }
   }
   
-  fn value(&self) -> Result<unit::Unit, error::Error> {
+  fn value(&self) -> Result<unit::Value, error::Error> {
     match self.value {
-      Some(value) => Ok(unit::Unit::None(value)),
+      Some(value) => Ok(unit::Value::raw(value)),
       None => Err(error::Error::InvalidASTNode(format!("{}: Expected value", self.ntype))),
     }
   }
@@ -192,7 +192,7 @@ impl Node {
     }
   }
   
-  pub fn exec(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
+  pub fn exec(&self, cxt: &mut Context) -> Result<unit::Value, error::Error> {
     match self.ntype {
       NType::Ident    => self.exec_ident(cxt),
       NType::Number   => self.exec_number(cxt),
@@ -202,7 +202,7 @@ impl Node {
     }
   }
   
-  fn exec_ident(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
+  fn exec_ident(&self, cxt: &mut Context) -> Result<unit::Value, error::Error> {
     let name = self.text()?;
     match cxt.get(&name) {
       Some(v) => Ok(v),
@@ -210,11 +210,11 @@ impl Node {
     }
   }
   
-  fn exec_number(&self, _cxt: &mut Context) -> Result<unit::Unit, error::Error> {
+  fn exec_number(&self, _cxt: &mut Context) -> Result<unit::Value, error::Error> {
     self.value()
   }
   
-  fn exec_assign(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
+  fn exec_assign(&self, cxt: &mut Context) -> Result<unit::Value, error::Error> {
     let left = self.left()?;
     let right = self.right()?;
     let ident = match left.ntype {
@@ -229,7 +229,7 @@ impl Node {
     Ok(right)
   }
   
-  fn exec_typecast(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
+  fn exec_typecast(&self, cxt: &mut Context) -> Result<unit::Value, error::Error> {
     let left = self.left()?;
     let right = self.right()?;
     let tcast = match right.ntype {
@@ -240,14 +240,14 @@ impl Node {
       Ok(left) => left,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
     };
-    let res = match unit::Unit::from(1.0, Some(tcast)) {
-      Some(res) => res,
-      None => return Err(error::Error::InvalidASTNode(format!("{}: No such type: {}", self.ntype, tcast))),
-    };
+    // let res = match unit::Value::raw(1.0, Some(tcast)) {
+    //   Some(res) => res,
+    //   None => return Err(error::Error::InvalidASTNode(format!("{}: No such type: {}", self.ntype, tcast))),
+    // };
     Ok(left) // ignore cast for now, just use the main expression
   }
   
-  fn exec_arith(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
+  fn exec_arith(&self, cxt: &mut Context) -> Result<unit::Value, error::Error> {
     let left = match self.left()?.exec(cxt) {
       Ok(left) => left,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
@@ -304,36 +304,36 @@ mod tests {
   #[test]
   fn exec_simple() {
     let mut cxt = Context::new();
-    cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(2.0));
-    cxt.set("c", unit::Unit::None(3.0));
+    cxt.set("a", unit::Value::raw(1.0));
+    cxt.set("b", unit::Value::raw(2.0));
+    cxt.set("c", unit::Value::raw(3.0));
     
     let n = Node::new_ident("a");
-    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), n.exec(&mut cxt));
     
     let n = Node::new_number(1.25);
-    assert_eq!(Ok(unit::Unit::None(1.25)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.25)), n.exec(&mut cxt));
     
     let n = Node::new_add(Node::new_ident("a"), Node::new_ident("b"));
-    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(3.0)), n.exec(&mut cxt));
     
     let n = Node::new_sub(Node::new_ident("a"), Node::new_ident("c"));
-    assert_eq!(Ok(unit::Unit::None(-2.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(-2.0)), n.exec(&mut cxt));
     
     let n = Node::new_mul(Node::new_ident("a"), Node::new_ident("c"));
-    assert_eq!(Ok(unit::Unit::None(3.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(3.0)), n.exec(&mut cxt));
     
     let n = Node::new_div(Node::new_ident("a"), Node::new_ident("b"));
-    assert_eq!(Ok(unit::Unit::None(0.5)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(0.5)), n.exec(&mut cxt));
     
     let n = Node::new_mod(Node::new_ident("c"), Node::new_ident("b"));
-    assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), n.exec(&mut cxt));
     
     let n = Node::new_assign(Node::new_ident("d"), Node::new_number(123.0));
-    assert_eq!(Ok(unit::Unit::None(123.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(123.0)), n.exec(&mut cxt));
     
     let n = Node::new_typecast(Node::new_ident("d"), Node::new_ident("kg"));
-    assert_eq!(Ok(unit::Unit::None(123.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(123.0)), n.exec(&mut cxt));
   }
   
 }

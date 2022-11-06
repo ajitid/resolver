@@ -1,35 +1,6 @@
 use std::fmt;
 use std::ops;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Unit {
-  None(f64),        // indivisible
-  
-  Teaspoon(f64),    // base
-  Tablespoon(f64),  // 3x tsp
-  Cup(f64),         // 16x tbsp
-  Quart(f64),       // 4x cup
-  Gallon(f64),      // 4x quart
-  
-  Liter(f64),       // base
-  Deciliter(f64),   // 1/10 base
-  Centiliter(f64),  // 1/100 base
-  Milliliter(f64),  // 1/1000 base
-  
-  Gram(f64),        // base
-  Kilogram(f64),    // 1000x grams
-}
-
-macro_rules! unit_reduce {
-  ($curr: ident, $pack: ident, $amount: expr, $reduce: expr) => {
-    if $curr < $amount {
-      return $pack;
-    }else{
-      $pack = $reduce;
-    }
-  };
-}
-
 pub fn is_suffix(name: &str) -> bool {
   match name.to_owned().trim().to_lowercase().as_str() {
     "tsp"     => true,
@@ -49,230 +20,248 @@ pub fn is_suffix(name: &str) -> bool {
   }
 }
 
-pub fn match_suffix(name: &str) -> Option<String> {
-  match name.to_owned().trim().to_lowercase().as_str() {
-    "tsp"     => Some("tsp".to_string()),
-    "tbsp"    => Some("tbsp".to_string()),
-    "cup"     => Some("cup".to_string()),
-    "quart"   => Some("quart".to_string()),
-    "gallon"  => Some("gallon".to_string()),
-
-    "l"       => Some("l".to_string()),
-    "dl"      => Some("dl".to_string()),
-    "cl"      => Some("cl".to_string()),
-    "ml"      => Some("ml".to_string()),
-    
-    "g"       => Some("g".to_string()),
-    "kg"      => Some("kg".to_string()),
-    _         => None,
-  }
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Unit {
+  Teaspoon,    // base
+  Tablespoon,  // 3x tsp
+  Cup,         // 16x tbsp
+  Quart,       // 4x cup
+  Gallon,      // 4x quart
+  
+  Liter,       // base
+  Deciliter,   // 1/10 base
+  Centiliter,  // 1/100 base
+  Milliliter,  // 1/1000 base
+  
+  Gram,        // base
+  Kilogram,    // 1000x grams
 }
 
 impl Unit {
-  pub fn from(q: f64, n: Option<&str>) -> Option<Unit> {
-    if let Some(n) = n {
-      match n {
-        "none"    => Some(Self::None(q)),
-        
-        "tsp"     => Some(Self::Teaspoon(q)),
-        "tbsp"    => Some(Self::Tablespoon(q)),
-        "cup"     => Some(Self::Cup(q)),
-        "quart"   => Some(Self::Quart(q)),
-        "gallon"  => Some(Self::Gallon(q)),
+  pub fn from(name: &str) -> Option<Unit> {
+    match name.to_owned().trim().to_lowercase().as_str() {
+      "tsp"            => Some(Unit::Teaspoon),
+      "tbsp"           => Some(Unit::Tablespoon),
+      "cup"            => Some(Unit::Cup),
+      "quart" | "qt"   => Some(Unit::Quart),
+      "gallon" | "gal" => Some(Unit::Gallon),
 
-        "l"       => Some(Self::Liter(q)),
-        "dl"      => Some(Self::Deciliter(q)),
-        "cl"      => Some(Self::Centiliter(q)),
-        "ml"      => Some(Self::Milliliter(q)),
-        
-        "g"       => Some(Self::Gram(q)),
-        "kg"      => Some(Self::Kilogram(q)),
-        _         => None,
-      }
-    }else{
-      Some(Self::None(q))
+      "l"              => Some(Unit::Liter),
+      "dl"             => Some(Unit::Deciliter),
+      "cl"             => Some(Unit::Centiliter),
+      "ml"             => Some(Unit::Milliliter),
+      
+      "g"              => Some(Unit::Gram),
+      "kg"             => Some(Unit::Kilogram),
+      _                => None,
     }
   }
   
-  pub fn value(&self) -> f64 {
+  pub fn base(&self) -> Unit {
     match self {
-      Self::None(n)       => *n,
+      Unit::Teaspoon   => Unit::Teaspoon,
+      Unit::Tablespoon => Unit::Teaspoon,
+      Unit::Cup        => Unit::Teaspoon,
+      Unit::Quart      => Unit::Teaspoon,
+      Unit::Gallon     => Unit::Teaspoon,
       
-      Self::Teaspoon(n)   => *n,
-      Self::Tablespoon(n) => *n,
-      Self::Cup(n)        => *n,
-      Self::Quart(n)      => *n,
-      Self::Gallon(n)     => *n,
+      Unit::Liter      => Unit::Liter,
+      Unit::Deciliter  => Unit::Liter,
+      Unit::Centiliter => Unit::Liter,
+      Unit::Milliliter => Unit::Liter,
       
-      Self::Milliliter(n) => *n,
-      Self::Centiliter(n) => *n,
-      Self::Deciliter(n)  => *n,
-      Self::Liter(n)      => *n,
-      
-      Self::Gram(n)       => *n,
-      Self::Kilogram(n)   => *n,
+      Unit::Gram       => Unit::Gram,
+      Unit::Kilogram   => Unit::Gram,
     }
   }
   
-  fn base(&self) -> Unit {
-    let mut u = *self;
-    loop {
-      match u {
-        Self::None(n)       => return Self::None(n),
-
-        Self::Teaspoon(n)   => return Self::Teaspoon(n),
-        Self::Tablespoon(n) => u = Self::Teaspoon(n * 3.0),
-        Self::Cup(n)        => u = Self::Tablespoon(n * 16.0),
-        Self::Quart(n)      => u = Self::Cup(n * 4.0),
-        Self::Gallon(n)     => u = Self::Quart(n * 4.0),
-
-        Self::Liter(n)      => return Self::Liter(n),
-        Self::Deciliter(n)  => u = Self::Liter(n / 10.0),
-        Self::Centiliter(n) => u = Self::Deciliter(n / 10.0),
-        Self::Milliliter(n) => u = Self::Centiliter(n / 10.0),
-        
-        Self::Gram(n)       => return Self::Gram(n),
-        Self::Kilogram(n)   => u = Self::Gram(n * 1000.0),
-      };
-    }
-  }
-  
-  fn pack(&self) -> Unit {
-    let mut u = *self;
-    loop {
-      match u {
-        Self::None(n)       => return Self::None(n),
-        
-        Self::Teaspoon(n)   => unit_reduce!(n, u, 3.0, Self::Tablespoon(n / 3.0)),
-        Self::Tablespoon(n) => unit_reduce!(n, u, 4.0, Self::Cup(n / 16.0)),
-        Self::Cup(n)        => unit_reduce!(n, u, 4.0, Self::Quart(n / 4.0)),
-        Self::Quart(n)      => unit_reduce!(n, u, 4.0, Self::Gallon(n / 4.0)),
-        Self::Gallon(n)     => return Self::Gallon(n),
-        
-        Self::Milliliter(n) => unit_reduce!(n, u, 10.0, Self::Centiliter(n / 10.0)),
-        Self::Centiliter(n) => unit_reduce!(n, u, 10.0, Self::Deciliter(n / 10.0)),
-        Self::Deciliter(n)  => unit_reduce!(n, u, 10.0, Self::Liter(n / 10.0)),
-        Self::Liter(n)      => return Self::Liter(n),
-        
-        Self::Gram(n)       => unit_reduce!(n, u, 1000.0, Self::Kilogram(n / 1000.0)),
-        Self::Kilogram(n)   => return Self::Kilogram(n),
-      };
-    }
-  }
-  
-  fn suffix(&self) -> Option<&str> {
-    match self {
-      Self::None(_)       => None,
-      
-      Self::Teaspoon(_)   => Some("tsp"),
-      Self::Tablespoon(_) => Some("tbsp"),
-      Self::Cup(_)        => Some("cup"),
-      Self::Quart(_)      => Some("quart"),
-      Self::Gallon(_)     => Some("gallon"),
-      
-      Self::Liter(_)      => Some("l"),
-      Self::Deciliter(_)  => Some("dl"),
-      Self::Centiliter(_) => Some("cl"),
-      Self::Milliliter(_) => Some("ml"),
-      
-      Self::Gram(_)       => Some("g"),
-      Self::Kilogram(_)   => Some("kg"),
-    }
-  }
-}
-
-macro_rules! unit_value_f64 {
-  ($variant: path, $value: expr) => {
-    if let $variant(v) = $value {
-      v as f64
-    }else if let Unit::None(v) = $value {
-      v as f64 // untyped is compatible with anything
-    }else{
-      0.0
-    }
-  };
-}
-
-macro_rules! unit_op_f64 {
-  ($left: ident, $right: expr, $op: tt) => {
-    match $left {
-      Self::None(value) => Self::None(value $op unit_value_f64!(Self::None, $right)),
-      
-      Self::Teaspoon(value) => Self::Teaspoon(value $op unit_value_f64!(Self::Teaspoon, $right)),
-      Self::Tablespoon(value) => Self::Tablespoon(value $op unit_value_f64!(Self::Tablespoon, $right)),
-      Self::Cup(value) => Self::Cup(value $op unit_value_f64!(Self::Cup, $right)),
-      Self::Quart(value) => Self::Quart(value $op unit_value_f64!(Self::Quart, $right)),
-      Self::Gallon(value) => Self::Gallon(value $op unit_value_f64!(Self::Gallon, $right)),
-
-      Self::Milliliter(value) => Self::Milliliter(value $op unit_value_f64!(Self::Milliliter, $right)),
-      Self::Centiliter(value) => Self::Centiliter(value $op unit_value_f64!(Self::Centiliter, $right)),
-      Self::Deciliter(value) => Self::Deciliter(value $op unit_value_f64!(Self::Deciliter, $right)),
-      Self::Liter(value) => Self::Liter(value $op unit_value_f64!(Self::Liter, $right)),
-      
-      Self::Gram(value) => Self::Gram(value $op unit_value_f64!(Self::Gram, $right)),
-      Self::Kilogram(value) => Self::Kilogram(value $op unit_value_f64!(Self::Kilogram, $right)),
-    }
-  };
-}
-
-impl ops::Add<Unit> for Unit {
-  type Output = Unit;
-  
-  fn add(self, right: Unit) -> Unit {
-    unit_op_f64!(self, right, +)
-  }
-}
-
-impl ops::Sub<Unit> for Unit {
-  type Output = Unit;
-  
-  fn sub(self, right: Unit) -> Unit {
-    unit_op_f64!(self, right, -)
-  }
-}
-
-impl ops::Mul<Unit> for Unit {
-  type Output = Unit;
-  
-  fn mul(self, right: Unit) -> Unit {
-    unit_op_f64!(self, right, *)
-  }
-}
-
-impl ops::Div<Unit> for Unit {
-  type Output = Unit;
-  
-  fn div(self, right: Unit) -> Unit {
-    unit_op_f64!(self, right, /)
-  }
-}
-
-impl ops::Rem<Unit> for Unit {
-  type Output = Unit;
-  
-  fn rem(self, right: Unit) -> Unit {
-    unit_op_f64!(self, right, %)
+  pub fn is_convertable(&self, another: Unit) -> bool {
+    self.base() == another.base()
   }
 }
 
 impl fmt::Display for Unit {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      Self::None(n)       => write!(f, "{}", n),
+      Self::Teaspoon   => write!(f, "{}", "tsp"),
+      Self::Tablespoon => write!(f, "{}", "tbsp"),
+      Self::Cup        => write!(f, "{}", "cup"),
+      Self::Quart      => write!(f, "{}", "quart"),
+      Self::Gallon     => write!(f, "{}", "gallon"),
       
-      Self::Teaspoon(n)   => write!(f, "{} {}", format_qty(*n), "tsp"),
-      Self::Tablespoon(n) => write!(f, "{} {}", format_qty(*n), "tbsp"),
-      Self::Cup(n)        => write!(f, "{} {}", format_qty(*n), "cup"),
-      Self::Quart(n)      => write!(f, "{} {}", format_qty(*n), "quart"),
-      Self::Gallon(n)     => write!(f, "{} {}", format_qty(*n), "gallon"),
+      Self::Liter      => write!(f, "{}", "l"),
+      Self::Deciliter  => write!(f, "{}", "dl"),
+      Self::Centiliter => write!(f, "{}", "cl"),
+      Self::Milliliter => write!(f, "{}", "ml"),
       
-      Self::Liter(n)      => write!(f, "{} {}", n, "l"),
-      Self::Deciliter(n)  => write!(f, "{} {}", n, "dl"),
-      Self::Centiliter(n) => write!(f, "{} {}", n, "cl"),
-      Self::Milliliter(n) => write!(f, "{} {}", n, "ml"),
-      
-      Self::Gram(n)       => write!(f, "{} {}", n, "g"),
-      Self::Kilogram(n)   => write!(f, "{} {}", n, "kg"),
+      Self::Gram       => write!(f, "{}", "g"),
+      Self::Kilogram   => write!(f, "{}", "kg"),
+    }
+  }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Value {
+  value: f64,
+  unit: Option<Unit>,
+}
+
+macro_rules! value_reduce {
+  ($curr: ident, $amount: expr, $reduce: expr) => {
+    if $curr.value < $amount {
+      return $curr;
+    }else{
+      $reduce
+    }
+  };
+}
+impl Value {
+  pub fn raw(v: f64) -> Value {
+    Value{
+      value: v,
+      unit: None,
+    }
+  }
+  
+  pub fn new(v: f64, u: Unit) -> Value {
+    Value{
+      value: v,
+      unit: Some(u),
+    }
+  }
+  
+  pub fn value(&self) -> f64 {
+    self.value
+  }
+  
+  pub fn unit(&self) -> Option<Unit> {
+    self.unit
+  }
+  
+  fn base(&self) -> Value {
+    let mut v = *self;
+    loop {
+      match v.unit {
+        None                   => return Self::raw(v.value),
+        
+        Some(Unit::Teaspoon)   => return Value::new(v.value, Unit::Teaspoon),
+        Some(Unit::Tablespoon) => v = Value::new(v.value * 3.0, Unit::Teaspoon),
+        Some(Unit::Cup)        => v = Value::new(v.value * 16.0, Unit::Tablespoon),
+        Some(Unit::Quart)      => v = Value::new(v.value * 4.0, Unit::Cup),
+        Some(Unit::Gallon)     => v = Value::new(v.value * 4.0, Unit::Quart),
+
+        Some(Unit::Liter)      => return Value::new(v.value, Unit::Liter),
+        Some(Unit::Deciliter)  => v = Value::new(v.value / 10.0, Unit::Liter),
+        Some(Unit::Centiliter) => v = Value::new(v.value / 10.0, Unit::Deciliter),
+        Some(Unit::Milliliter) => v = Value::new(v.value / 10.0, Unit::Centiliter),
+        
+        Some(Unit::Gram)       => return Value::new(v.value, Unit::Gram),
+        Some(Unit::Kilogram)   => v = Value::new(v.value * 1000.0, Unit::Gram),
+      };
+    }
+  }
+  
+  fn pack(&self) -> Value {
+    let mut v = *self;
+    loop {
+      match v.unit {
+        None                   => return Self::raw(v.value),
+        
+        Some(Unit::Teaspoon)   => v = value_reduce!(v, 3.0, Value::new(v.value /  3.0, Unit::Tablespoon)),
+        Some(Unit::Tablespoon) => v = value_reduce!(v, 4.0, Value::new(v.value / 16.0, Unit::Cup)),
+        Some(Unit::Cup)        => v = value_reduce!(v, 4.0, Value::new(v.value /  4.0, Unit::Quart)),
+        Some(Unit::Quart)      => v = value_reduce!(v, 4.0, Value::new(v.value /  4.0, Unit::Gallon)),
+        Some(Unit::Gallon)     => return Value::new(v.value, Unit::Gallon),
+        
+        Some(Unit::Milliliter) => v = value_reduce!(v, 10.0, Value::new(v.value / 10.0, Unit::Centiliter)),
+        Some(Unit::Centiliter) => v = value_reduce!(v, 10.0, Value::new(v.value / 10.0, Unit::Deciliter)),
+        Some(Unit::Deciliter)  => v = value_reduce!(v, 10.0, Value::new(v.value / 10.0, Unit::Liter)),
+        Some(Unit::Liter)      => return Value::new(v.value, Unit::Liter),
+        
+        Some(Unit::Gram)       => v = value_reduce!(v, 1000.0, Value::new(v.value / 1000.0, Unit::Kilogram)),
+        Some(Unit::Kilogram)   => return Value::new(v.value, Unit::Kilogram),
+      };
+    }
+  }
+}
+
+fn coalesce<T>(a: Option<T>, b: Option<T>) -> Option<T> {
+  if let Some(a) = a {
+    Some(a)
+  }else if let Some(b) = b {
+    Some(b)
+  }else{
+    None
+  }
+}
+
+impl ops::Add<Value> for Value {
+  type Output = Value;
+  
+  fn add(self, right: Value) -> Value {
+    Value{
+      value: self.value + right.value,
+      unit: coalesce(self.unit, right.unit),
+    }
+  }
+}
+
+impl ops::Sub<Value> for Value {
+  type Output = Value;
+  
+  fn sub(self, right: Value) -> Value {
+    Value{
+      value: self.value - right.value,
+      unit: coalesce(self.unit, right.unit),
+    }
+  }
+}
+
+impl ops::Mul<Value> for Value {
+  type Output = Value;
+  
+  fn mul(self, right: Value) -> Value {
+    Value{
+      value: self.value * right.value,
+      unit: coalesce(self.unit, right.unit),
+    }
+  }
+}
+
+impl ops::Div<Value> for Value {
+  type Output = Value;
+  
+  fn div(self, right: Value) -> Value {
+    Value{
+      value: self.value / right.value,
+      unit: coalesce(self.unit, right.unit),
+    }
+  }
+}
+
+impl ops::Rem<Value> for Value {
+  type Output = Value;
+  
+  fn rem(self, right: Value) -> Value {
+    Value{
+      value: self.value % right.value,
+      unit: coalesce(self.unit, right.unit),
+    }
+  }
+}
+
+impl fmt::Display for Value {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    if f.alternate() {
+      match self.unit {
+        Some(unit) => write!(f, "{} {}", format_qty(self.value), unit),
+        None       => write!(f, "{}", format_qty(self.value)),
+      }
+    }else{
+      match self.unit {
+        Some(unit) => write!(f, "{} {}", self.value, unit),
+        None       => write!(f, "{}", self.value),
+      }
     }
   }
 }
@@ -316,99 +305,99 @@ mod tests {
   
   #[test]
   fn to_base() {
-    assert_eq!(Unit::Teaspoon(3.0), Unit::Teaspoon(3.0).base());
+    assert_eq!(Value::new(3.0, Unit::Teaspoon), Value::new(3.0, Unit::Teaspoon).base());
     
-    assert_eq!(Unit::Teaspoon(3.0), Unit::Tablespoon(1.0).base());
-    assert_eq!(Unit::Teaspoon(48.0), Unit::Cup(1.0).base());
-    assert_eq!(Unit::Teaspoon(192.0), Unit::Quart(1.0).base());
-    assert_eq!(Unit::Teaspoon(768.0), Unit::Gallon(1.0).base());
+    assert_eq!(Value::new(3.0, Unit::Teaspoon), Value::new(1.0, Unit::Tablespoon).base());
+    assert_eq!(Value::new(48.0, Unit::Teaspoon), Value::new(1.0, Unit::Cup).base());
+    assert_eq!(Value::new(192.0, Unit::Teaspoon), Value::new(1.0, Unit::Quart).base());
+    assert_eq!(Value::new(768.0, Unit::Teaspoon), Value::new(1.0, Unit::Gallon).base());
     
-    assert_eq!(Unit::Teaspoon(12.0), Unit::Cup(0.25).base());
-    assert_eq!(Unit::Teaspoon(24.0), Unit::Cup(0.5).base());
-    assert_eq!(Unit::Teaspoon(24.0), Unit::Quart(0.125).base());
-    assert_eq!(Unit::Teaspoon(24.0), Unit::Tablespoon(8.0).base());
+    assert_eq!(Value::new(12.0, Unit::Teaspoon), Value::new(0.25, Unit::Cup).base());
+    assert_eq!(Value::new(24.0, Unit::Teaspoon), Value::new(0.5, Unit::Cup).base());
+    assert_eq!(Value::new(24.0, Unit::Teaspoon), Value::new(0.125, Unit::Quart).base());
+    assert_eq!(Value::new(24.0, Unit::Teaspoon), Value::new(8.0, Unit::Tablespoon).base());
 
-    assert_eq!(Unit::Liter(0.25), Unit::Liter(0.25).base());
-    assert_eq!(Unit::Liter(0.1), Unit::Deciliter(1.0).base());
-    assert_eq!(Unit::Liter(0.01), Unit::Centiliter(1.0).base());
-    assert_eq!(Unit::Liter(0.001), Unit::Milliliter(1.0).base());
-    assert_eq!(Unit::Liter(1.0), Unit::Deciliter(10.0).base());
-    assert_eq!(Unit::Liter(1.0), Unit::Centiliter(100.0).base());
-    assert_eq!(Unit::Liter(1.0), Unit::Milliliter(1000.0).base());
-    assert_eq!(Unit::Liter(3.1), Unit::Milliliter(3100.0).base());
+    assert_eq!(Value::new(0.25, Unit::Liter), Value::new(0.25, Unit::Liter).base());
+    assert_eq!(Value::new(0.1, Unit::Liter), Value::new(1.0, Unit::Deciliter).base());
+    assert_eq!(Value::new(0.01, Unit::Liter), Value::new(1.0, Unit::Centiliter).base());
+    assert_eq!(Value::new(0.001, Unit::Liter), Value::new(1.0, Unit::Milliliter).base());
+    assert_eq!(Value::new(1.0, Unit::Liter), Value::new(10.0, Unit::Deciliter).base());
+    assert_eq!(Value::new(1.0, Unit::Liter), Value::new(100.0, Unit::Centiliter).base());
+    assert_eq!(Value::new(1.0, Unit::Liter), Value::new(1000.0, Unit::Milliliter).base());
+    assert_eq!(Value::new(3.1, Unit::Liter), Value::new(3100.0, Unit::Milliliter).base());
 
-    assert_eq!(Unit::Gram(10.0), Unit::Gram(10.0).base());
-    assert_eq!(Unit::Gram(1000.0), Unit::Gram(1000.0).base());
-    assert_eq!(Unit::Gram(1000.0), Unit::Kilogram(1.0).base());
-    assert_eq!(Unit::Gram(2000.0), Unit::Kilogram(2.0).base());
+    assert_eq!(Value::new(10.0, Unit::Gram), Value::new(10.0, Unit::Gram).base());
+    assert_eq!(Value::new(1000.0, Unit::Gram), Value::new(1000.0, Unit::Gram).base());
+    assert_eq!(Value::new(1000.0, Unit::Gram), Value::new(1.0, Unit::Kilogram).base());
+    assert_eq!(Value::new(2000.0, Unit::Gram), Value::new(2.0, Unit::Kilogram).base());
   }
   
   #[test]
   fn to_pack() {
-    assert_eq!(Unit::Teaspoon(2.0), Unit::Teaspoon(2.0).pack());
-    assert_eq!(Unit::Tablespoon(1.0), Unit::Teaspoon(3.0).pack());
-    assert_eq!(Unit::Cup(0.25), Unit::Teaspoon(12.0).pack());
-    assert_eq!(Unit::Cup(1.0), Unit::Teaspoon(48.0).pack());
+    assert_eq!(Value::new(2.0, Unit::Teaspoon), Value::new(2.0, Unit::Teaspoon).pack());
+    assert_eq!(Value::new(1.0, Unit::Tablespoon), Value::new(3.0, Unit::Teaspoon).pack());
+    assert_eq!(Value::new(0.25, Unit::Cup), Value::new(12.0, Unit::Teaspoon).pack());
+    assert_eq!(Value::new(1.0, Unit::Cup), Value::new(48.0, Unit::Teaspoon).pack());
 
-    assert_eq!(Unit::Tablespoon(3.0), Unit::Tablespoon(3.0).pack());
-    assert_eq!(Unit::Tablespoon(3.0), Unit::Tablespoon(3.0).pack());
-    assert_eq!(Unit::Cup(0.25), Unit::Tablespoon(4.0).pack());
-    assert_eq!(Unit::Cup(1.0), Unit::Tablespoon(16.0).pack());
-    assert_eq!(Unit::Cup(3.0), Unit::Tablespoon(48.0).pack());
-    assert_eq!(Unit::Quart(1.25), Unit::Tablespoon(80.0).pack());
-    assert_eq!(Unit::Quart(3.0), Unit::Tablespoon(192.0).pack());
-    assert_eq!(Unit::Gallon(1.25), Unit::Tablespoon(320.0).pack());
+    assert_eq!(Value::new(3.0, Unit::Tablespoon), Value::new(3.0, Unit::Tablespoon).pack());
+    assert_eq!(Value::new(3.0, Unit::Tablespoon), Value::new(3.0, Unit::Tablespoon).pack());
+    assert_eq!(Value::new(0.25, Unit::Cup), Value::new(4.0, Unit::Tablespoon).pack());
+    assert_eq!(Value::new(1.0, Unit::Cup), Value::new(16.0, Unit::Tablespoon).pack());
+    assert_eq!(Value::new(3.0, Unit::Cup), Value::new(48.0, Unit::Tablespoon).pack());
+    assert_eq!(Value::new(1.25, Unit::Quart), Value::new(80.0, Unit::Tablespoon).pack());
+    assert_eq!(Value::new(3.0, Unit::Quart), Value::new(192.0, Unit::Tablespoon).pack());
+    assert_eq!(Value::new(1.25, Unit::Gallon), Value::new(320.0, Unit::Tablespoon).pack());
 
-    assert_eq!(Unit::Milliliter(1.0), Unit::Milliliter(1.0).pack());
-    assert_eq!(Unit::Centiliter(1.0), Unit::Milliliter(10.0).pack());
-    assert_eq!(Unit::Deciliter(1.0), Unit::Milliliter(100.0).pack());
-    assert_eq!(Unit::Liter(1.0), Unit::Milliliter(1000.0).pack());
-    assert_eq!(Unit::Liter(2.1), Unit::Milliliter(2100.0).pack());
+    assert_eq!(Value::new(1.0, Unit::Milliliter), Value::new(1.0, Unit::Milliliter).pack());
+    assert_eq!(Value::new(1.0, Unit::Centiliter), Value::new(10.0, Unit::Milliliter).pack());
+    assert_eq!(Value::new(1.0, Unit::Deciliter), Value::new(100.0, Unit::Milliliter).pack());
+    assert_eq!(Value::new(1.0, Unit::Liter), Value::new(1000.0, Unit::Milliliter).pack());
+    assert_eq!(Value::new(2.1, Unit::Liter), Value::new(2100.0, Unit::Milliliter).pack());
     
-    assert_eq!(Unit::Gram(999.0), Unit::Gram(999.0).pack());
-    assert_eq!(Unit::Kilogram(1.25), Unit::Gram(1250.0).pack());
+    assert_eq!(Value::new(999.0, Unit::Gram), Value::new(999.0, Unit::Gram).pack());
+    assert_eq!(Value::new(1.25, Unit::Kilogram), Value::new(1250.0, Unit::Gram).pack());
   }
   
   #[test]
   fn to_display() {
-    assert_eq!("1 tsp", Unit::Teaspoon(1.0).pack().to_string());
-    assert_eq!("1 1/4 tsp", Unit::Teaspoon(1.25).pack().to_string());
-    assert_eq!("2 tsp", Unit::Teaspoon(2.0).pack().to_string());
+    assert_eq!("1 tsp", &format!("{:#}", Value::new(1.0, Unit::Teaspoon).pack()));
+    assert_eq!("1 1/4 tsp", &format!("{:#}", Value::new(1.25, Unit::Teaspoon).pack()));
+    assert_eq!("2 tsp", &format!("{:#}", Value::new(2.0, Unit::Teaspoon).pack()));
     
-    assert_eq!("1 tbsp", Unit::Teaspoon(3.0).pack().to_string());
-    assert_eq!("1/4 cup", Unit::Teaspoon(12.0).pack().to_string());
-    assert_eq!("1 cup", Unit::Teaspoon(48.0).pack().to_string());
+    assert_eq!("1 tbsp", &format!("{:#}", Value::new(3.0, Unit::Teaspoon).pack()));
+    assert_eq!("1/4 cup", &format!("{:#}", Value::new(12.0, Unit::Teaspoon).pack()));
+    assert_eq!("1 cup", &format!("{:#}", Value::new(48.0, Unit::Teaspoon).pack()));
 
-    assert_eq!("3 tbsp", Unit::Tablespoon(3.0).pack().to_string());
-    assert_eq!("1/4 cup", Unit::Tablespoon(4.0).pack().to_string());
-    assert_eq!("1/2 cup", Unit::Tablespoon(8.0).pack().to_string());
-    assert_eq!("7/8 cup", Unit::Tablespoon(14.0).pack().to_string());
-    assert_eq!("2 cup", Unit::Tablespoon(32.0).pack().to_string());
+    assert_eq!("3 tbsp", &format!("{:#}", Value::new(3.0, Unit::Tablespoon).pack()));
+    assert_eq!("1/4 cup", &format!("{:#}", Value::new(4.0, Unit::Tablespoon).pack()));
+    assert_eq!("1/2 cup", &format!("{:#}", Value::new(8.0, Unit::Tablespoon).pack()));
+    assert_eq!("7/8 cup", &format!("{:#}", Value::new(14.0, Unit::Tablespoon).pack()));
+    assert_eq!("2 cup", &format!("{:#}", Value::new(32.0, Unit::Tablespoon).pack()));
     
-    assert_eq!("3 cup", Unit::Cup(3.0).pack().to_string());
-    assert_eq!("1 quart", Unit::Cup(4.0).pack().to_string());
-    assert_eq!("3 quart", Unit::Cup(12.0).pack().to_string());
+    assert_eq!("3 cup", &format!("{:#}", Value::new(3.0, Unit::Cup).pack()));
+    assert_eq!("1 quart", &format!("{:#}", Value::new(4.0, Unit::Cup).pack()));
+    assert_eq!("3 quart", &format!("{:#}", Value::new(12.0, Unit::Cup).pack()));
     
-    assert_eq!("2 1/8 gallon", Unit::Gallon(2.125).pack().to_string());
-    assert_eq!("2.123 gallon", Unit::Gallon(2.123).pack().to_string());
+    assert_eq!("2 1/8 gallon", &format!("{:#}", Value::new(2.125, Unit::Gallon).pack()));
+    assert_eq!("2.123 gallon", &format!("{:#}", Value::new(2.123, Unit::Gallon).pack()));
 
-    assert_eq!("1 ml", Unit::Milliliter(1.0).pack().to_string());
-    assert_eq!("1 cl", Unit::Milliliter(10.0).pack().to_string());
-    assert_eq!("1 dl", Unit::Milliliter(100.0).pack().to_string());
-    assert_eq!("1 l", Unit::Milliliter(1000.0).pack().to_string());
-    assert_eq!("1.1 l", Unit::Milliliter(1100.0).pack().to_string());
+    assert_eq!("1 ml", &format!("{:#}", Value::new(1.0, Unit::Milliliter).pack()));
+    assert_eq!("1 cl", &format!("{:#}", Value::new(10.0, Unit::Milliliter).pack()));
+    assert_eq!("1 dl", &format!("{:#}", Value::new(100.0, Unit::Milliliter).pack()));
+    assert_eq!("1 l", &format!("{:#}", Value::new(1000.0, Unit::Milliliter).pack()));
+    assert_eq!("1.1 l", &format!("{:#}", Value::new(1100.0, Unit::Milliliter).pack()));
     
-    assert_eq!("10 g", Unit::Gram(10.0).pack().to_string());
-    assert_eq!("2 kg", Unit::Gram(2000.0).pack().to_string());
-    assert_eq!("2 kg", Unit::Kilogram(2.0).pack().to_string());
+    assert_eq!("10 g", &format!("{:#}", Value::new(10.0, Unit::Gram).pack()));
+    assert_eq!("2 kg", &format!("{:#}", Value::new(2000.0, Unit::Gram).pack()));
+    assert_eq!("2 kg", &format!("{:#}", Value::new(2.0, Unit::Kilogram).pack()));
   }
 
   #[test]
   fn operations() {
-    assert_eq!(Unit::None(10.0), Unit::None(5.0) * Unit::None(2.0));
-    assert_eq!(Unit::Teaspoon(10.0), Unit::Teaspoon(5.0) * Unit::Teaspoon(2.0));
-    assert_eq!(Unit::Teaspoon(10.0), Unit::Teaspoon(5.0) * Unit::None(2.0));
-    assert_eq!(Unit::Teaspoon(10.0), Unit::None(2.0) * Unit::Teaspoon(5.0));
-    assert_eq!(Unit::Teaspoon(10.0), Unit::Teaspoon(5.0) * Unit::Tablespoon(2.0));
+    assert_eq!(Value::raw(10.0), Value::raw(5.0) * Value::raw(2.0));
+    assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::new(2.0, Unit::Teaspoon));
+    assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::raw(2.0));
+    assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::raw(2.0) * Value::new(5.0, Unit::Teaspoon));
+    assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::new(2.0, Unit::Tablespoon));
   }
 }

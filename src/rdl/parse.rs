@@ -224,7 +224,7 @@ mod tests {
     Ok(e.ast)
   }
   
-  fn exec_node(n: Node, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
+  fn exec_node(n: Node, cxt: &mut Context) -> Result<unit::Value, error::Error> {
     let v = n.exec(cxt)?;
     println!("=== [{}] → {}", n, v);
     Ok(v)
@@ -239,21 +239,21 @@ mod tests {
   #[test]
   fn parse_primitive() {
     let mut cxt = Context::new();
-    cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(2.0));
-    cxt.set("c", unit::Unit::None(3.0));
+    cxt.set("a", unit::Value::raw(1.0));
+    cxt.set("b", unit::Value::raw(2.0));
+    cxt.set("c", unit::Value::raw(3.0));
     
     let n = parse_expr(r#"1"#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"123.456"#).expect("Could not parse");
     assert_eq!(Node::new_number(123.456), n);
-    assert_eq!(Ok(unit::Unit::None(123.456)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(123.456)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"a"#).expect("Could not parse");
     assert_eq!(Node::new_ident("a"), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"Hello"#).expect("Could not parse");
     assert_eq!(Node::new_ident("Hello"), n);
@@ -263,147 +263,147 @@ mod tests {
   #[test]
   fn parse_ws() {
     let mut cxt = Context::new();
-    cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(2.0));
-    cxt.set("c", unit::Unit::None(3.0));
+    cxt.set("a", unit::Value::raw(1.0));
+    cxt.set("b", unit::Value::raw(2.0));
+    cxt.set("c", unit::Value::raw(3.0));
     
     let n = parse_expr(r#"  1"#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1  "#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"  1  "#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
   }
   
   #[test]
   fn parse_arith() {
     let mut cxt = Context::new();
-    cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(2.0));
-    cxt.set("c", unit::Unit::None(3.0));
+    cxt.set("a", unit::Value::raw(1.0));
+    cxt.set("b", unit::Value::raw(2.0));
+    cxt.set("c", unit::Value::raw(3.0));
     
     let n = parse_expr(r#"1 + 2"#).expect("Could not parse");
     assert_eq!(Node::new_add(Node::new_number(1.0), Node::new_number(2.0)), n);
-    assert_eq!(Ok(unit::Unit::None(3.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(3.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1 - 2"#).expect("Could not parse");
     assert_eq!(Node::new_sub(Node::new_number(1.0), Node::new_number(2.0)), n);
-    assert_eq!(Ok(unit::Unit::None(-1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(-1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1 * 2"#).expect("Could not parse");
     assert_eq!(Node::new_mul(Node::new_number(1.0), Node::new_number(2.0)), n);
-    assert_eq!(Ok(unit::Unit::None(2.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(2.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1 / 2"#).expect("Could not parse");
     assert_eq!(Node::new_div(Node::new_number(1.0), Node::new_number(2.0)), n);
-    assert_eq!(Ok(unit::Unit::None(0.5)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(0.5)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"4 % 3"#).expect("Could not parse");
     assert_eq!(Node::new_mod(Node::new_number(4.0), Node::new_number(3.0)), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"a + 2"#).expect("Could not parse");
     assert_eq!(Node::new_add(Node::new_ident("a"), Node::new_number(2.0)), n);
-    assert_eq!(Ok(unit::Unit::None(3.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(3.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1 + b"#).expect("Could not parse");
     assert_eq!(Node::new_add(Node::new_number(1.0), Node::new_ident("b")), n);
-    assert_eq!(Ok(unit::Unit::None(3.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(3.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"a + b"#).expect("Could not parse");
     assert_eq!(Node::new_add(Node::new_ident("a"), Node::new_ident("b")), n);
-    assert_eq!(Ok(unit::Unit::None(3.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(3.0)), exec_node(n, &mut cxt));
   }
   
   #[test]
   fn parse_subexpr() {
     let mut cxt = Context::new();
-    cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(2.0));
-    cxt.set("c", unit::Unit::None(3.0));
+    cxt.set("a", unit::Value::raw(1.0));
+    cxt.set("b", unit::Value::raw(2.0));
+    cxt.set("c", unit::Value::raw(3.0));
     
     let n = parse_expr(r#"(1)"#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"(a)"#).expect("Could not parse");
     assert_eq!(Node::new_ident("a"), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"((a))"#).expect("Could not parse");
     assert_eq!(Node::new_ident("a"), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"(1 + 2)"#).expect("Could not parse");
     assert_eq!(Node::new_add(Node::new_number(1.0), Node::new_number(2.0)), n);
-    assert_eq!(Ok(unit::Unit::None(3.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(3.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1 - 2 + 3"#).expect("Could not parse");
     assert_eq!(Node::new_add(Node::new_sub(Node::new_number(1.0), Node::new_number(2.0)), Node::new_number(3.0)), n);
-    assert_eq!(Ok(unit::Unit::None(2.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(2.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1 - (2 + 3)"#).expect("Could not parse");
     assert_eq!(Node::new_sub(Node::new_number(1.0), Node::new_add(Node::new_number(2.0), Node::new_number(3.0))), n);
-    assert_eq!(Ok(unit::Unit::None(-4.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(-4.0)), n.exec(&mut cxt));
     
     let n = parse_expr(r#"1 - (2 + 3) / 4"#).expect("Could not parse");
     assert_eq!(Node::new_div(Node::new_sub(Node::new_number(1.0), Node::new_add(Node::new_number(2.0), Node::new_number(3.0))), Node::new_number(4.0)), n);
-    assert_eq!(Ok(unit::Unit::None(-1.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(-1.0)), n.exec(&mut cxt));
     
     let n = parse_expr(r#"1 - ((5 + 3) / 4)"#).expect("Could not parse");
     assert_eq!(Node::new_sub(Node::new_number(1.0), Node::new_div(Node::new_add(Node::new_number(5.0), Node::new_number(3.0)), Node::new_number(4.0))), n);
-    assert_eq!(Ok(unit::Unit::None(-1.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::raw(-1.0)), n.exec(&mut cxt));
   }
   
   #[test]
   fn parse_assign() {
     let mut cxt = Context::new();
-    cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(2.0));
-    cxt.set("c", unit::Unit::None(3.0));
+    cxt.set("a", unit::Value::raw(1.0));
+    cxt.set("b", unit::Value::raw(2.0));
+    cxt.set("c", unit::Value::raw(3.0));
     
     let n = parse_expr(r#"d = 100"#).expect("Could not parse");
     assert_eq!(Node::new_assign(Node::new_ident("d"), Node::new_number(100.0)), n);
-    assert_eq!(Ok(unit::Unit::None(100.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(100.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"d"#).expect("Could not parse");
     assert_eq!(Node::new_ident("d"), n); // value is now set for 'd'
-    assert_eq!(Ok(unit::Unit::None(100.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(100.0)), exec_node(n, &mut cxt));
   }
   
   #[test]
   fn parse_unit_suffix() {
     let mut cxt = Context::new();
-    cxt.set("kg", unit::Unit::None(4.0));
+    cxt.set("kg", unit::Value::raw(4.0));
     
     let n = parse_expr(r#"kg"#).expect("Could not parse");
     assert_eq!(Node::new_ident("kg"), n);
-    assert_eq!(Ok(unit::Unit::None(4.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(4.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"100 kg"#).expect("Could not parse");
     assert_eq!(Node::new_typecast(Node::new_number(100.0), Node::new_ident("kg")), n);
-    assert_eq!(Ok(unit::Unit::None(100.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(100.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"(kg) kg"#).expect("Could not parse");
     assert_eq!(Node::new_typecast(Node::new_ident("kg"), Node::new_ident("kg")), n);
-    assert_eq!(Ok(unit::Unit::None(4.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(4.0)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1 ok"#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);
-    assert_eq!(Ok(unit::Unit::None(1.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
   }
   
   #[test]
   fn parse_in_context() {
     let mut cxt = Context::new();
-    cxt.set("a", unit::Unit::None(1.0));
-    cxt.set("b", unit::Unit::None(2.0));
-    cxt.set("c", unit::Unit::None(3.0));
+    cxt.set("a", unit::Value::raw(1.0));
+    cxt.set("b", unit::Value::raw(2.0));
+    cxt.set("c", unit::Value::raw(3.0));
     
     let t = r#"100+200; 0"#;
     assert_eq!("(100 + 200) → 300; 0 → 0", &exec_line(t, &mut cxt));
