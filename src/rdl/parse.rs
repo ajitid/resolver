@@ -389,7 +389,7 @@ mod tests {
     assert_eq!(Node::new_typecast(Node::new_number(100.0), Node::new_ident("kg")), n);
     assert_eq!(Ok(unit::Unit::None(100.0)), exec_node(n, &mut cxt));
     
-    let n = parse_expr(r#"kg kg"#).expect("Could not parse");
+    let n = parse_expr(r#"(kg) kg"#).expect("Could not parse");
     assert_eq!(Node::new_typecast(Node::new_ident("kg"), Node::new_ident("kg")), n);
     assert_eq!(Ok(unit::Unit::None(4.0)), exec_node(n, &mut cxt));
   }
