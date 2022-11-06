@@ -40,6 +40,7 @@ pub enum NType {
   Ident,
   Number,
   Assign,
+  Typecast,
   Add,
   Sub,
   Mul,
@@ -50,14 +51,15 @@ pub enum NType {
 impl fmt::Display for NType {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      NType::Ident  => write!(f, "ident"),
-      NType::Number => write!(f, "value"),
-      NType::Assign => write!(f, "="),
-      NType::Add    => write!(f, "+"),
-      NType::Sub    => write!(f, "-"),
-      NType::Mul    => write!(f, "*"),
-      NType::Div    => write!(f, "/"),
-      NType::Mod    => write!(f, "%"),
+      NType::Ident    => write!(f, "ident"),
+      NType::Number   => write!(f, "value"),
+      NType::Assign   => write!(f, "="),
+      NType::Typecast => write!(f, ":"),
+      NType::Add      => write!(f, "+"),
+      NType::Sub      => write!(f, "-"),
+      NType::Mul      => write!(f, "*"),
+      NType::Div      => write!(f, "/"),
+      NType::Mod      => write!(f, "%"),
     }
   }
 }
@@ -104,6 +106,15 @@ impl Node {
       ntype: NType::Assign,
       left: Some(Box::new(left)), right: Some(Box::new(right)),
       text: Some("=".to_string()),
+      value: None,
+    }
+  }
+  
+  pub fn new_typecast(left: Node, right: Node) -> Node {
+    Node{
+      ntype: NType::Typecast,
+      left: Some(Box::new(left)), right: Some(Box::new(right)),
+      text: Some(":".to_string()),
       value: None,
     }
   }
@@ -183,9 +194,10 @@ impl Node {
   
   pub fn exec(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
     match self.ntype {
-      NType::Ident => self.exec_ident(cxt),
-      NType::Number => self.exec_number(cxt),
-      NType::Assign => self.exec_assign(cxt),
+      NType::Ident    => self.exec_ident(cxt),
+      NType::Number   => self.exec_number(cxt),
+      NType::Assign   => self.exec_assign(cxt),
+      NType::Typecast => self.exec_typecast(cxt),
       NType::Add | NType::Sub | NType::Mul | NType::Div | NType::Mod => self.exec_arith(cxt),
     }
   }
@@ -217,6 +229,11 @@ impl Node {
     Ok(right)
   }
   
+  fn exec_typecast(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
+    let left = self.left()?.exec(cxt)?;
+    Ok(left) // ignore cast for now, just use the main expression
+  }
+  
   fn exec_arith(&self, cxt: &mut Context) -> Result<unit::Unit, error::Error> {
     let left = match self.left()?.exec(cxt) {
       Ok(left) => left,
@@ -238,9 +255,10 @@ impl Node {
   
   pub fn print(&self) -> Result<String, error::Error> {
     match self.ntype {
-      NType::Ident  => self.print_ident(),
-      NType::Number => self.print_number(),
-      NType::Assign => self.print_assign(),
+      NType::Ident    => self.print_ident(),
+      NType::Number   => self.print_number(),
+      NType::Assign   => self.print_assign(),
+      NType::Typecast => self.print_typecast(),
       NType::Add | NType::Sub | NType::Mul | NType::Div | NType::Mod => self.print_arith(),
     }
   }
@@ -259,6 +277,10 @@ impl Node {
   
   fn print_assign(&self) -> Result<String, error::Error> {
     Ok(format!("({} {} {})", self.left()?.print()?, self.ntype, self.right()?.print()?))
+  }
+  
+  fn print_typecast(&self) -> Result<String, error::Error> {
+    Ok(format!("{}({}))", self.right()?.print()?, self.left()?.print()?))
   }
 }
 
@@ -295,6 +317,9 @@ mod tests {
     assert_eq!(Ok(unit::Unit::None(1.0)), n.exec(&mut cxt));
     
     let n = Node::new_assign(Node::new_ident("d"), Node::new_number(123.0));
+    assert_eq!(Ok(unit::Unit::None(123.0)), n.exec(&mut cxt));
+    
+    let n = Node::new_typecast(Node::new_ident("d"), Node::new_ident("kg"));
     assert_eq!(Ok(unit::Unit::None(123.0)), n.exec(&mut cxt));
   }
   

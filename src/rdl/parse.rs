@@ -155,22 +155,34 @@ impl<'a> Parser<'a> {
   }
   
   fn parse_primary(&mut self) -> Result<Expr, error::Error> {
-    let tok = self.scan.expect_token_fn(|ttype| {
-      ttype == TType::Ident  ||
-      ttype == TType::Number ||
-      ttype == TType::LParen
+    let tok = self.scan.expect_token_fn(|tok| {
+      tok.ttype == TType::Ident  ||
+      tok.ttype == TType::Number ||
+      tok.ttype == TType::LParen
     })?;
-    match tok.ttype {
-      TType::Ident  => Ok(Expr{
+    
+    let rng = tok.range.clone();
+    let exp = match &tok.ttype {
+      TType::Ident  => Expr{
         range: tok.range,
         ast: Node::new_ident(&tok.ttext),
-      }),
-      TType::Number => Ok(Expr{
+      },
+      TType::Number => Expr{
         range: tok.range,
         ast: Node::new_number(tok.ttext.parse::<f64>()?),
+      },
+      TType::LParen => self.parse_expr()?,
+      _             => return Err(error::Error::TokenNotMatched),
+    };
+    
+    self.scan.discard(TType::Whitespace);
+    
+    match self.parse_unit() {
+      Ok(unit) => Ok(Expr{
+        range: rng.start..unit.range.end,
+        ast: Node::new_typecast(exp.ast, unit.ast),
       }),
-      TType::LParen => self.parse_expr(),
-      _             => Err(error::Error::TokenNotMatched),
+      Err(_) => Ok(exp),
     }
   }
   
@@ -185,6 +197,16 @@ impl<'a> Parser<'a> {
   
   fn parse_ident(&mut self) -> Result<Expr, error::Error> {
     let tok = self.scan.expect_token(TType::Ident)?;
+    Ok(Expr{
+      range: tok.range,
+      ast: Node::new_ident(&tok.ttext),
+    })
+  }
+  
+  fn parse_unit(&mut self) -> Result<Expr, error::Error> {
+    let tok = self.scan.expect_token_fn(|tok| {
+      tok.ttype == TType::Ident && tok.ttext == "kg"
+    })?;
     Ok(Expr{
       range: tok.range,
       ast: Node::new_ident(&tok.ttext),
@@ -352,6 +374,24 @@ mod tests {
     let n = parse_expr(r#"d"#).expect("Could not parse");
     assert_eq!(Node::new_ident("d"), n); // value is now set for 'd'
     assert_eq!(Ok(unit::Unit::None(100.0)), exec_node(n, &mut cxt));
+  }
+  
+  #[test]
+  fn parse_unit_suffix() {
+    let mut cxt = Context::new();
+    cxt.set("kg", unit::Unit::None(4.0));
+    
+    let n = parse_expr(r#"kg"#).expect("Could not parse");
+    assert_eq!(Node::new_ident("kg"), n);
+    assert_eq!(Ok(unit::Unit::None(4.0)), exec_node(n, &mut cxt));
+    
+    let n = parse_expr(r#"100 kg"#).expect("Could not parse");
+    assert_eq!(Node::new_typecast(Node::new_number(100.0), Node::new_ident("kg")), n);
+    assert_eq!(Ok(unit::Unit::None(100.0)), exec_node(n, &mut cxt));
+    
+    let n = parse_expr(r#"kg kg"#).expect("Could not parse");
+    assert_eq!(Node::new_typecast(Node::new_ident("kg"), Node::new_ident("kg")), n);
+    assert_eq!(Ok(unit::Unit::None(4.0)), exec_node(n, &mut cxt));
   }
   
   #[test]

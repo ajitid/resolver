@@ -188,6 +188,18 @@ impl<'a> Scanner<'a> {
     }
   }
   
+  /// Look ahead for the next token type in the stream. Nothign is consumed.
+  fn la_token(&mut self) -> Option<&Token> {
+    if self.tokens.len() == 0 {
+      let _ = self.scan(); // ignore error, just produce none
+    }
+    if self.tokens.len() > 0 {
+      Some(&self.tokens[0])
+    }else{
+      None
+    }
+  }
+  
   /// Step over and consume the next token that has already been scanned.
   /// This can be used to discard a token that has already been obtained
   /// via la(). If no token exists in the look-ahead buffer, this method
@@ -243,19 +255,19 @@ impl<'a> Scanner<'a> {
   /// Look ahead for the next token type in the stream, expecting a certain
   /// type. If the expected type is found, return it, otherwise nothing.
   pub fn expect_token(&mut self, expect: TType) -> Result<Token, error::Error> {
-    self.expect_token_fn(|ttype| { ttype == expect })
+    self.expect_token_fn(|tok| { tok.ttype == expect })
   }
   
   /// Look ahead for the next token type in the stream, expecting a certain
   /// type. If the expected type is found, return it, otherwise nothing.
-  pub fn expect_token_fn(&mut self, check: impl Fn(TType) -> bool) -> Result<Token, error::Error> {
-    let ttype = match self.la() {
-      Some(ttype) => ttype,
+  pub fn expect_token_fn(&mut self, check: impl Fn(&Token) -> bool) -> Result<Token, error::Error> {
+    let tok = match self.la_token() {
+      Some(tok) => tok,
       None => return Err(error::Error::TokenNotMatched),
     };
-    if ttype == TType::End {
+    if tok.ttype == TType::End {
       Err(error::Error::EndOfInput)
-    }else if check(ttype) {
+    }else if check(tok) {
       self.token()
     }else{
       Err(error::Error::TokenNotMatched)
