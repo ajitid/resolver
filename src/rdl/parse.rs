@@ -205,7 +205,7 @@ impl<'a> Parser<'a> {
   
   fn parse_unit(&mut self) -> Result<Expr, error::Error> {
     let tok = self.scan.expect_token_fn(|tok| {
-      tok.ttype == TType::Ident && tok.ttext == "kg"
+      tok.ttype == TType::Ident && unit::is_suffix(&tok.ttext)
     })?;
     Ok(Expr{
       range: tok.range,
