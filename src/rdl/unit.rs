@@ -38,26 +38,28 @@ impl Unit {
     }
   }
   
-  pub fn base(&self) -> Unit {
+  pub fn base(&self) -> (Unit, usize) {
     match self {
-      Unit::Teaspoon   => Unit::Teaspoon,
-      Unit::Tablespoon => Unit::Teaspoon,
-      Unit::Cup        => Unit::Teaspoon,
-      Unit::Quart      => Unit::Teaspoon,
-      Unit::Gallon     => Unit::Teaspoon,
+      Unit::Teaspoon   => (Unit::Teaspoon, 0),
+      Unit::Tablespoon => (Unit::Teaspoon, 1),
+      Unit::Cup        => (Unit::Teaspoon, 2),
+      Unit::Quart      => (Unit::Teaspoon, 3),
+      Unit::Gallon     => (Unit::Teaspoon, 4),
       
-      Unit::Liter      => Unit::Liter,
-      Unit::Deciliter  => Unit::Liter,
-      Unit::Centiliter => Unit::Liter,
-      Unit::Milliliter => Unit::Liter,
+      Unit::Liter      => (Unit::Liter, 0),
+      Unit::Deciliter  => (Unit::Liter, 1),
+      Unit::Centiliter => (Unit::Liter, 2),
+      Unit::Milliliter => (Unit::Liter, 3),
       
-      Unit::Gram       => Unit::Gram,
-      Unit::Kilogram   => Unit::Gram,
+      Unit::Gram       => (Unit::Gram, 0),
+      Unit::Kilogram   => (Unit::Gram, 1),
     }
   }
   
   pub fn is_convertable(&self, another: Unit) -> bool {
-    self.base() == another.base()
+    let (a, _) = self.base();
+    let (b, _) = another.base();
+    a == b
   }
 }
 
@@ -88,14 +90,15 @@ pub struct Value {
 }
 
 macro_rules! value_reduce {
-  ($curr: ident, $amount: expr, $reduce: expr) => {
+  ($curr: ident, $else: expr, $amount: expr, $reduce: expr) => {
     if $curr.value < $amount {
-      return $curr;
+      return $else;
     }else{
       $reduce
     }
   };
 }
+
 impl Value {
   pub fn raw(v: f64) -> Value {
     Value{
@@ -136,6 +139,86 @@ impl Value {
     }
   }
   
+  pub fn untype(&self) -> Value {
+    Value{
+      value: self.value,
+      unit: None,
+    }
+  }
+  
+  pub fn convert(&self, unit: Unit) -> Option<Value> {
+    let curr = match self.unit {
+      Some(curr) => curr,
+      None => return Some(Value::new(self.value, unit)),
+    };
+    
+    let (bc, nc) = curr.base();
+    let (bt, nt) = unit.base();
+    if bc != bt {
+      return None;
+    }
+    
+    if nt == nc {
+      Some(*self)
+    }else if nt > nc {
+      self.upcast(unit)
+    }else{
+      self.downcast(unit)
+    }
+  }
+  
+  fn downcast(&self, unit: Unit) -> Option<Value> {
+    let mut v = *self;
+    loop {
+      if v.unit == Some(unit) {
+        return Some(v);
+      }
+      match v.unit {
+        None                   => return Some(v),
+        
+        Some(Unit::Teaspoon)   => return Some(Value::new(v.value, Unit::Teaspoon)),
+        Some(Unit::Tablespoon) => v = Value::new(v.value * 3.0, Unit::Teaspoon),
+        Some(Unit::Cup)        => v = Value::new(v.value * 16.0, Unit::Tablespoon),
+        Some(Unit::Quart)      => v = Value::new(v.value * 4.0, Unit::Cup),
+        Some(Unit::Gallon)     => v = Value::new(v.value * 4.0, Unit::Quart),
+
+        Some(Unit::Liter)      => return Some(Value::new(v.value, Unit::Liter)),
+        Some(Unit::Deciliter)  => v = Value::new(v.value / 10.0, Unit::Liter),
+        Some(Unit::Centiliter) => v = Value::new(v.value / 10.0, Unit::Deciliter),
+        Some(Unit::Milliliter) => v = Value::new(v.value / 10.0, Unit::Centiliter),
+        
+        Some(Unit::Gram)       => return Some(Value::new(v.value, Unit::Gram)),
+        Some(Unit::Kilogram)   => v = Value::new(v.value * 1000.0, Unit::Gram),
+      };
+    }
+  }
+  
+  fn upcast(&self, unit: Unit) -> Option<Value> {
+    let mut v = *self;
+    loop {
+      if v.unit == Some(unit) {
+        return Some(v);
+      }
+      match v.unit {
+        None                   => return Some(v),
+        
+        Some(Unit::Teaspoon)   => v = value_reduce!(v, Some(v), 3.0, Value::new(v.value /  3.0, Unit::Tablespoon)),
+        Some(Unit::Tablespoon) => v = value_reduce!(v, Some(v), 4.0, Value::new(v.value / 16.0, Unit::Cup)),
+        Some(Unit::Cup)        => v = value_reduce!(v, Some(v), 4.0, Value::new(v.value /  4.0, Unit::Quart)),
+        Some(Unit::Quart)      => v = value_reduce!(v, Some(v), 4.0, Value::new(v.value /  4.0, Unit::Gallon)),
+        Some(Unit::Gallon)     => return Some(Value::new(v.value, Unit::Gallon)),
+        
+        Some(Unit::Milliliter) => v = value_reduce!(v, Some(v), 10.0, Value::new(v.value / 10.0, Unit::Centiliter)),
+        Some(Unit::Centiliter) => v = value_reduce!(v, Some(v), 10.0, Value::new(v.value / 10.0, Unit::Deciliter)),
+        Some(Unit::Deciliter)  => v = value_reduce!(v, Some(v), 10.0, Value::new(v.value / 10.0, Unit::Liter)),
+        Some(Unit::Liter)      => return Some(Value::new(v.value, Unit::Liter)),
+        
+        Some(Unit::Gram)       => v = value_reduce!(v, Some(v), 1000.0, Value::new(v.value / 1000.0, Unit::Kilogram)),
+        Some(Unit::Kilogram)   => return Some(Value::new(v.value, Unit::Kilogram)),
+      };
+    }
+  }
+  
   fn base(&self) -> Value {
     let mut v = *self;
     loop {
@@ -165,18 +248,18 @@ impl Value {
       match v.unit {
         None                   => return Self::raw(v.value),
         
-        Some(Unit::Teaspoon)   => v = value_reduce!(v, 3.0, Value::new(v.value /  3.0, Unit::Tablespoon)),
-        Some(Unit::Tablespoon) => v = value_reduce!(v, 4.0, Value::new(v.value / 16.0, Unit::Cup)),
-        Some(Unit::Cup)        => v = value_reduce!(v, 4.0, Value::new(v.value /  4.0, Unit::Quart)),
-        Some(Unit::Quart)      => v = value_reduce!(v, 4.0, Value::new(v.value /  4.0, Unit::Gallon)),
+        Some(Unit::Teaspoon)   => v = value_reduce!(v, v, 3.0, Value::new(v.value /  3.0, Unit::Tablespoon)),
+        Some(Unit::Tablespoon) => v = value_reduce!(v, v, 4.0, Value::new(v.value / 16.0, Unit::Cup)),
+        Some(Unit::Cup)        => v = value_reduce!(v, v, 4.0, Value::new(v.value /  4.0, Unit::Quart)),
+        Some(Unit::Quart)      => v = value_reduce!(v, v, 4.0, Value::new(v.value /  4.0, Unit::Gallon)),
         Some(Unit::Gallon)     => return Value::new(v.value, Unit::Gallon),
         
-        Some(Unit::Milliliter) => v = value_reduce!(v, 10.0, Value::new(v.value / 10.0, Unit::Centiliter)),
-        Some(Unit::Centiliter) => v = value_reduce!(v, 10.0, Value::new(v.value / 10.0, Unit::Deciliter)),
-        Some(Unit::Deciliter)  => v = value_reduce!(v, 10.0, Value::new(v.value / 10.0, Unit::Liter)),
+        Some(Unit::Milliliter) => v = value_reduce!(v, v, 10.0, Value::new(v.value / 10.0, Unit::Centiliter)),
+        Some(Unit::Centiliter) => v = value_reduce!(v, v, 10.0, Value::new(v.value / 10.0, Unit::Deciliter)),
+        Some(Unit::Deciliter)  => v = value_reduce!(v, v, 10.0, Value::new(v.value / 10.0, Unit::Liter)),
         Some(Unit::Liter)      => return Value::new(v.value, Unit::Liter),
         
-        Some(Unit::Gram)       => v = value_reduce!(v, 1000.0, Value::new(v.value / 1000.0, Unit::Kilogram)),
+        Some(Unit::Gram)       => v = value_reduce!(v, v, 1000.0, Value::new(v.value / 1000.0, Unit::Kilogram)),
         Some(Unit::Kilogram)   => return Value::new(v.value, Unit::Kilogram),
       };
     }
@@ -390,6 +473,14 @@ mod tests {
     assert_eq!("2 kg", &format!("{:#}", Value::new(2.0, Unit::Kilogram).pack()));
   }
 
+  #[test]
+  fn casts() {
+    assert_eq!(Some(Value::new(5.0, Unit::Teaspoon)), Value::raw(5.0).convert(Unit::Teaspoon));
+    assert_eq!(Some(Value::new(15.0, Unit::Teaspoon)), Value::new(5.0, Unit::Tablespoon).convert(Unit::Teaspoon));
+    assert_eq!(Some(Value::new(1.0, Unit::Cup)), Value::new(16.0, Unit::Tablespoon).convert(Unit::Cup));
+    assert_eq!(None, Value::new(16.0, Unit::Tablespoon).convert(Unit::Liter));
+  }
+  
   #[test]
   fn operations() {
     assert_eq!(Value::raw(10.0), Value::raw(5.0) * Value::raw(2.0));
