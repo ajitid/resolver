@@ -205,7 +205,7 @@ impl<'a> Parser<'a> {
   
   fn parse_unit(&mut self) -> Result<Expr, error::Error> {
     let tok = self.scan.expect_token_fn(|tok| {
-      tok.ttype == TType::Ident && unit::is_suffix(&tok.ttext)
+      tok.ttype == TType::Ident && if let Some(_) = unit::Unit::from(&tok.ttext) { true } else { false }
     })?;
     Ok(Expr{
       range: tok.range,
@@ -387,11 +387,11 @@ mod tests {
     
     let n = parse_expr(r#"100 kg"#).expect("Could not parse");
     assert_eq!(Node::new_typecast(Node::new_number(100.0), Node::new_ident("kg")), n);
-    assert_eq!(Ok(unit::Value::raw(100.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::new(100.0, unit::Unit::Kilogram)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"(kg) kg"#).expect("Could not parse");
     assert_eq!(Node::new_typecast(Node::new_ident("kg"), Node::new_ident("kg")), n);
-    assert_eq!(Ok(unit::Value::raw(4.0)), exec_node(n, &mut cxt));
+    assert_eq!(Ok(unit::Value::new(4.0, unit::Unit::Kilogram)), exec_node(n, &mut cxt));
     
     let n = parse_expr(r#"1 ok"#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);

@@ -1,25 +1,6 @@
 use std::fmt;
 use std::ops;
 
-pub fn is_suffix(name: &str) -> bool {
-  match name.to_owned().trim().to_lowercase().as_str() {
-    "tsp"     => true,
-    "tbsp"    => true,
-    "cup"     => true,
-    "quart"   => true,
-    "gallon"  => true,
-
-    "l"       => true,
-    "dl"      => true,
-    "cl"      => true,
-    "ml"      => true,
-    
-    "g"       => true,
-    "kg"      => true,
-    _         => false,
-  }
-}
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Unit {
   Teaspoon,    // base
@@ -42,7 +23,7 @@ impl Unit {
     match name.to_owned().trim().to_lowercase().as_str() {
       "tsp"            => Some(Unit::Teaspoon),
       "tbsp"           => Some(Unit::Tablespoon),
-      "cup"            => Some(Unit::Cup),
+      "cup" | "cp"     => Some(Unit::Cup),
       "quart" | "qt"   => Some(Unit::Quart),
       "gallon" | "gal" => Some(Unit::Gallon),
 
@@ -130,12 +111,29 @@ impl Value {
     }
   }
   
+  pub fn option(v: f64, u: Option<Unit>) -> Value {
+    Value{
+      value: v,
+      unit: u,
+    }
+  }
+  
   pub fn value(&self) -> f64 {
     self.value
   }
   
   pub fn unit(&self) -> Option<Unit> {
     self.unit
+  }
+  
+  pub fn is_compatible(&self, with: Option<Unit>) -> bool {
+    match self.unit {
+      None      => true,
+      Some(a)   => match with {
+        None    => true,
+        Some(b) => a.is_convertable(b),
+      }
+    }
   }
   
   fn base(&self) -> Value {

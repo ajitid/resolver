@@ -232,7 +232,7 @@ impl Node {
   fn exec_typecast(&self, cxt: &mut Context) -> Result<unit::Value, error::Error> {
     let left = self.left()?;
     let right = self.right()?;
-    let tcast = match right.ntype {
+    let tname = match right.ntype {
       NType::Ident => right.text()?,
       _ => return Err(error::Error::InvalidASTNode(format!("{}: Expected identifier as right child, got: {}", self.ntype, right.ntype))),
     };
@@ -240,11 +240,8 @@ impl Node {
       Ok(left) => left,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
     };
-    // let res = match unit::Value::raw(1.0, Some(tcast)) {
-    //   Some(res) => res,
-    //   None => return Err(error::Error::InvalidASTNode(format!("{}: No such type: {}", self.ntype, tcast))),
-    // };
-    Ok(left) // ignore cast for now, just use the main expression
+    let conv = unit::Value::option(left.value(), unit::Unit::from(tname));
+    Ok(conv)
   }
   
   fn exec_arith(&self, cxt: &mut Context) -> Result<unit::Value, error::Error> {
@@ -333,7 +330,7 @@ mod tests {
     assert_eq!(Ok(unit::Value::raw(123.0)), n.exec(&mut cxt));
     
     let n = Node::new_typecast(Node::new_ident("d"), Node::new_ident("kg"));
-    assert_eq!(Ok(unit::Value::raw(123.0)), n.exec(&mut cxt));
+    assert_eq!(Ok(unit::Value::new(123.0, unit::Unit::Kilogram)), n.exec(&mut cxt));
   }
   
 }
