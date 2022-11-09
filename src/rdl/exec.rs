@@ -240,8 +240,14 @@ impl Node {
       Ok(left) => left,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
     };
-    let conv = unit::Value::option(left.value(), unit::Unit::from(tname));
-    Ok(conv)
+    let dest = match unit::Unit::from(tname) {
+      Some(dest) => dest,
+      None => return Ok(left),
+    };
+    Ok(match left.convert(dest) {
+      Some(conv) => conv,
+      None => left,
+    })
   }
   
   fn exec_arith(&self, cxt: &mut Context) -> Result<unit::Value, error::Error> {
