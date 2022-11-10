@@ -436,7 +436,7 @@ mod tests {
     let n = parse_expr(r#"100 kg in g"#).expect("Could not parse");
     assert_eq!(Node::new_typecast(Node::new_typecast(Node::new_number(100.0), Node::new_ident("kg")), Node::new_ident("g")), n);
     assert_eq!(Ok(unit::Value::new(100000.0, unit::Unit::Gram)), exec_node(n, &mut cxt));
-
+    
     let n = parse_expr(r#"100 + 200 kg in g"#).expect("Could not parse");
     assert_eq!(Node::new_typecast(Node::new_add(Node::new_number(100.0), Node::new_typecast(Node::new_number(200.0), Node::new_ident("kg"))), Node::new_ident("g")), n);
     assert_eq!(Ok(unit::Value::new(300000.0, unit::Unit::Gram)), exec_node(n, &mut cxt));

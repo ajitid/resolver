@@ -51,11 +51,11 @@ impl Writer {
     let mut cxt = exec::Context::new_with_stdlib();
     
     let style = vec![
-      attrs::Attributes{bold: true, color: Some(Color::Yellow)},
-      attrs::Attributes{bold: true, color: Some(Color::Magenta)},
-      attrs::Attributes{bold: true, color: Some(Color::Cyan)},
-      attrs::Attributes{bold: true, color: Some(Color::Green)},
-      attrs::Attributes{bold: true, color: Some(Color::Blue)},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Yellow)},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Magenta)},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Cyan)},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Green)},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Blue)},
     ];
     
     let opts = rdl::Options{

@@ -12,6 +12,7 @@ pub enum Mode {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Attributes {
   pub bold: bool,
+  pub invert: bool,
   pub color: Option<Color>,
 }
 
@@ -32,6 +33,9 @@ impl Attributes {
     if self.bold {
       styled = styled.bold();
     }
+    if self.invert {
+      styled = styled.reverse();
+    }
     if let Some(color) = self.color {
       styled = styled.with(color);
     }
@@ -43,12 +47,18 @@ impl Attributes {
     if self.bold {
       attrd.push_str("<b>");
     }
+    if self.invert {
+      attrd.push_str("<invert>");
+    }
     if let Some(color) = self.color {
       attrd.push_str(&format!("<{:?}>", color));
     }
     attrd.push_str(text);
     if let Some(color) = self.color {
       attrd.push_str(&format!("</{:?}>", color));
+    }
+    if self.invert {
+      attrd.push_str("</invert>");
     }
     if self.bold {
       attrd.push_str("</b>");
