@@ -178,19 +178,19 @@ impl Value {
     }
   }
   
+  pub fn untype(&self) -> Value {
+    Value{
+      value: self.value,
+      unit: None,
+    }
+  }
+  
   pub fn value(&self) -> f64 {
     self.value
   }
   
   pub fn unit(&self) -> Option<Unit> {
     self.unit
-  }
-  
-  pub fn untype(&self) -> Value {
-    Value{
-      value: self.value,
-      unit: None,
-    }
   }
   
   pub fn is_compatible(&self, with: Option<Unit>) -> bool {
@@ -203,11 +203,18 @@ impl Value {
     }
   }
   
-  pub fn convert(&self, to: Unit) -> Option<Value> {
+  pub fn convert(&self, to: Option<Unit>) -> Option<Value> {
+    let to = match to {
+      Some(to) => to,
+      None => return Some(Value::raw(self.value)),
+    };
     let from = match self.unit {
       Some(from) => from,
       None => return Some(Value::new(self.value, to)),
     };
+    if from == to {
+      return Some(*self);
+    }
     let factor = CONVERSION[from.ordinal()][to.ordinal()];
     if factor == 0.0 {
       None // cannot convert
@@ -219,7 +226,7 @@ impl Value {
   fn base(&self) -> Value {
     match self.unit {
       None       => *self,
-      Some(unit) => self.convert(unit.min()).unwrap(),
+      Some(unit) => self.convert(Some(unit.min())).unwrap(),
     }
   }
   
@@ -237,7 +244,7 @@ impl Value {
         None => return v,
       };
       let n = match c.up() {
-        Some(n) => v.convert(n),
+        Some(n) => v.convert(Some(n)),
         None => return v,
       };
       v = match n {
@@ -264,13 +271,27 @@ fn coalesce<T>(a: Option<T>, b: Option<T>) -> Option<T> {
   }
 }
 
+fn operands(left: Value, right: Value) -> (Option<Unit>, Value, Value) {
+  let target = coalesce(left.unit, right.unit);
+  let left = match left.convert(target) {
+    Some(conv) => conv,
+    None => left.untype(),
+  };
+  let right = match right.convert(target) {
+    Some(conv) => conv,
+    None => right.untype(),
+  };
+  (target, left, right)
+}
+
 impl ops::Add<Value> for Value {
   type Output = Value;
   
   fn add(self, right: Value) -> Value {
+    let (target, left, right) = operands(self, right);
     Value{
-      value: self.value + right.value,
-      unit: coalesce(self.unit, right.unit),
+      value: left.value + right.value,
+      unit: target,
     }
   }
 }
@@ -279,9 +300,10 @@ impl ops::Sub<Value> for Value {
   type Output = Value;
   
   fn sub(self, right: Value) -> Value {
+    let (target, left, right) = operands(self, right);
     Value{
-      value: self.value - right.value,
-      unit: coalesce(self.unit, right.unit),
+      value: left.value - right.value,
+      unit: target,
     }
   }
 }
@@ -290,9 +312,10 @@ impl ops::Mul<Value> for Value {
   type Output = Value;
   
   fn mul(self, right: Value) -> Value {
+    let (target, left, right) = operands(self, right);
     Value{
-      value: self.value * right.value,
-      unit: coalesce(self.unit, right.unit),
+      value: left.value * right.value,
+      unit: target,
     }
   }
 }
@@ -301,9 +324,10 @@ impl ops::Div<Value> for Value {
   type Output = Value;
   
   fn div(self, right: Value) -> Value {
+    let (target, left, right) = operands(self, right);
     Value{
-      value: self.value / right.value,
-      unit: coalesce(self.unit, right.unit),
+      value: left.value / right.value,
+      unit: target,
     }
   }
 }
@@ -312,9 +336,10 @@ impl ops::Rem<Value> for Value {
   type Output = Value;
   
   fn rem(self, right: Value) -> Value {
+    let (target, left, right) = operands(self, right);
     Value{
-      value: self.value % right.value,
-      unit: coalesce(self.unit, right.unit),
+      value: left.value % right.value,
+      unit: target,
     }
   }
 }
@@ -463,21 +488,24 @@ mod tests {
   
   #[test]
   fn convert() {
-    assert_eq!(Some(Value::new(3.0, Unit::Teaspoon)), Value::new(1.0, Unit::Tablespoon).convert(Unit::Teaspoon));
-    assert_eq!(Some(Value::new(1.0, Unit::Tablespoon)), Value::new(3.0, Unit::Teaspoon).convert(Unit::Tablespoon));
+    assert_eq!(Some(Value::raw(1.0)), Value::new(1.0, Unit::Tablespoon).convert(None));
     
-    assert_eq!(Some(Value::new(5.0, Unit::Teaspoon)), Value::raw(5.0).convert(Unit::Teaspoon));
-    assert_eq!(Some(Value::new(15.0, Unit::Teaspoon)), Value::new(5.0, Unit::Tablespoon).convert(Unit::Teaspoon));
-    assert_eq!(Some(Value::new(1.0, Unit::Cup)), Value::new(16.0, Unit::Tablespoon).convert(Unit::Cup));
-    assert_eq!(Some(Value::new(0.236588395339208, Unit::Liter)), Value::new(16.0, Unit::Tablespoon).convert(Unit::Liter));
+    assert_eq!(Some(Value::new(3.0, Unit::Teaspoon)), Value::new(1.0, Unit::Tablespoon).convert(Some(Unit::Teaspoon)));
+    assert_eq!(Some(Value::new(1.0, Unit::Tablespoon)), Value::new(3.0, Unit::Teaspoon).convert(Some(Unit::Tablespoon)));
+    
+    assert_eq!(Some(Value::new(5.0, Unit::Teaspoon)), Value::raw(5.0).convert(Some(Unit::Teaspoon)));
+    assert_eq!(Some(Value::new(15.0, Unit::Teaspoon)), Value::new(5.0, Unit::Tablespoon).convert(Some(Unit::Teaspoon)));
+    assert_eq!(Some(Value::new(1.0, Unit::Cup)), Value::new(16.0, Unit::Tablespoon).convert(Some(Unit::Cup)));
+    assert_eq!(Some(Value::new(0.236588395339208, Unit::Liter)), Value::new(16.0, Unit::Tablespoon).convert(Some(Unit::Liter)));
   }
   
   #[test]
   fn operations() {
     assert_eq!(Value::raw(10.0), Value::raw(5.0) * Value::raw(2.0));
+    
     assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::new(2.0, Unit::Teaspoon));
     assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::raw(2.0));
     assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::raw(2.0) * Value::new(5.0, Unit::Teaspoon));
-    assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::new(2.0, Unit::Tablespoon));
+    assert_eq!(Value::new(30.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::new(2.0, Unit::Tablespoon));
   }
 }

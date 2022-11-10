@@ -240,11 +240,7 @@ impl Node {
       Ok(left) => left,
       Err(err) => return Err(error::Error::InvalidASTNode(format!("{}: Could not exec left: {}", self.ntype, err))),
     };
-    let dest = match unit::Unit::from(tname) {
-      Some(dest) => dest,
-      None => return Ok(left),
-    };
-    Ok(match left.convert(dest) {
+    Ok(match left.convert(unit::Unit::from(tname)) {
       Some(conv) => conv,
       None => left,
     })
