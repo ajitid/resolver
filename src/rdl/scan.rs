@@ -12,6 +12,7 @@ pub const RBRACE: char  = '}';
 pub const LPAREN: char  = '(';
 pub const RPAREN: char  = ')';
 pub const EQUAL: char   = '=';
+pub const COLON: char   = ':';
 pub const QUOTE: char   = '"';
 pub const COMMA: char   = ',';
 pub const ADD: char     = '+';
@@ -30,6 +31,7 @@ pub enum TType {
   String,
   Operator,
   Assign,
+  Typecast,
   LParen,
   RParen,
   Symbol,
@@ -292,7 +294,7 @@ impl<'a> Scanner<'a> {
   fn scan_semantic(&mut self) -> Result<(), error::Error> {
     if let Some(c) = self.peek() {
       if Self::is_ident_start(c) {
-        return self.scan_ident();
+        return self.scan_word();
       }else if Self::is_number_start(c) {
         return self.scan_number();
       }else if Self::is_operator(c) {
@@ -333,6 +335,24 @@ impl<'a> Scanner<'a> {
       ttype: TType::Verbatim,
       ttext: buf,
       range: idx..self.index,
+    });
+    Ok(())
+  }
+  
+  fn scan_word(&mut self) -> Result<(), error::Error> {
+    let idx = self.index;
+    let name = self.ident()?;
+    self.push(match name.as_ref() {
+      "in" | "as" => Token{
+        ttype: TType::Typecast,
+        ttext: name,
+        range: idx..self.index,
+      },
+      _ => Token{
+        ttype: TType::Ident,
+        ttext: name,
+        range: idx..self.index,
+      },
     });
     Ok(())
   }
@@ -615,5 +635,23 @@ mod tests {
     assert_eq!(Ok(Token::new(TType::Whitespace, " ", 8..9)), t.token());
     assert_eq!(Ok(Token::new(TType::Ident, "b", 9..10)), t.token());
     assert_eq!(Ok(Token::new(TType::RParen, ")", 10..11)), t.token());
+    
+    let s = r#"1 as kg"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Number, "1", 0..1)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 1..2)), t.token());
+    assert_eq!(Ok(Token::new(TType::Typecast, "as", 2..4)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 4..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "kg", 5..7)), t.token());
+    
+    let s = r#"1 kg in g"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Number, "1", 0..1)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 1..2)), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "kg", 2..4)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 4..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Typecast, "in", 5..7)), t.token());
+    assert_eq!(Ok(Token::new(TType::Whitespace, " ", 7..8)), t.token());
+    assert_eq!(Ok(Token::new(TType::Ident, "g", 8..9)), t.token());
   }
 }

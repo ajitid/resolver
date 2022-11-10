@@ -47,26 +47,54 @@ impl<'a> Parser<'a> {
     
     let left = match self.parse_ident() {
       Ok(left) => left,
-      Err(_)   => return self.parse_arith(),
+      Err(_)   => return self.parse_typecast(),
     };
 
     self.scan.discard(TType::Whitespace);
     
     match self.scan.expect_token(TType::Assign) {
       Ok(_)  => {},
-      Err(_) => return self.parse_arith_left(left),
+      Err(_) => return self.parse_typecast_left(left),
     };
     
     self.scan.discard(TType::Whitespace);
     
-    let right = match self.parse_arith() {
+    let right = match self.parse_typecast() {
       Ok(right) => right,
-      Err(_)    => return self.parse_arith_left(left),
+      Err(_)    => return self.parse_typecast_left(left),
     };
     
     Ok(Expr{
       range: left.range.start..right.range.end,
       ast: Node::new_assign(left.ast, right.ast),
+    })
+  }
+  
+  fn parse_typecast(&mut self) -> Result<Expr, error::Error> {
+    match self.parse_arith() {
+      Ok(left) => self.parse_typecast_left(left),
+      Err(err) => Err(err.into()),
+    }
+  }
+  
+  fn parse_typecast_left(&mut self, left: Expr) -> Result<Expr, error::Error> {
+    self.scan.discard(TType::Whitespace);
+    
+    match self.scan.expect_token(TType::Typecast) {
+      Ok(_)  => {},
+      Err(_) => return self.parse_arith_left(left),
+    };
+    
+    self.scan.discard(TType::Whitespace);
+    
+    let unit = match self.parse_unit() {
+      Ok(unit) => unit,
+      Err(_)   => return Ok(left),
+    };
+    
+    Ok(Expr{
+      range: left.range.start..unit.range.end,
+      ast: Node::new_typecast(left.ast, unit.ast),
     })
   }
   
@@ -396,6 +424,22 @@ mod tests {
     let n = parse_expr(r#"1 ok"#).expect("Could not parse");
     assert_eq!(Node::new_number(1.0), n);
     assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
+  }
+  
+  #[test]
+  fn parse_typecast() {
+    let mut cxt = Context::new();
+    cxt.set("a", unit::Value::raw(1.0));
+    cxt.set("b", unit::Value::raw(2.0));
+    cxt.set("c", unit::Value::raw(3.0));
+    
+    let n = parse_expr(r#"100 kg in g"#).expect("Could not parse");
+    assert_eq!(Node::new_typecast(Node::new_typecast(Node::new_number(100.0), Node::new_ident("kg")), Node::new_ident("g")), n);
+    assert_eq!(Ok(unit::Value::new(100000.0, unit::Unit::Gram)), exec_node(n, &mut cxt));
+
+    let n = parse_expr(r#"100 + 200 kg in g"#).expect("Could not parse");
+    assert_eq!(Node::new_typecast(Node::new_add(Node::new_number(100.0), Node::new_typecast(Node::new_number(200.0), Node::new_ident("kg"))), Node::new_ident("g")), n);
+    assert_eq!(Ok(unit::Value::new(300000.0, unit::Unit::Gram)), exec_node(n, &mut cxt));
   }
   
   #[test]

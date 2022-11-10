@@ -36,20 +36,21 @@ pub enum Unit {
 impl Unit {
   pub fn from(name: &str) -> Option<Unit> {
     match name.to_owned().trim().to_lowercase().as_str() {
-      "tsp"            => Some(Unit::Teaspoon),
-      "tbsp"           => Some(Unit::Tablespoon),
-      "cup" | "cp"     => Some(Unit::Cup),
-      "quart" | "qt"   => Some(Unit::Quart),
-      "gallon" | "gal" => Some(Unit::Gallon),
-
-      "l"              => Some(Unit::Liter),
-      "dl"             => Some(Unit::Deciliter),
-      "cl"             => Some(Unit::Centiliter),
-      "ml"             => Some(Unit::Milliliter),
+      "tsp" | "tsps"       => Some(Unit::Teaspoon),
+      "tbsp" | "tbsps"     => Some(Unit::Tablespoon),
+      "cup" | "cups"       => Some(Unit::Cup),
+      "quart" | "quarts"   => Some(Unit::Quart),
+      "gallon" | "gallons" => Some(Unit::Gallon),
       
-      "g"              => Some(Unit::Gram),
-      "kg"             => Some(Unit::Kilogram),
-      _                => None,
+      "l"                  => Some(Unit::Liter),
+      "dl"                 => Some(Unit::Deciliter),
+      "cl"                 => Some(Unit::Centiliter),
+      "ml"                 => Some(Unit::Milliliter),
+      
+      "g"                  => Some(Unit::Gram),
+      "kg"                 => Some(Unit::Kilogram),
+      
+      _                    => None,
     }
   }
   

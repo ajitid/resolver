@@ -292,7 +292,7 @@ impl Node {
   }
   
   fn print_typecast(&self) -> Result<String, error::Error> {
-    Ok(format!("{}({}))", self.right()?.print()?, self.left()?.print()?))
+    Ok(format!("{}({})", self.right()?.print()?, self.left()?.print()?))
   }
 }
 
