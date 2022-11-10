@@ -272,7 +272,7 @@ fn coalesce<T>(a: Option<T>, b: Option<T>) -> Option<T> {
 }
 
 fn operands(left: Value, right: Value) -> (Option<Unit>, Value, Value) {
-  let target = coalesce(left.unit, right.unit);
+  let target = coalesce(right.unit, left.unit);
   let left = match left.convert(target) {
     Some(conv) => conv,
     None => left.untype(),
@@ -506,6 +506,6 @@ mod tests {
     assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::new(2.0, Unit::Teaspoon));
     assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::raw(2.0));
     assert_eq!(Value::new(10.0, Unit::Teaspoon), Value::raw(2.0) * Value::new(5.0, Unit::Teaspoon));
-    assert_eq!(Value::new(30.0, Unit::Teaspoon), Value::new(5.0, Unit::Teaspoon) * Value::new(2.0, Unit::Tablespoon));
+    assert_eq!(Value::new(20.0, Unit::Tablespoon), Value::new(30.0, Unit::Teaspoon) * Value::new(2.0, Unit::Tablespoon));
   }
 }
