@@ -194,13 +194,13 @@ mod tests {
   #[test]
   fn render_attributes() {
     let t = "Hello, there.";
-
+    
     let a = vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None})];
     assert_eq!("<b>Hello</b>, there.", render_with_mode(t, &a, Mode::Markup));
-
+    
     let a = vec![Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)})];
     assert_eq!("<b><Blue>Hello</Blue></b>, there.", render_with_mode(t, &a, Mode::Markup));
-
+    
     let a = vec![Span::new(7..12, Attributes{bold:false, invert: false, color: Some(Color::Green)}), Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)})];
     assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", render_with_mode(t, &a, Mode::Markup));
   }
@@ -218,13 +218,13 @@ mod tests {
   #[test]
   fn render_attributed() {
     let t = "Hello, there.";
-
+    
     let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None})]);
     assert_eq!("<b>Hello</b>, there.", a.render_with_mode(Mode::Markup));
-
+    
     let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None})]);
     assert_eq!("<b>Hello</b>, there.", a.render_with_mode(Mode::Markup));
-
+    
     let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)})]);
     assert_eq!("<b><Blue>Hello</Blue></b>, there.", a.render_with_mode(Mode::Markup));
     
