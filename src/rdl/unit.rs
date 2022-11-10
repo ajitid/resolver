@@ -232,12 +232,6 @@ impl Value {
   }
   
   fn pack(&self) -> Value {
-    let unit = match self.unit {
-      Some(unit) => unit,
-      None => return *self,
-    };
-    
-    let mut curr = unit.ordinal();
     let mut v = *self;
     loop {
       let c = match v.unit {
@@ -257,8 +251,6 @@ impl Value {
         },
       }
     }
-    
-    v // just use the remainder
   }
 }
 

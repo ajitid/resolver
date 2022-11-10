@@ -1,7 +1,6 @@
 use std::io;
 use std::fmt;
 use std::string;
-use std::error;
 
 #[derive(Debug)]
 pub enum Error {
