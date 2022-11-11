@@ -284,17 +284,22 @@ impl Text {
     self
   }
   
-  fn to(&self, movement: Movement, idx: usize) -> Pos {
-    match movement {
+  fn to(&self, mvmt: Movement, idx: usize) -> Pos {
+    match mvmt {
       Movement::Up          => self.up(idx),
       Movement::Right       => self.right(idx),
       Movement::Down        => self.down(idx),
       Movement::Left        => self.left(idx),
-      Movement::StartOfWord => self.word_start(idx),
+      // Movement::StartOfWord => self.word_start(idx),
       // Movement::EndOfWord   => self.word_end(idx),
       Movement::StartOfLine => self.home(idx),
       Movement::EndOfLine   => self.end(idx),
+      _ => ZERO_POS,
     }
+  }
+  
+  fn find_fwd(&self, idx: usize, check: impl Fn(usize, char) -> bool) -> Option<Pos> {
+    None
   }
   
   fn to_rel(&self, movement: Movement) -> Pos {
