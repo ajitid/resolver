@@ -1,13 +1,16 @@
+pub mod keys;
+pub mod writer;
+
 use crossterm::event;
+
+use writer::Writer;
 
 use crate::Reader;
 use crate::error;
 use crate::text::{self, Text, Pos};
-use crate::writer::Writer;
 use crate::options;
 
 pub struct Editor {
-  _opts: options::Options,
   reader: Reader,
   writer: Writer,
   text: Text,
@@ -17,7 +20,6 @@ pub struct Editor {
 impl Editor {
   pub fn new_with_size(size: (usize, usize), opts: options::Options) -> Self {
     Editor{
-      _opts: opts.clone(),
       reader: Reader,
       writer: Writer::new_with_size(size, opts),
       text: Text::new((size.0 / 3) * 2),

@@ -1,6 +1,5 @@
 mod buffer;
 mod editor;
-mod writer;
 mod frame;
 mod options;
 mod error;
@@ -19,7 +18,7 @@ use crossterm::terminal;
 use clap::Parser;
 
 use editor::Editor;
-use writer::Writer;
+use editor::writer::Writer;
 
 struct Finalize {
   opts: options::Options,
