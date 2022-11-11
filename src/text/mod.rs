@@ -1,10 +1,13 @@
 pub mod attrs;
 pub mod layout;
+pub mod action;
 
 use std::fmt;
 use std::ops;
 use std::str;
 use std::cmp::min;
+
+use action::{Movement, Operation};
 
 use crate::buffer::Buffer;
 
@@ -281,7 +284,24 @@ impl Text {
     self
   }
   
-  pub fn up(&mut self, idx: usize) -> Pos {
+  fn to(&self, movement: Movement, idx: usize) -> Pos {
+    match movement {
+      Movement::Up          => self.up(idx),
+      Movement::Right       => self.right(idx),
+      Movement::Down        => self.down(idx),
+      Movement::Left        => self.left(idx),
+      Movement::StartOfWord => self.word_start(idx),
+      // Movement::EndOfWord   => self.word_end(idx),
+      Movement::StartOfLine => self.home(idx),
+      Movement::EndOfLine   => self.end(idx),
+    }
+  }
+  
+  fn to_rel(&self, movement: Movement) -> Pos {
+    self.to(movement, self.loc)
+  }
+  
+  pub fn up(&self, idx: usize) -> Pos {
     let pos = self.index(idx);
     if pos.y == 0 {
       return ZERO_POS;
@@ -302,7 +322,7 @@ impl Text {
     pos
   }
   
-  pub fn down(&mut self, idx: usize) -> Pos {
+  pub fn down(&self, idx: usize) -> Pos {
     let nl = match self.lines.len() {
       0 => return ZERO_POS, // no line data; we have no content
       v => v,
@@ -337,7 +357,7 @@ impl Text {
     pos
   }
   
-  pub fn left(&mut self, idx: usize) -> Pos {
+  pub fn left(&self, idx: usize) -> Pos {
     if idx > 0 {
       self.index(idx - 1)
     }else{
@@ -351,7 +371,7 @@ impl Text {
     pos
   }
   
-  pub fn right(&mut self, idx: usize) -> Pos {
+  pub fn right(&self, idx: usize) -> Pos {
     self.index(idx + 1)
   }
   
@@ -361,7 +381,7 @@ impl Text {
     pos
   }
   
-  pub fn home(&mut self, idx: usize) -> Pos {
+  pub fn home(&self, idx: usize) -> Pos {
     let nl = match self.lines.len() {
       0 => return ZERO_POS, // no line data; we have no content
       v => v,
@@ -380,7 +400,7 @@ impl Text {
     pos
   }
   
-  pub fn end(&mut self, idx: usize) -> Pos {
+  pub fn end(&self, idx: usize) -> Pos {
     let nl = match self.lines.len() {
       0 => return ZERO_POS, // no line data; we have no content
       v => v,
@@ -400,7 +420,7 @@ impl Text {
     pos
   }
   
-  pub fn index(&mut self, idx: usize) -> Pos {
+  pub fn index(&self, idx: usize) -> Pos {
     if self.len() == 0 {
       return ZERO_POS;
     }

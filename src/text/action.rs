@@ -1,21 +1,23 @@
-use crossterm::event;
 
-enum Movement {
+pub enum Movement {
   Up,
   Right,
   Down,
   Left,
+  StartOfWord,
+  EndOfWord,
   StartOfLine,
   EndOfLine,
 }
 
-enum Operation {
+pub enum Operation {
   Move,
   Select,
   Delete,
 }
 
-struct Event {
+pub struct Action {
   movement: Movement,
   operation: Operation,
 }
+
