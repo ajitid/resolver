@@ -1,4 +1,3 @@
-pub mod keys;
 pub mod writer;
 
 use crossterm::event;
@@ -7,7 +6,7 @@ use writer::Writer;
 
 use crate::Reader;
 use crate::error;
-use crate::text::{self, Text, Pos};
+use crate::text::{self, action, Text, Pos};
 use crate::options;
 
 pub struct Editor {
@@ -71,15 +70,15 @@ impl Editor {
       } => self.pos = self.text.end_rel(),
 
       event::KeyEvent{
-        code: event::KeyCode::Left,
-        modifiers: event::KeyModifiers::ALT,
+        code: event::KeyCode::Char('b'),
+        modifiers: event::KeyModifiers::CONTROL,
         ..
-      } => self.pos = self.text.to_rel(keys::Movement::StartOfWord),
+      } => self.pos = self.text.to_rel(action::Movement::StartOfWord),
       event::KeyEvent{
-        code: event::KeyCode::Right,
-        modifiers: event::KeyModifiers::ALT,
+        code: event::KeyCode::Char('e'),
+        modifiers: event::KeyModifiers::CONTROL,
         ..
-      } => self.pos = self.text.to_rel(keys::Movement::EndOfWord),
+      } => self.pos = self.text.to_rel(action::Movement::EndOfWord),
       
       event::KeyEvent{
         code: event::KeyCode::Backspace,

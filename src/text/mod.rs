@@ -319,21 +319,21 @@ impl Text {
     self
   }
   
-  fn to(&self, idx: usize, mvmt: Movement) -> Option<Pos> {
+  pub fn to(&self, idx: usize, mvmt: Movement) -> Option<Pos> {
     match mvmt {
       Movement::Up          => Some(self.up(idx)),
       Movement::Right       => Some(self.right(idx)),
       Movement::Down        => Some(self.down(idx)),
       Movement::Left        => Some(self.left(idx)),
       Movement::StartOfWord => self.find_rev(idx-1, match_word_boundary),
-      Movement::EndOfWord   => self.word_end(idx+1, match_word_boundary),
+      Movement::EndOfWord   => self.find_fwd(idx+1, match_word_boundary),
       Movement::StartOfLine => Some(self.home(idx)),
       Movement::EndOfLine   => Some(self.end(idx)),
-      _ => ZERO_POS,
+      _                     => None,
     }
   }
   
-  fn to_rel(&self, movement: Movement) -> Pos {
+  pub fn to_rel(&mut self, movement: Movement) -> Pos {
     let pos = match self.to(self.loc, movement) {
       Some(pos) => pos,
       None => self.index(self.loc),
@@ -362,7 +362,11 @@ impl Text {
         break;
       }
     }
-    None
+    if check('\0', prev) {
+      Some(self.index(idx + coff))
+    }else{
+      None
+    }
   }
   
   fn find_rev(&self, idx: usize, check: impl Fn(char, char) -> bool) -> Option<Pos> {
@@ -385,7 +389,11 @@ impl Text {
         break;
       }
     }
-    None
+    if check('\0', prev) {
+      Some(self.index(idx - coff))
+    }else{
+      None
+    }
   }
   
   pub fn up(&self, idx: usize) -> Pos {
@@ -636,7 +644,7 @@ impl fmt::Display for Text {
 }
 
 fn match_word_boundary(curr: char, prev: char) -> bool {
-  curr.is_whitespace() && (prev == '\0' || !prev.is_whitespace())
+  (curr == '\0' || curr.is_whitespace()) && (prev == '\0' || !prev.is_whitespace())
 }
 
 #[cfg(test)]
@@ -1124,12 +1132,14 @@ mod tests {
     assert_eq!(Some(Pos{index:  4, x:  4, y: 0}), x.find_fwd( 0, match_word_boundary));
     assert_eq!(Some(Pos{index:  4, x:  4, y: 0}), x.find_fwd( 4, match_word_boundary));
     assert_eq!(Some(Pos{index: 30, x: 30, y: 0}), x.find_fwd(24, match_word_boundary));
+    assert_eq!(Some(Pos{index: 32, x: 32, y: 0}), x.find_fwd(31, match_word_boundary));
   }
   
   #[test]
   fn test_find_rev() {
     let t = "Très bien, c'est époustouflant !";
     let x = Text::new_with_str(100, t);
+    assert_eq!(Some(Pos{index:  0, x:  0, y: 0}), x.find_rev( 3, match_word_boundary));
     assert_eq!(Some(Pos{index:  5, x:  5, y: 0}), x.find_rev( 9, match_word_boundary));
     assert_eq!(Some(Pos{index:  5, x:  5, y: 0}), x.find_rev( 5, match_word_boundary));
     assert_eq!(Some(Pos{index: 17, x: 17, y: 0}), x.find_rev(24, match_word_boundary));
