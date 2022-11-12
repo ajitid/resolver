@@ -13,6 +13,7 @@ use crate::options;
 enum Mode {
   Normal,
   Delete,
+  // Select,
 }
 
 pub struct Editor {
