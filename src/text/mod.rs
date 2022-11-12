@@ -5,9 +5,9 @@ pub mod action;
 use std::fmt;
 use std::ops;
 use std::str;
-use std::cmp::min;
+use std::cmp::{min, max};
 
-use action::{Movement, Operation};
+use action::{Action, Movement, Operation};
 
 use crate::buffer::Buffer;
 
@@ -319,6 +319,27 @@ impl Text {
     self
   }
   
+  pub fn edit(&mut self, idx: usize, action: Action) -> Option<Pos> {
+    let dest = match self.to(idx, action.movement) {
+      Some(dest) => dest,
+      None => return None,
+    };
+    match action.operation {
+      Operation::Move   => Some(dest), // nothing to do
+      Operation::Select => Some(dest), // not currently supported
+      Operation::Delete => self.delete(min(idx, dest.index)..max(idx, dest.index)),
+    }
+  }
+  
+  pub fn edit_rel(&mut self, action: Action) -> Pos {
+    let pos = match self.edit(self.loc, action) {
+      Some(pos) => pos,
+      None => self.index(self.loc),
+    };
+    self.loc = pos.index;
+    pos
+  }
+  
   pub fn to(&self, idx: usize, mvmt: Movement) -> Option<Pos> {
     match mvmt {
       Movement::Up          => Some(self.up(idx)),
@@ -330,7 +351,6 @@ impl Text {
       Movement::Word        => self.find_fwd(idx+1, match_word),
       Movement::StartOfWord => if idx == 0 { None } else { self.find_rev(idx-1, match_word_boundary) },
       Movement::EndOfWord   => self.find_fwd(idx+1, match_word_boundary),
-      _                     => None,
     }
   }
   
@@ -561,6 +581,20 @@ impl Text {
     let pos = self.insert(self.loc, c);
     self.loc = pos.index;
     pos
+  }
+  
+  pub fn delete(&mut self, rng: ops::Range<usize>) -> Option<Pos> {
+    let start = match self.offset_for_index(rng.start) {
+      Some(start) => start,
+      None => return None,
+    };
+    let end = match self.offset_for_index(rng.end) {
+      Some(end) => end,
+      None => return None,
+    };
+    self.text.replace_range(start..end, "");
+    self.reflow();
+    Some(self.index(start))
   }
   
   pub fn backspace(&mut self, idx: usize) -> Pos {

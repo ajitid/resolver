@@ -18,7 +18,7 @@ pub enum Operation {
 }
 
 pub struct Action {
-  movement: Movement,
-  operation: Operation,
+  pub movement: Movement,
+  pub operation: Operation,
 }
 
