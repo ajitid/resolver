@@ -254,6 +254,41 @@ impl Text {
     Some(line.boff + line.bytes) // visual end of line
   }
   
+  fn line_with_offset<'a>(&'a self, bix: usize) -> Option<&'a Line> {
+    if self.lines.len() == 0 {
+      return None;
+    }
+    for l in &self.lines {
+      if bix >= l.boff && bix < l.bext {
+        return Some(l);
+      }
+    }
+    None
+  }
+  
+  fn index_for_offset<'a>(&'a self, bix: usize) -> Option<usize> {
+    let line = match self.line_with_offset(bix) {
+      Some(line) => line,
+      None => return None,
+    };
+    
+    let mut rem = bix - line.boff;
+    if rem == 0 {
+      return Some(line.coff);
+    }
+    
+    let mut ecw = 0;
+    for c in line.text(&self.text).chars() {
+      ecw += 1;
+      rem -= c.len_utf8();
+      if rem == 0 {
+        return Some(line.coff + ecw);
+      }
+    }
+    
+    Some(line.coff + line.chars) // visual end of line
+  }
+  
   fn debug_text_for_index<'a>(&self, idx: usize) -> Option<String> {
     let line = match self.line_with_index(idx) {
       Some(line) => line,
@@ -298,7 +333,49 @@ impl Text {
     }
   }
   
-  fn find_fwd(&self, idx: usize, check: impl Fn(usize, char) -> bool) -> Option<Pos> {
+  fn find_fwd(&self, idx: usize, check: impl Fn(char, char) -> bool) -> Option<Pos> {
+    let bix = match self.offset_for_index(idx) {
+      Some(bix) => bix,
+      None => return None,
+    };
+    let fwd = &self.text[bix..];
+    let mut prev: char = '\0';
+    let mut iter = fwd.chars();
+    let mut coff = 0;
+    loop {
+      if let Some(c) = iter.next() {
+        if check(c, prev) {
+          return Some(self.index(idx + coff));
+        }
+        coff += 1;
+        prev = c;
+      }else{
+        break;
+      }
+    }
+    None
+  }
+  
+  fn find_rev(&self, idx: usize, check: impl Fn(char, char) -> bool) -> Option<Pos> {
+    let bix = match self.offset_for_index(idx) {
+      Some(bix) => bix,
+      None => return None,
+    };
+    let rev = &self.text[..bix];
+    let mut prev: char = '\0';
+    let mut iter = rev.chars();
+    let mut coff = 0;
+    loop {
+      if let Some(c) = iter.next_back() {
+        if check(c, prev) {
+          return Some(self.index(idx - coff));
+        }
+        coff += 1;
+        prev = c;
+      }else{
+        break;
+      }
+    }
     None
   }
   
@@ -551,6 +628,10 @@ impl fmt::Display for Text {
     }
     Ok(())
   }
+}
+
+fn match_word_boundary(curr: char, prev: char) -> bool {
+  curr.is_whitespace() && (prev == '\0' || !prev.is_whitespace())
 }
 
 #[cfg(test)]
@@ -1009,18 +1090,44 @@ mod tests {
     let x = Text::new_with_str(100, t);
     assert_eq!(Some(&Line{num: 0, coff: 0, boff: 0, cext:  6, bext:  8, chars: 5, bytes:  7, hard: true}), x.line_with_index(1));
     assert_eq!(Some(&Line{num: 1, coff: 6, boff: 8, cext: 15, bext: 18, chars: 9, bytes: 10, hard: false}), x.line_with_index(6));
-
+    
     assert_eq!(Some(1),  x.offset_for_index(1));
     assert_eq!(Some(5),  x.offset_for_index(3));
     assert_eq!(Some(8),  x.offset_for_index(6));
     assert_eq!(Some(12), x.offset_for_index(9));
     assert_eq!(None,     x.offset_for_index(16));
     assert_eq!(None,     x.offset_for_index(99));
-
+    
+    // reverse
+    assert_eq!(Some(1),  x.index_for_offset(1));
+    assert_eq!(Some(3),  x.index_for_offset(5));
+    assert_eq!(Some(6),  x.index_for_offset(8));
+    assert_eq!(Some(9),  x.index_for_offset(12));
+    assert_eq!(None,     x.index_for_offset(19));
+    assert_eq!(None,     x.index_for_offset(99));
+    
     let t = "Yo!\n";
     let x = Text::new_with_str(100, t);
     assert_eq!(Some(3),  x.offset_for_index(3));
     assert_eq!(None,     x.offset_for_index(4));
+  }
+  
+  #[test]
+  fn test_find_fwd() {
+    let t = "Très bien, c'est époustouflant !";
+    let x = Text::new_with_str(100, t);
+    assert_eq!(Some(Pos{index:  4, x:  4, y: 0}), x.find_fwd( 0, match_word_boundary));
+    assert_eq!(Some(Pos{index:  4, x:  4, y: 0}), x.find_fwd( 4, match_word_boundary));
+    assert_eq!(Some(Pos{index: 30, x: 30, y: 0}), x.find_fwd(24, match_word_boundary));
+  }
+  
+  #[test]
+  fn test_find_rev() {
+    let t = "Très bien, c'est époustouflant !";
+    let x = Text::new_with_str(100, t);
+    assert_eq!(Some(Pos{index:  5, x:  5, y: 0}), x.find_rev( 9, match_word_boundary));
+    assert_eq!(Some(Pos{index:  5, x:  5, y: 0}), x.find_rev( 5, match_word_boundary));
+    assert_eq!(Some(Pos{index: 17, x: 17, y: 0}), x.find_rev(24, match_word_boundary));
   }
   
 }
