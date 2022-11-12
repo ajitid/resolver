@@ -652,7 +652,6 @@ fn match_word_boundary(curr: char, prev: char) -> bool {
   (curr == '\0' || curr.is_whitespace()) && (prev == '\0' || !prev.is_whitespace())
 }
 
-
 #[cfg(test)]
 mod tests {
   use super::*;
