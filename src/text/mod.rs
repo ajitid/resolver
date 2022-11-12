@@ -327,6 +327,7 @@ impl Text {
       Movement::Left        => Some(self.left(idx)),
       Movement::StartOfLine => Some(self.home(idx)),
       Movement::EndOfLine   => Some(self.end(idx)),
+      Movement::Word        => self.find_fwd(idx+1, match_word),
       Movement::StartOfWord => if idx == 0 { None } else { self.find_rev(idx-1, match_word_boundary) },
       Movement::EndOfWord   => self.find_fwd(idx+1, match_word_boundary),
       _                     => None,
@@ -643,9 +644,14 @@ impl fmt::Display for Text {
   }
 }
 
+fn match_word(curr: char, prev: char) -> bool {
+  (curr == '\0' || !curr.is_whitespace()) && prev.is_whitespace()
+}
+
 fn match_word_boundary(curr: char, prev: char) -> bool {
   (curr == '\0' || curr.is_whitespace()) && (prev == '\0' || !prev.is_whitespace())
 }
+
 
 #[cfg(test)]
 mod tests {

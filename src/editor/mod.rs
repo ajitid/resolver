@@ -79,6 +79,11 @@ impl Editor {
         modifiers: event::KeyModifiers::CONTROL,
         ..
       } => self.pos = self.text.to_rel(action::Movement::EndOfWord),
+      event::KeyEvent{
+        code: event::KeyCode::Char('w'),
+        modifiers: event::KeyModifiers::CONTROL,
+        ..
+      } => self.pos = self.text.to_rel(action::Movement::Word),
       
       event::KeyEvent{
         code: event::KeyCode::Backspace,

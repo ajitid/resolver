@@ -4,6 +4,7 @@ pub enum Movement {
   Right,
   Down,
   Left,
+  Word,
   StartOfWord,
   EndOfWord,
   StartOfLine,
