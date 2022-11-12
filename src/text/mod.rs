@@ -325,7 +325,7 @@ impl Text {
       Movement::Right       => Some(self.right(idx)),
       Movement::Down        => Some(self.down(idx)),
       Movement::Left        => Some(self.left(idx)),
-      Movement::StartOfWord => self.find_rev(idx-1, match_word_boundary),
+      Movement::StartOfWord => if idx == 0 { None } else { self.find_rev(idx-1, match_word_boundary) },
       Movement::EndOfWord   => self.find_fwd(idx+1, match_word_boundary),
       Movement::StartOfLine => Some(self.home(idx)),
       Movement::EndOfLine   => Some(self.end(idx)),
