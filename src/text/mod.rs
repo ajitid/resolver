@@ -590,7 +590,7 @@ impl Text {
     };
     let end = match self.offset_for_index(rng.end) {
       Some(end) => end,
-      None => return None,
+      None => self.next_offset(),
     };
     self.text.replace_range(start..end, "");
     self.reflow();

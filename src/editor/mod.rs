@@ -65,75 +65,48 @@ impl Editor {
         code: event::KeyCode::Left,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::Left,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::Left, op)),
       event::KeyEvent{
         code: event::KeyCode::Right,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::Right,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::Right, op)),
       event::KeyEvent{
         code: event::KeyCode::Up,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::Up,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::Up, op)),
       event::KeyEvent{
         code: event::KeyCode::Down,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::Down,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::Down, op)),
       event::KeyEvent{
         code: event::KeyCode::Home,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::StartOfLine,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::StartOfLine, op)),
       event::KeyEvent{
         code: event::KeyCode::End,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::EndOfLine,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::EndOfLine, op)),
 
       event::KeyEvent{
         code: event::KeyCode::Char('b'),
         modifiers: event::KeyModifiers::CONTROL,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::StartOfWord,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::StartOfWord, op)),
       event::KeyEvent{
         code: event::KeyCode::Char('e'),
         modifiers: event::KeyModifiers::CONTROL,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::EndOfWord,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::EndOfWord, op)),
       event::KeyEvent{
         code: event::KeyCode::Char('w'),
         modifiers: event::KeyModifiers::CONTROL,
         ..
-      } => self.pos = self.text.edit_rel(Action{
-        movement: Movement::Word,
-        operation: op,
-      }),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::Word, op)),
       
       event::KeyEvent{
         code: event::KeyCode::Backspace,
@@ -159,89 +132,7 @@ impl Editor {
     
     Ok(true)
   }
-
-/*
-  pub fn key(&mut self) -> crossterm::Result<bool> {
-    match self.reader.read_key()? {
-      event::KeyEvent{
-        code: event::KeyCode::Char('q'),
-        modifiers: event::KeyModifiers::CONTROL,
-        ..
-      } => return Ok(false),
-      event::KeyEvent{
-        code: event::KeyCode::Char('d'),
-        modifiers: event::KeyModifiers::CONTROL,
-        ..
-      } => self.mode = Mode::Delete,
-      
-      event::KeyEvent{
-        code: event::KeyCode::Left,
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.pos = self.text.left_rel(),
-      event::KeyEvent{
-        code: event::KeyCode::Right,
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.pos = self.text.right_rel(),
-      event::KeyEvent{
-        code: event::KeyCode::Up,
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.pos = self.text.up_rel(),
-      event::KeyEvent{
-        code: event::KeyCode::Down,
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.pos = self.text.down_rel(),
-      event::KeyEvent{
-        code: event::KeyCode::Home,
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.pos = self.text.home_rel(),
-      event::KeyEvent{
-        code: event::KeyCode::End,
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.pos = self.text.end_rel(),
-
-      event::KeyEvent{
-        code: event::KeyCode::Char('b'),
-        modifiers: event::KeyModifiers::CONTROL,
-        ..
-      } => self.pos = self.text.to_rel(action::Movement::StartOfWord),
-      event::KeyEvent{
-        code: event::KeyCode::Char('e'),
-        modifiers: event::KeyModifiers::CONTROL,
-        ..
-      } => self.pos = self.text.to_rel(action::Movement::EndOfWord),
-      event::KeyEvent{
-        code: event::KeyCode::Char('w'),
-        modifiers: event::KeyModifiers::CONTROL,
-        ..
-      } => self.pos = self.text.to_rel(action::Movement::Word),
-      
-      event::KeyEvent{
-        code: event::KeyCode::Backspace,
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.pos = self.text.backspace_rel(),
-      event::KeyEvent{
-        code: event::KeyCode::Char(v),
-        modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
-        ..
-      } => self.pos = self.text.insert_rel(v),
-      event::KeyEvent{
-        code: event::KeyCode::Enter,
-        modifiers: event::KeyModifiers::NONE,
-        ..
-      } => self.pos = self.text.insert_rel('\n'),
-
-      _ => {},
-    };
-    Ok(true)
-  }
-*/  
+  
   pub fn draw(&mut self) -> Result<bool, error::Error> {
     self.writer.refresh(&self.pos, &self.text)?;
     Ok(true)

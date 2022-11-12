@@ -22,3 +22,11 @@ pub struct Action {
   pub operation: Operation,
 }
 
+impl Action {
+  pub fn new(mv: Movement, op: Operation) -> Action {
+    Action{
+      movement: mv,
+      operation: op,
+    }
+  }
+}
