@@ -1,6 +1,6 @@
 use crossterm::event;
 
-enum Movement {
+pub enum Movement {
   Up,
   Right,
   Down,
@@ -9,13 +9,13 @@ enum Movement {
   EndOfLine,
 }
 
-enum Operation {
+pub enum Operation {
   Move,
   Select,
   Delete,
 }
 
-struct Event {
+pub struct Event {
   movement: Movement,
   operation: Operation,
 }

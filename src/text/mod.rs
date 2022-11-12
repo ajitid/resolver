@@ -319,18 +319,27 @@ impl Text {
     self
   }
   
-  fn to(&self, mvmt: Movement, idx: usize) -> Pos {
+  fn to(&self, idx: usize, mvmt: Movement) -> Option<Pos> {
     match mvmt {
-      Movement::Up          => self.up(idx),
-      Movement::Right       => self.right(idx),
-      Movement::Down        => self.down(idx),
-      Movement::Left        => self.left(idx),
-      // Movement::StartOfWord => self.word_start(idx),
-      // Movement::EndOfWord   => self.word_end(idx),
-      Movement::StartOfLine => self.home(idx),
-      Movement::EndOfLine   => self.end(idx),
+      Movement::Up          => Some(self.up(idx)),
+      Movement::Right       => Some(self.right(idx)),
+      Movement::Down        => Some(self.down(idx)),
+      Movement::Left        => Some(self.left(idx)),
+      Movement::StartOfWord => self.find_rev(idx-1, match_word_boundary),
+      Movement::EndOfWord   => self.word_end(idx+1, match_word_boundary),
+      Movement::StartOfLine => Some(self.home(idx)),
+      Movement::EndOfLine   => Some(self.end(idx)),
       _ => ZERO_POS,
     }
+  }
+  
+  fn to_rel(&self, movement: Movement) -> Pos {
+    let pos = match self.to(self.loc, movement) {
+      Some(pos) => pos,
+      None => self.index(self.loc),
+    };
+    self.loc = pos.index;
+    pos
   }
   
   fn find_fwd(&self, idx: usize, check: impl Fn(char, char) -> bool) -> Option<Pos> {
@@ -377,10 +386,6 @@ impl Text {
       }
     }
     None
-  }
-  
-  fn to_rel(&self, movement: Movement) -> Pos {
-    self.to(movement, self.loc)
   }
   
   pub fn up(&self, idx: usize) -> Pos {

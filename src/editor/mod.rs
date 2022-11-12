@@ -38,6 +38,7 @@ impl Editor {
         modifiers: event::KeyModifiers::CONTROL,
         ..
       } => return Ok(false),
+      
       event::KeyEvent{
         code: event::KeyCode::Left,
         modifiers: event::KeyModifiers::NONE,
@@ -68,6 +69,18 @@ impl Editor {
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.pos = self.text.end_rel(),
+
+      event::KeyEvent{
+        code: event::KeyCode::Left,
+        modifiers: event::KeyModifiers::ALT,
+        ..
+      } => self.pos = self.text.to_rel(keys::Movement::StartOfWord),
+      event::KeyEvent{
+        code: event::KeyCode::Right,
+        modifiers: event::KeyModifiers::ALT,
+        ..
+      } => self.pos = self.text.to_rel(keys::Movement::EndOfWord),
+      
       event::KeyEvent{
         code: event::KeyCode::Backspace,
         modifiers: event::KeyModifiers::NONE,
@@ -83,6 +96,7 @@ impl Editor {
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.pos = self.text.insert_rel('\n'),
+
       _ => {},
     };
     Ok(true)
