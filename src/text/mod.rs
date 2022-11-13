@@ -597,25 +597,25 @@ impl Text {
     Some(self.index(start))
   }
   
-  pub fn backspace(&mut self, idx: usize) -> Pos {
-    let eix = idx - 1;
-    let offset = match self.offset_for_index(eix) {
-      Some(offset) => offset,
-      None => return ZERO_POS,
-    };
-    self.text.remove(offset);
-    self.reflow();
-    self.index(eix)
-  }
+  // pub fn backspace(&mut self, idx: usize) -> Pos {
+  //   let eix = idx - 1;
+  //   let offset = match self.offset_for_index(eix) {
+  //     Some(offset) => offset,
+  //     None => return ZERO_POS,
+  //   };
+  //   self.text.remove(offset);
+  //   self.reflow();
+  //   self.index(eix)
+  // }
   
-  pub fn backspace_rel(&mut self) -> Pos {
-    if self.loc == 0 { // nothing to delete
-      return ZERO_POS;
-    }
-    let pos = self.backspace(self.loc);
-    self.loc = pos.index;
-    pos
-  }
+  // pub fn backspace_rel(&mut self) -> Pos {
+  //   if self.loc == 0 { // nothing to delete
+  //     return ZERO_POS;
+  //   }
+  //   let pos = self.backspace(self.loc);
+  //   self.loc = pos.index;
+  //   pos
+  // }
 }
 
 impl Storage for Text {

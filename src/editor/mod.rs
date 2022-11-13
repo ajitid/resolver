@@ -110,9 +110,25 @@ impl Editor {
       
       event::KeyEvent{
         code: event::KeyCode::Backspace,
+        modifiers: event::KeyModifiers::CONTROL,
+        ..
+      } => self.pos = self.text.edit_rel(Action::new(Movement::StartOfWord, Operation::Delete)),
+      event::KeyEvent{
+        code: event::KeyCode::Backspace,
         modifiers: event::KeyModifiers::NONE,
         ..
-      } => self.pos = self.text.backspace_rel(),
+      } => self.pos = self.text.edit_rel(Action::new(Movement::Left, Operation::Delete)),
+      event::KeyEvent{
+        code: event::KeyCode::Delete,
+        modifiers: event::KeyModifiers::CONTROL,
+        ..
+      } => self.pos = self.text.edit_rel(Action::new(Movement::EndOfWord, Operation::Delete)),
+      event::KeyEvent{
+        code: event::KeyCode::Delete,
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.pos = self.text.edit_rel(Action::new(Movement::Right, Operation::Delete)),
+      
       event::KeyEvent{
         code: event::KeyCode::Char(v),
         modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
