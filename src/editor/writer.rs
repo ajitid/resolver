@@ -6,7 +6,7 @@ use crossterm::queue;
 use crossterm::cursor;
 use crossterm::execute;
 use crossterm::terminal;
-use crossterm::style::Color;
+use crossterm::style::{Color, Stylize};
 
 use crate::options;
 use crate::error;
@@ -84,12 +84,22 @@ impl Writer {
     )
   }
   
-  fn draw_gutter(&self, _width: usize, height: usize) -> String {
-    let mut g = String::new();
+  fn draw_gutter(&self, width: usize, height: usize, nlines: usize) -> Content {
+    let style = attrs::Attributes{bold: true, invert: false, color: None};
+    
+    let mut text = String::new();
+    let mut spns: Vec<attrs::Span> = Vec::new();
     for i in 0..height {
-      g.push_str(&format!(" {:>3}\n", i+1));
+      let line = format!(" {:>3}", i+1);
+      let start = text.len();
+      text.push_str(&line);
+      if i < nlines {
+        spns.push(attrs::Span::new(start..text.len(), style.clone()));
+      }
+      text.push('\n');
     }
-    g
+    
+    Content::new_with_attributed(text, spns, width)
   }
   
   pub fn refresh(&mut self, pos: &Pos, text: &Text) -> Result<(), error::Error> {
@@ -98,14 +108,13 @@ impl Writer {
     let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
     
     let (edit, fmla) = self.draw_formula(tw, self.term_size.1 as usize, text);
-    let gutter = Content::new_with_string(self.draw_gutter(gw, self.term_size.1 as usize), gw);
+    let gutter = self.draw_gutter(gw, self.term_size.1 as usize, edit.num_lines());
     let cols: Vec<&dyn Renderable> = if self.opts.debug_editor {
       vec![&edit]
     }else{
       vec![&gutter, &edit, &fmla]
     };
     
-    // queue!(self.buf, cursor::Hide, terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0))?;
     queue!(self.buf, cursor::Hide)?;
     self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf, pos)?;
     queue!(self.buf, cursor::MoveTo((pos.x + ox) as u16, pos.y as u16), cursor::Show)?;
