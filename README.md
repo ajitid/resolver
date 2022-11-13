@@ -1,5 +1,5 @@
-# Resolver is like [Soulver](https://soulver.app/), but for your terminal
-Soulver, the excellent Mac app, describes itself as "a notepad calculator app for Mac". **Resolver** aims to be the notepad calculator for anything with a terminal: Linux, Mac, wherever.
+# Resolver
+_Resolver_ is the notepad app for your terminal. It takes inspiration from [Soulver](https://soulver.app/), an excellent Mac GUI app that, unfortunately, doesn't work anywhere else.
 
 ## Using Resolver
 Resolver is currently in early development and it has a lot of rough edges. Many of the basics work reasonably well, but if you're inclined to try it out, your expectations should be low.
