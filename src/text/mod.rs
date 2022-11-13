@@ -679,7 +679,7 @@ impl fmt::Display for Text {
 }
 
 fn match_word(curr: char, prev: char) -> bool {
-  (curr == '\0' || !curr.is_whitespace()) && prev.is_whitespace()
+  curr == '\0' || (!curr.is_whitespace() && prev.is_whitespace())
 }
 
 fn match_word_boundary(curr: char, prev: char) -> bool {
@@ -1172,6 +1172,12 @@ mod tests {
     assert_eq!(Some(Pos{index:  4, x:  4, y: 0}), x.find_fwd( 4, match_word_boundary));
     assert_eq!(Some(Pos{index: 30, x: 30, y: 0}), x.find_fwd(24, match_word_boundary));
     assert_eq!(Some(Pos{index: 32, x: 32, y: 0}), x.find_fwd(31, match_word_boundary));
+
+    assert_eq!(Some(Pos{index:  5, x:  5, y: 0}), x.find_fwd( 0, match_word));
+    assert_eq!(Some(Pos{index: 11, x: 11, y: 0}), x.find_fwd( 5, match_word));
+    assert_eq!(Some(Pos{index: 17, x: 17, y: 0}), x.find_fwd(11, match_word));
+    assert_eq!(Some(Pos{index: 31, x: 31, y: 0}), x.find_fwd(17, match_word));
+    assert_eq!(Some(Pos{index: 32, x: 32, y: 0}), x.find_fwd(31, match_word));
   }
   
   #[test]
