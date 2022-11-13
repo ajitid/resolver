@@ -64,12 +64,16 @@ impl Writer {
     };
     
     let mut boff0 = 0;
-    for l in text.paragraphs() {
+    for (l, n) in text.paragraphs() {
       let (mut txt, mut exp) = rdl::render_with_options(&mut cxt, l, boff0, fmla_text.len(), Some(&style), Some(&opts));
       
       edit_text.push_str(txt.text());
       edit_text.push_str("\n");
       edit_spns.append(txt.spans_mut());
+      
+      if n > 1 {
+        fmla_text.push_str(&"\n".repeat(n - 1));
+      }
       
       fmla_text.push_str(exp.text());
       fmla_text.push_str("\n");
@@ -107,7 +111,7 @@ impl Writer {
     let gw = if self.opts.debug_editor { 0 }else{ 5 };
     let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
     
-    let (edit, fmla) = self.draw_formula(tw, self.term_size.1 as usize, text);
+    let (edit, fmla) = self.draw_formula(tw - 1, self.term_size.1 as usize, text);
     let gutter = self.draw_gutter(gw, self.term_size.1 as usize, edit.num_lines());
     let cols: Vec<&dyn Renderable> = if self.opts.debug_editor {
       vec![&edit]

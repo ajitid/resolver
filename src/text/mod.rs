@@ -81,6 +81,39 @@ impl Line {
   }
 }
 
+pub struct Lines<'a> {
+  idx: usize,
+  text: &'a str,
+  metrics: &'a Vec<Line>,
+}
+
+impl<'a> Iterator for Lines<'a> {
+  type Item = (&'a str, usize);
+  
+  fn next(&mut self) -> Option<Self::Item> {
+    let n = self.metrics.len();
+    if self.idx >= n {
+      return None;
+    }
+    
+    let loff = self.idx;
+    let line = &self.metrics[self.idx];
+    let boff = line.boff;
+    let mut bext = line.bext;
+    
+    for i in self.idx..self.metrics.len() {
+      let line = &self.metrics[self.idx];
+      bext = line.boff + line.bytes;
+      self.idx += 1;
+      if line.hard {
+        break;
+      }
+    }
+    
+    Some((&self.text[boff..bext], self.idx - loff))
+  }
+}
+
 pub trait Storage {
   fn width(&self) -> usize;
   fn num_lines(&self) -> usize;
@@ -215,8 +248,12 @@ impl Text {
     }
   }
   
-  pub fn paragraphs<'a>(&'a self) -> str::Lines<'a> {
-    self.text.lines()
+  pub fn paragraphs<'a>(&'a self) -> Lines<'a> {
+    Lines{
+      idx: 0,
+      text: &self.text,
+      metrics: &self.lines,
+    }
   }
   
   fn line_with_index<'a>(&'a self, idx: usize) -> Option<&'a Line> {
@@ -597,25 +634,27 @@ impl Text {
     Some(self.index(start))
   }
   
-  // pub fn backspace(&mut self, idx: usize) -> Pos {
-  //   let eix = idx - 1;
-  //   let offset = match self.offset_for_index(eix) {
-  //     Some(offset) => offset,
-  //     None => return ZERO_POS,
-  //   };
-  //   self.text.remove(offset);
-  //   self.reflow();
-  //   self.index(eix)
-  // }
+  // TODO: deprecated below; these can be replaced by edit() operations.
   
-  // pub fn backspace_rel(&mut self) -> Pos {
-  //   if self.loc == 0 { // nothing to delete
-  //     return ZERO_POS;
-  //   }
-  //   let pos = self.backspace(self.loc);
-  //   self.loc = pos.index;
-  //   pos
-  // }
+  pub fn backspace(&mut self, idx: usize) -> Pos {
+    let eix = idx - 1;
+    let offset = match self.offset_for_index(eix) {
+      Some(offset) => offset,
+      None => return ZERO_POS,
+    };
+    self.text.remove(offset);
+    self.reflow();
+    self.index(eix)
+  }
+  
+  pub fn backspace_rel(&mut self) -> Pos {
+    if self.loc == 0 { // nothing to delete
+      return ZERO_POS;
+    }
+    let pos = self.backspace(self.loc);
+    self.loc = pos.index;
+    pos
+  }
 }
 
 impl Storage for Text {
@@ -1190,4 +1229,22 @@ mod tests {
     assert_eq!(Some(Pos{index: 17, x: 17, y: 0}), x.find_rev(24, match_word_boundary));
   }
   
+  #[test]
+  fn test_iter_lines() {
+    let t = "Très bien,\nc'est époustouflant!\nD'acc, à bientôt...";
+    let x = Text::new_with_str(100, t);
+    let mut it = x.paragraphs();
+    assert_eq!(Some(("Très bien,", 1)), it.next());
+    assert_eq!(Some(("c'est époustouflant!", 1)), it.next());
+    assert_eq!(Some(("D'acc, à bientôt...", 1)), it.next());
+    assert_eq!(None, it.next());
+    
+    let t = "Très bien,\nc'est époustouflant!\nD'acc, à bientôt...";
+    let x = Text::new_with_str(5, t);
+    let mut it = x.paragraphs();
+    assert_eq!(Some(("Très bien,", 3)), it.next());
+    assert_eq!(Some(("c'est époustouflant!", 5)), it.next());
+    assert_eq!(Some(("D'acc, à bientôt...", 4)), it.next());
+    assert_eq!(None, it.next());
+  }
 }
