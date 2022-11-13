@@ -215,7 +215,7 @@ impl Text {
     }
   }
   
-  pub fn lines<'a>(&'a self) -> str::Lines<'a> {
+  pub fn paragraphs<'a>(&'a self) -> str::Lines<'a> {
     self.text.lines()
   }
   

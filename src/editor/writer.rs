@@ -64,7 +64,7 @@ impl Writer {
     };
     
     let mut boff0 = 0;
-    for l in text.lines() {
+    for l in text.paragraphs() {
       let (mut txt, mut exp) = rdl::render_with_options(&mut cxt, l, boff0, fmla_text.len(), Some(&style), Some(&opts));
       
       edit_text.push_str(txt.text());
