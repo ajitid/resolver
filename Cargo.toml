@@ -2,6 +2,14 @@
 name = "resolver"
 version = "0.1.0"
 edition = "2021"
+description = "The notepad calculator for your terminal"
+repository = "https://github.com/bww/resolver"
+readme = "README.md"
+license = "BSD-3-Clause"
+
+[[bin]]
+name = "resolver"
+path = "src/main.rs"
 
 [dependencies]
 crossterm = "0.25.0"
