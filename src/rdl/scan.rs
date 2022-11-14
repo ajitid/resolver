@@ -6,6 +6,8 @@ use crossterm::style::Stylize;
 
 use crate::rdl::error;
 
+const ZERO: char = '\0';
+
 pub const ESCAPE: char  = '\\';
 pub const LBRACE: char  = '{';
 pub const RBRACE: char  = '}';
@@ -80,7 +82,7 @@ pub struct Scanner<'a> {
   text: &'a str,
   data: str::Chars<'a>,
   tokens: Vec<Token>,
-  peek: Option<char>,
+  peek: [char; 2],
   index: usize, // index in text, in bytes
 }
 
@@ -96,7 +98,7 @@ impl<'a> Scanner<'a> {
       text: text,
       data: text.chars(),
       tokens: Vec::new(),
-      peek: None,
+      peek: [ZERO, ZERO],
       index: 0,
     }
   }
@@ -106,17 +108,38 @@ impl<'a> Scanner<'a> {
   }
   
   pub fn peek(&mut self) -> Option<char> {
-    if self.peek == None {
-      self.peek = self.read();
+    self.peek_n(0)
+  }
+  
+  pub fn peek_n(&mut self, idx: usize) -> Option<char> {
+    if idx >= self.peek.len() {
+      return None;
     }
-    self.peek
+    for i in 0..=idx {
+      if self.peek[i] == ZERO {
+        self.peek[i] = match self.read() {
+          Some(c) => c,
+          None => ZERO,
+        };
+      }
+    }
+    let c = self.peek[idx];
+    if c != ZERO {
+      Some(c)
+    }else{
+      None
+    }
   }
   
   pub fn skip(&mut self) {
-    if let Some(c) = self.peek {
+    let n = self.peek.len();
+    if let Some(c) = self.peek() {
       self.index += c.len_utf8();
     }
-    self.peek = self.read();
+    for i in 1..n {
+      self.peek[i-1] = self.peek[i];
+    }
+    self.peek[n-1] = ZERO;
   }
   
   pub fn next(&mut self) -> Option<char> {
@@ -573,6 +596,40 @@ mod tests {
     assert_eq!(Some('r'), t.next());
     assert_eq!(None, t.next());
     assert_eq!(None, t.next());
+  }
+  
+  #[test]
+  fn peek_next_n() {
+    let s = "Foo bar".to_string();
+    let mut t = Scanner::new(&s);
+    assert_eq!(Some('F'), t.peek());
+    assert_eq!(Some('o'), t.peek_n(1));
+    assert_eq!(None,      t.peek_n(2)); // LA is too small
+    assert_eq!(Some('F'), t.peek_n(0));
+    assert_eq!(Some('o'), t.peek_n(1));
+    assert_eq!(Some('F'), t.next());
+    
+    assert_eq!(Some('o'), t.peek_n(0));
+    assert_eq!(Some('o'), t.peek_n(1));
+    assert_eq!(Some('o'), t.next());
+    assert_eq!(Some('o'), t.next());
+    
+    assert_eq!(Some(' '), t.peek_n(0));
+    assert_eq!(Some(' '), t.peek_n(0));
+    assert_eq!(Some('b'), t.peek_n(1));
+    assert_eq!(Some('b'), t.peek_n(1));
+    assert_eq!(Some(' '), t.next());
+    
+    assert_eq!(Some('b'), t.peek_n(0));
+    assert_eq!(Some('a'), t.peek_n(1));
+    assert_eq!(Some('b'), t.next());
+    assert_eq!(Some('a'), t.next());
+    assert_eq!(Some('r'), t.next());
+    
+    assert_eq!(None,      t.peek_n(0));
+    assert_eq!(None,      t.peek_n(1));
+    assert_eq!(None,      t.peek_n(2));
+    assert_eq!(None,      t.next());
   }
   
   #[test]
