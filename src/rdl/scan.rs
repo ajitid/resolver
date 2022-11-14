@@ -523,11 +523,17 @@ impl<'a> Scanner<'a> {
   fn number(&mut self) -> Result<String, error::Error> {
     let mut buf = String::new();
     buf.push_str(&self.integer()?);
-    if let Some(c) = self.peek() {
-      if c == '.' {
-        buf.push(c);
-        self.skip();
-        buf.push_str(&self.integer()?);
+    if let Some(c1) = self.peek_n(0) {
+      if c1 == '.' {
+        if let Some(c2) = self.peek_n(1) {
+          if c2.is_digit(10) {
+            buf.push(c1);
+            self.skip();
+            buf.push(c2);
+            self.skip();
+            buf.push_str(&self.integer()?);
+          }
+        }
       }
     }
     Ok(buf)
@@ -634,6 +640,23 @@ mod tests {
   
   #[test]
   fn next_token() {
+    let s = r#"Hello"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
+    
+    let s = r#"100"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Number, "100", 0..3)), t.token());
+    
+    let s = r#"100.987"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Number, "100.987", 0..7)), t.token());
+    
+    let s = r#"100."#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Number, "100", 0..3)), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, ".", 3..4)), t.token());
+    
     let s = r#"Hello 122"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
@@ -645,6 +668,19 @@ mod tests {
     assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
     assert_eq!(Ok(Token::new(TType::Assign, "=", 5..6)), t.token());
     assert_eq!(Ok(Token::new(TType::Number, "122", 6..9)), t.token());
+    
+    let s = r#"Hello=122.345"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=", 5..6)), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122.345", 6..13)), t.token());
+    
+    let s = r#"Hello=122."#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Ident, "Hello", 0..5)), t.token());
+    assert_eq!(Ok(Token::new(TType::Assign, "=", 5..6)), t.token());
+    assert_eq!(Ok(Token::new(TType::Number, "122", 6..9)), t.token());
+    assert_eq!(Ok(Token::new(TType::Verbatim, ".", 9..10)), t.token());
     
     let s = r#"+-*/%"#; // consuming operators is greedy
     let mut t = Scanner::new(s);
