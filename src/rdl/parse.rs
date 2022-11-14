@@ -199,8 +199,14 @@ impl<'a> Parser<'a> {
         range: tok.range,
         ast: Node::new_number(tok.ttext.parse::<f64>()?),
       },
-      TType::LParen => self.parse_expr()?,
-      _             => return Err(error::Error::TokenNotMatched),
+      TType::LParen => {
+        let exp = self.parse_expr()?;
+        Expr{
+          range: tok.range.start..exp.range.end,
+          ast: exp.ast,
+        }
+      },
+      _ => return Err(error::Error::TokenNotMatched),
     };
     
     self.scan.discard(TType::Whitespace);
