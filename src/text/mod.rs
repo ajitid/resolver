@@ -259,26 +259,6 @@ impl Text {
     }
   }
   
-  pub fn selection<'a>(&'a self) -> &'a Option<ops::Range<usize>> {
-    &self.sel
-  }
-  
-  pub fn selected_text<'a>(&'a self) -> Option<&'a str> {
-    let sel = match &self.sel {
-      Some(sel) => sel,
-      None => return None,
-    };
-    let start = match self.offset_for_index(sel.start) {
-      Some(bix) => bix,
-      None => 0,
-    };
-    let end = match self.offset_for_index(sel.end) {
-      Some(bix) => bix,
-      None => self.len(),
-    };
-    Some(&self.text[start..end])
-  }
-  
   fn line_with_index<'a>(&'a self, idx: usize) -> Option<&'a Line> {
     if self.lines.len() == 0 {
       return None;
@@ -374,6 +354,26 @@ impl Text {
     }
   }
   
+  pub fn selection<'a>(&'a self) -> &'a Option<ops::Range<usize>> {
+    &self.sel
+  }
+  
+  pub fn selected_text<'a>(&'a self) -> Option<&'a str> {
+    let sel = match &self.sel {
+      Some(sel) => sel,
+      None => return None,
+    };
+    let start = match self.offset_for_index(sel.start) {
+      Some(bix) => bix,
+      None => 0,
+    };
+    let end = match self.offset_for_index(sel.end) {
+      Some(bix) => bix,
+      None => self.len(),
+    };
+    Some(&self.text[start..end])
+  }
+  
   fn reflow(&mut self) -> &mut Self {
     self.lines = layout::layout(&self.text, self.width);
     self
@@ -386,7 +386,7 @@ impl Text {
     };
     match action.operation {
       Operation::Move   => Some(dest), // nothing to do
-      Operation::Select => Some(dest), // not currently supported
+      Operation::Select => self.select(min(idx, dest.index)..max(idx, dest.index)),
       Operation::Delete => self.delete(min(idx, dest.index)..max(idx, dest.index)),
     }
   }
@@ -655,6 +655,32 @@ impl Text {
     self.text.replace_range(start..end, "");
     self.reflow();
     Some(self.index(start))
+  }
+  
+  pub fn select(&mut self, rng: Option<ops::Range<usize>>) -> Option<Pos> {
+    let rng = match rng {
+      Some(rng) => rng,
+      None => {
+        self.sel = None;
+        return None;
+      },
+    };
+    
+    let start = match self.offset_for_index(rng.start) {
+      Some(start) => start,
+      None => return None,
+    };
+    let end = match self.offset_for_index(rng.end) {
+      Some(end) => end,
+      None => self.next_offset(),
+    };
+    let sel = match self.sel {
+      Some(sel) => min(start, sel.start)..max(end, sel.end),
+      None => start..end,
+    };
+    
+    self.sel = Some(sel);
+    Some(self.index(end))
   }
   
   // TODO: deprecated below; these can be replaced by edit() operations.
