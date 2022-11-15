@@ -139,6 +139,11 @@ impl Editor {
         modifiers: event::KeyModifiers::NONE,
         ..
       } => self.pos = self.text.insert_rel('\n'),
+      event::KeyEvent{
+        code: event::KeyCode::Tab,
+        modifiers: event::KeyModifiers::NONE,
+        ..
+      } => self.pos = self.text.insert_rel(' '),
 
       _ => {},
     };

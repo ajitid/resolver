@@ -101,7 +101,7 @@ impl<'a> Iterator for Lines<'a> {
     let boff = line.boff;
     let mut bext = line.bext;
     
-    for i in self.idx..self.metrics.len() {
+    for _ in self.idx..self.metrics.len() {
       let line = &self.metrics[self.idx];
       bext = line.boff + line.bytes;
       self.idx += 1;
@@ -212,6 +212,7 @@ pub struct Text {
   width: usize,
   lines: Vec<Line>,
   spans: Option<Vec<attrs::Span>>,
+  sel: Option<ops::Range<usize>>,
   loc: usize,
 }
 
@@ -222,6 +223,7 @@ impl Text {
       width: width,
       lines: Vec::new(),
       spans: None,
+      sel: None,
       loc: 0,
     }
   }
@@ -232,6 +234,7 @@ impl Text {
       width: width,
       lines: Vec::new(),
       spans: None,
+      sel: None,
       loc: 0,
     };
     c.reflow();
@@ -254,6 +257,26 @@ impl Text {
       text: &self.text,
       metrics: &self.lines,
     }
+  }
+  
+  pub fn selection<'a>(&'a self) -> &'a Option<ops::Range<usize>> {
+    &self.sel
+  }
+  
+  pub fn selected_text<'a>(&'a self) -> Option<&'a str> {
+    let sel = match &self.sel {
+      Some(sel) => sel,
+      None => return None,
+    };
+    let start = match self.offset_for_index(sel.start) {
+      Some(bix) => bix,
+      None => 0,
+    };
+    let end = match self.offset_for_index(sel.end) {
+      Some(bix) => bix,
+      None => self.len(),
+    };
+    Some(&self.text[start..end])
   }
   
   fn line_with_index<'a>(&'a self, idx: usize) -> Option<&'a Line> {

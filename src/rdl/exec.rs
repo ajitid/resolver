@@ -18,6 +18,8 @@ impl Context {
   pub fn new_with_stdlib() -> Context {
     let mut vars = HashMap::new();
     vars.insert("pi".to_string(), unit::Value::raw(std::f64::consts::PI));
+    vars.insert("tau".to_string(), unit::Value::raw(std::f64::consts::TAU));
+    vars.insert("E".to_string(), unit::Value::raw(std::f64::consts::E));
     Context{
       vars: vars,
     }
