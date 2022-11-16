@@ -354,8 +354,8 @@ impl Text {
     }
   }
   
-  pub fn selection<'a>(&'a self) -> &'a Option<ops::Range<usize>> {
-    &self.sel
+  pub fn selection(&self) -> Option<ops::Range<usize>> {
+    self.sel.clone()
   }
   
   pub fn selected_text<'a>(&'a self) -> Option<&'a str> {
@@ -386,7 +386,7 @@ impl Text {
     };
     match action.operation {
       Operation::Move   => Some(dest), // nothing to do
-      Operation::Select => self.select(min(idx, dest.index)..max(idx, dest.index)),
+      Operation::Select => self.select(Some(min(idx, dest.index)..max(idx, dest.index)), true),
       Operation::Delete => self.delete(min(idx, dest.index)..max(idx, dest.index)),
     }
   }
@@ -657,7 +657,7 @@ impl Text {
     Some(self.index(start))
   }
   
-  pub fn select(&mut self, rng: Option<ops::Range<usize>>) -> Option<Pos> {
+  pub fn select(&mut self, rng: Option<ops::Range<usize>>, extend: bool) -> Option<Pos> {
     let rng = match rng {
       Some(rng) => rng,
       None => {
@@ -666,21 +666,23 @@ impl Text {
       },
     };
     
-    let start = match self.offset_for_index(rng.start) {
-      Some(start) => start,
-      None => return None,
+    let sel = if extend {
+      match &self.sel {
+        Some(sel) => min(sel.start, rng.start)..max(sel.end, rng.end),
+        None => rng.clone(),
+      }
+    }else{
+      rng.clone()
     };
-    let end = match self.offset_for_index(rng.end) {
-      Some(end) => end,
-      None => self.next_offset(),
-    };
-    let sel = match self.sel {
-      Some(sel) => min(start, sel.start)..max(end, sel.end),
-      None => start..end,
+    
+    let dst = if rng.end > self.loc {
+      rng.end
+    }else{
+      rng.start
     };
     
     self.sel = Some(sel);
-    Some(self.index(end))
+    Some(self.index(dst))
   }
   
   // TODO: deprecated below; these can be replaced by edit() operations.
@@ -1295,5 +1297,31 @@ mod tests {
     assert_eq!(Some(("c'est époustouflant!", 5)), it.next());
     assert_eq!(Some(("D'acc, à bientôt...", 4)), it.next());
     assert_eq!(None, it.next());
+  }
+  
+  #[test]
+  fn test_select() {
+    let t = "Très bien,\nc'est époustouflant!\nD'acc, à bientôt...";
+    let mut x = Text::new_with_str(100, t);
+    
+    assert_eq!(Some(Pos{index: 10, x: 10, y: 0}), x.select(Some( 0..10), true));
+    assert_eq!(Some(0..10), x.selection());
+    assert_eq!(Some("Très bien,"), x.selected_text());
+    
+    assert_eq!(Some(Pos{index: 31, x: 20, y: 1}), x.select(Some(10..31), true));
+    assert_eq!(Some(0..31), x.selection());
+    assert_eq!(Some("Très bien,\nc'est époustouflant!"), x.selected_text());
+    
+    assert_eq!(None, x.select(None, true));
+    assert_eq!(None, x.selection());
+    assert_eq!(None, x.selected_text());
+    
+    assert_eq!(Some(Pos{index: 31, x: 20, y: 1}), x.select(Some(10..31), true));
+    assert_eq!(Some(10..31), x.selection());
+    assert_eq!(Some("\nc'est époustouflant!"), x.selected_text());
+    
+    assert_eq!(Some(Pos{index: 5, x: 5, y: 0}), x.select(Some(5..10), true));
+    assert_eq!(Some(5..31), x.selection());
+    assert_eq!(Some("bien,\nc'est époustouflant!"), x.selected_text());
   }
 }
