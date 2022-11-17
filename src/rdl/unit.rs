@@ -1,6 +1,8 @@
 use std::fmt;
 use std::ops;
 
+use crate::util;
+
 const CONVERSION: [[f64; 11]; 11] = [
  //                 Teaspoon,     Tablespoon,         Cup,                 Quart,               Gallon,              Liter,               Deciliter,           Centiliter,        Milliliter,        Gram,      Kilogram,
  /* Teaspoon */   [ 1.0,          1.0 / 3.0,          0.0208333333333333,  0.0052083333333333,  0.0013020833333333,  0.0049289249029002,  0.0492892490290018,  4.92892490290018,  4928.92490290018,  0.0,       0.0 ],
@@ -254,18 +256,8 @@ impl Value {
   }
 }
 
-fn coalesce<T>(a: Option<T>, b: Option<T>) -> Option<T> {
-  if let Some(a) = a {
-    Some(a)
-  }else if let Some(b) = b {
-    Some(b)
-  }else{
-    None
-  }
-}
-
 fn operands(left: Value, right: Value) -> (Option<Unit>, Value, Value) {
-  let target = coalesce(right.unit, left.unit);
+  let target = util::coalesce(right.unit, left.unit);
   let left = match left.convert(target) {
     Some(conv) => conv,
     None => left.untype(),

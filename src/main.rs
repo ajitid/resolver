@@ -5,6 +5,7 @@ mod options;
 mod error;
 mod rdl;
 mod text;
+mod util;
 
 use std::time;
 use std::io::stdout;

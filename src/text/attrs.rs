@@ -3,6 +3,8 @@ use std::cmp::{min, max, Ordering};
 
 use crossterm::style::{Stylize, Color};
 
+use crate::util;
+
 #[derive(Debug, Clone, Copy)]
 pub enum Mode {
   Terminal,
@@ -17,6 +19,14 @@ pub struct Attributes {
 }
 
 impl Attributes {
+  pub fn merged(&self, with: &Attributes) -> Attributes {
+    Attributes{
+      bold: self.bold || with.bold,
+      invert: self.invert || with.invert,
+      color: util::coalesce(self.color, with.color),
+    }
+  }
+  
   pub fn render(&self, text: &str) -> String {
     self.render_with_mode(text, Mode::Terminal)
   }
@@ -190,6 +200,16 @@ fn render_with_options(text: &str, boff: usize, spans: &Vec<Span>, mode: Mode) -
 #[cfg(test)]
 mod tests {
   use super::*;
+  
+  #[test]
+  fn merge_attributes() {
+    let a = Attributes{bold:true,  invert: false, color: None};
+    let b = Attributes{bold:false, invert: true,  color: None};
+    let c = Attributes{bold:false, invert: false, color: Some(Color::Blue)};
+    
+    assert_eq!(Attributes{bold:true,  invert: true, color: None}, a.merged(&b));
+    assert_eq!(Attributes{bold:false, invert: true, color: Some(Color::Blue)}, c.merged(&b));
+  }
   
   #[test]
   fn render_attributes() {

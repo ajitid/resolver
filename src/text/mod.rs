@@ -400,7 +400,7 @@ impl Text {
     pos
   }
   
-  pub fn to(&self, idx: usize, mvmt: Movement) -> Option<Pos> {
+  fn to(&self, idx: usize, mvmt: Movement) -> Option<Pos> {
     match mvmt {
       Movement::Up          => Some(self.up(idx)),
       Movement::Right       => Some(self.right(idx)),
@@ -414,12 +414,23 @@ impl Text {
     }
   }
   
-  pub fn to_rel(&mut self, movement: Movement) -> Pos {
+  fn to_rel(&mut self, movement: Movement) -> Pos {
     let pos = match self.to(self.loc, movement) {
       Some(pos) => pos,
       None => self.index(self.loc),
     };
     self.loc = pos.index;
+    pos
+  }
+  
+  fn to_abs(&mut self, idx: usize) -> Pos {
+    let idx = if idx > self.len() {
+      self.next_offset()
+    }else{
+      idx
+    };
+    let pos = self.index(idx);
+    self.loc = idx;
     pos
   }
   
@@ -657,6 +668,15 @@ impl Text {
     Some(self.index(start))
   }
   
+  pub fn delete_rel(&mut self, rng: ops::Range<usize>) -> Pos {
+    let pos = match self.delete(rng) {
+      Some(pos) => pos,
+      None => return self.index(self.loc),
+    };
+    self.loc = pos.index;
+    pos
+  }
+  
   pub fn select(&mut self, rng: Option<ops::Range<usize>>, extend: bool) -> Option<Pos> {
     let rng = match rng {
       Some(rng) => rng,
@@ -683,6 +703,15 @@ impl Text {
     
     self.sel = Some(sel);
     Some(self.index(dst))
+  }
+  
+  pub fn select_rel(&mut self, rng: Option<ops::Range<usize>>, extend: bool) -> Pos {
+    let pos = match self.select(rng, extend) {
+      Some(pos) => pos,
+      None => return self.index(self.loc),
+    };
+    self.loc = pos.index;
+    pos
   }
   
   // TODO: deprecated below; these can be replaced by edit() operations.
@@ -1304,23 +1333,25 @@ mod tests {
     let t = "Très bien,\nc'est époustouflant!\nD'acc, à bientôt...";
     let mut x = Text::new_with_str(100, t);
     
-    assert_eq!(Some(Pos{index: 10, x: 10, y: 0}), x.select(Some( 0..10), true));
+    assert_eq!(Pos{index: 10, x: 10, y: 0}, x.select_rel(Some( 0..10), true));
     assert_eq!(Some(0..10), x.selection());
     assert_eq!(Some("Très bien,"), x.selected_text());
     
-    assert_eq!(Some(Pos{index: 31, x: 20, y: 1}), x.select(Some(10..31), true));
+    assert_eq!(Pos{index: 31, x: 20, y: 1}, x.select_rel(Some(10..31), true));
     assert_eq!(Some(0..31), x.selection());
     assert_eq!(Some("Très bien,\nc'est époustouflant!"), x.selected_text());
     
-    assert_eq!(None, x.select(None, true));
+    assert_eq!(Pos{index: 31, x: 20, y: 1}, x.select_rel(None, true));
     assert_eq!(None, x.selection());
     assert_eq!(None, x.selected_text());
     
-    assert_eq!(Some(Pos{index: 31, x: 20, y: 1}), x.select(Some(10..31), true));
+    x.to_abs(0);
+    
+    assert_eq!(Pos{index: 31, x: 20, y: 1}, x.select_rel(Some(10..31), true));
     assert_eq!(Some(10..31), x.selection());
     assert_eq!(Some("\nc'est époustouflant!"), x.selected_text());
     
-    assert_eq!(Some(Pos{index: 5, x: 5, y: 0}), x.select(Some(5..10), true));
+    assert_eq!(Pos{index: 5, x: 5, y: 0}, x.select_rel(Some(5..10), true));
     assert_eq!(Some(5..31), x.selection());
     assert_eq!(Some("bien,\nc'est époustouflant!"), x.selected_text());
   }
