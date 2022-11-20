@@ -91,7 +91,10 @@ impl PartialOrd for Span {
 
 impl Ord for Span {
   fn cmp(&self, other: &Self) -> Ordering {
-    self.range.start.cmp(&other.range.start)
+    match self.range.start.cmp(&other.range.start) {
+      Ordering::Equal => self.range.end.cmp(&other.range.end),
+      ord             => ord,
+    }
   }
 }
 
@@ -157,6 +160,61 @@ impl Attributed {
   }
 }
 
+pub fn merge(a: Vec<Span>, b: Vec<Span>) -> Vec<Span> {
+  let mut res: Vec<Span> = Vec::new();
+  let mut dup: Vec<Span> = Vec::with_capacity(a.len() + b.len());
+  
+  dup.extend(a);
+  dup.extend(b);
+  dup.sort();
+  
+  let mut boff = 0;
+  loop {
+    match dup.len() {
+      0 => break,
+      1 => {
+        res.push(Span{
+          range: boff..dup[0].range.end,
+          attrs: dup[0].attrs.clone(),
+        });
+        break;
+      },
+      _ => {
+        let x = &dup[0];
+        let y = &dup[1];
+
+        if x.range.start < y.range.start {
+          let end = min(x.range.end, y.range.start);
+          res.push(Span{
+            range: boff..end,
+            attrs: x.attrs.clone(),
+          });
+          boff = end;
+        }
+
+        if x.range.end > y.range.start {
+          let end = min(x.range.end, y.range.end);
+          res.push(Span{
+            range: boff..end,
+            attrs: x.attrs.merged(&y.attrs),
+          });
+          boff = end;
+        }
+        
+        while dup.len() > 0 {
+          if dup[0].range.end <= boff {
+            dup.remove(0);
+          }else{
+            break;
+          }
+        }
+      },
+    };
+  }
+  
+  res
+}
+
 pub fn render(text: &str, spans: &Vec<Span>) -> String {
   render_with_mode(text, spans, Mode::Terminal)
 }
@@ -209,6 +267,24 @@ mod tests {
     
     assert_eq!(Attributes{bold:true,  invert: true, color: None}, a.merged(&b));
     assert_eq!(Attributes{bold:false, invert: true, color: Some(Color::Blue)}, c.merged(&b));
+  }
+  
+  #[test]
+  fn merge_spans() {
+    let a = vec![Span::new(0..5, Attributes{bold:true,  invert: false, color: None})];
+    let b = vec![Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)})];
+    assert_eq!(vec![
+      Span::new(0..3, Attributes{bold:true, invert: false, color: None}),
+      Span::new(3..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)}),
+    ], merge(a, b));
+    
+    let a = vec![Span::new(0..5, Attributes{bold:false, invert: false, color: None})];
+    let b = vec![Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)})];
+    let c = vec![Span::new(3..5, Attributes{bold:true,  invert: true,  color: None})];
+    assert_eq!(vec![
+      Span::new(0..3, Attributes{bold:false, invert: false, color: None}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: Some(Color::Blue)}),
+    ], merge(a, b));
   }
   
   #[test]
