@@ -168,41 +168,47 @@ pub fn merge(a: Vec<Span>, b: Vec<Span>) -> Vec<Span> {
   dup.extend(b);
   dup.sort();
   
-  let mut boff = 0;
   loop {
     match dup.len() {
       0 => break,
       1 => {
-        res.push(Span{
-          range: boff..dup[0].range.end,
-          attrs: dup[0].attrs.clone(),
-        });
+        res.push(dup[0].clone());
         break;
       },
       _ => {
-        let x = &dup[0];
-        let y = &dup[1];
-
-        if x.range.start < y.range.start {
-          let end = min(x.range.end, y.range.start);
-          res.push(Span{
-            range: boff..end,
-            attrs: x.attrs.clone(),
-          });
-          boff = end;
-        }
-
-        if x.range.end > y.range.start {
-          let end = min(x.range.end, y.range.end);
-          res.push(Span{
-            range: boff..end,
-            attrs: x.attrs.merged(&y.attrs),
-          });
-          boff = end;
+        if dup[0].range.end > dup[1].range.start {
+            if dup[0].range.start < dup[1].range.start {
+              res.push(Span{
+                range: dup[0].range.start..dup[1].range.start,
+                attrs: dup[0].attrs.clone(),
+              });
+              dup[0] = Span{
+                range: dup[1].range.start..dup[0].range.end,
+                attrs: dup[0].attrs.clone(),
+              };
+            }
+            let (end, nxt, attrs) = if dup[0].range.end < dup[1].range.end {
+              (dup[0].range.end, dup[1].range.end, dup[1].attrs.clone())
+            }else{
+              (dup[1].range.end, dup[0].range.end, dup[0].attrs.clone())
+            };
+            dup[0] = Span{
+              range: dup[1].range.start..end,
+              attrs: dup[0].attrs.merged(&dup[1].attrs),
+            };
+            if nxt == end {
+              dup.remove(1);
+            }else{
+              dup[1] = Span{
+                range: end..nxt,
+                attrs: attrs,
+              };
+            }
         }
         
-        while dup.len() > 0 {
-          if dup[0].range.end <= boff {
+        while dup.len() > 1 {
+          if dup[0].range.end <= dup[1].range.start {
+            res.push(dup[0].clone());
             dup.remove(0);
           }else{
             break;
@@ -271,16 +277,24 @@ mod tests {
   
   #[test]
   fn merge_spans() {
-    let a = vec![Span::new(0..5, Attributes{bold:true,  invert: false, color: None})];
-    let b = vec![Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)})];
+    let a = vec![
+      Span::new(0..5, Attributes{bold:true,  invert: false, color: None})
+    ];
+    let b = vec![
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)})
+    ];
     assert_eq!(vec![
       Span::new(0..3, Attributes{bold:true, invert: false, color: None}),
       Span::new(3..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)}),
     ], merge(a, b));
     
-    let a = vec![Span::new(0..5, Attributes{bold:false, invert: false, color: None})];
-    let b = vec![Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)})];
-    let c = vec![Span::new(3..5, Attributes{bold:true,  invert: true,  color: None})];
+    let a = vec![
+      Span::new(0..5, Attributes{bold:false, invert: false, color: None})
+    ];
+    let b = vec![
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None})
+    ];
     assert_eq!(vec![
       Span::new(0..3, Attributes{bold:false, invert: false, color: None}),
       Span::new(3..5, Attributes{bold:true,  invert: true,  color: Some(Color::Blue)}),
