@@ -16,6 +16,7 @@ pub struct Attributes {
   pub bold: bool,
   pub invert: bool,
   pub color: Option<Color>,
+  pub background: Option<Color>,
 }
 
 impl Attributes {
@@ -24,6 +25,7 @@ impl Attributes {
       bold: self.bold || with.bold,
       invert: self.invert || with.invert,
       color: util::coalesce(self.color, with.color),
+      background: util::coalesce(self.background, with.background),
     }
   }
   
@@ -49,6 +51,9 @@ impl Attributes {
     if let Some(color) = self.color {
       styled = styled.with(color);
     }
+    if let Some(background) = self.background {
+      styled = styled.on(background);
+    }
     styled.to_string()
   }
   
@@ -60,12 +65,18 @@ impl Attributes {
     if self.invert {
       attrd.push_str("<invert>");
     }
+    if let Some(background) = self.background {
+      attrd.push_str(&format!("<bg:{:?}>", background));
+    }
     if let Some(color) = self.color {
-      attrd.push_str(&format!("<{:?}>", color));
+      attrd.push_str(&format!("<fg:{:?}>", color));
     }
     attrd.push_str(text);
     if let Some(color) = self.color {
-      attrd.push_str(&format!("</{:?}>", color));
+      attrd.push_str(&format!("</fg:{:?}>", color));
+    }
+    if let Some(background) = self.background {
+      attrd.push_str(&format!("</bg:{:?}>", background));
     }
     if self.invert {
       attrd.push_str("</invert>");
@@ -267,62 +278,62 @@ mod tests {
   
   #[test]
   fn merge_attributes() {
-    let a = Attributes{bold:true,  invert: false, color: None};
-    let b = Attributes{bold:false, invert: true,  color: None};
-    let c = Attributes{bold:false, invert: false, color: Some(Color::Blue)};
+    let a = Attributes{bold:true,  invert: false, color: None, background: None};
+    let b = Attributes{bold:false, invert: true,  color: None, background: None};
+    let c = Attributes{bold:false, invert: false, color: Some(Color::Blue), background: None};
     
-    assert_eq!(Attributes{bold:true,  invert: true, color: None}, a.merged(&b));
-    assert_eq!(Attributes{bold:false, invert: true, color: Some(Color::Blue)}, c.merged(&b));
+    assert_eq!(Attributes{bold:true,  invert: true, color: None, background: None}, a.merged(&b));
+    assert_eq!(Attributes{bold:false, invert: true, color: Some(Color::Blue), background: None}, c.merged(&b));
   }
   
   #[test]
   fn merge_spans() {
     let a = vec![
-      Span::new(0..5, Attributes{bold:true,  invert: false, color: None}),
+      Span::new(0..5, Attributes{bold:true,  invert: false, color: None, background: None}),
     ];
     let b = vec![
-      Span::new(0..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
+      Span::new(0..5, Attributes{bold:false, invert: false, color: Some(Color::Blue), background: None}),
     ];
     assert_eq!(vec![
-      Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)}),
+      Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue), background: None}),
     ], merge(a, b));
     
     let a = vec![
-      Span::new(0..5, Attributes{bold:true,  invert: false, color: None}),
+      Span::new(0..5, Attributes{bold:true,  invert: false, color: None, background: None}),
     ];
     let b = vec![
-      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue), background: None}),
     ];
     assert_eq!(vec![
-      Span::new(0..3, Attributes{bold:true, invert: false, color: None}),
-      Span::new(3..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)}),
+      Span::new(0..3, Attributes{bold:true, invert: false, color: None, background: None}),
+      Span::new(3..5, Attributes{bold:true, invert: false, color: Some(Color::Blue), background: None}),
     ], merge(a, b));
     
     let a = vec![
-      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
-      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None}),
-      Span::new(0..5, Attributes{bold:false, invert: false, color: None}),
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue), background: None}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None, background: None}),
+      Span::new(0..5, Attributes{bold:false, invert: false, color: None, background: None}),
     ];
     let b = vec![
-      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
-      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None}),
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue), background: None}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None, background: None}),
     ];
     assert_eq!(vec![
-      Span::new(0..3, Attributes{bold:false, invert: false, color: None}),
-      Span::new(3..5, Attributes{bold:true,  invert: true,  color: Some(Color::Blue)}),
+      Span::new(0..3, Attributes{bold:false, invert: false, color: None, background: None}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: Some(Color::Blue), background: None}),
     ], merge(a, b));
     
     let a = vec![
-      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Red)}), // first non-null color prevails
-      Span::new(0..5, Attributes{bold:false, invert: false, color: None}),
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Red), background: None}), // first non-null color prevails
+      Span::new(0..5, Attributes{bold:false, invert: false, color: None, background: None}),
     ];
     let b = vec![
-      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None}),
-      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None, background: None}),
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue), background: None}),
     ];
     assert_eq!(vec![
-      Span::new(0..3, Attributes{bold:false, invert: false, color: None}),
-      Span::new(3..5, Attributes{bold:true,  invert: true,  color: Some(Color::Red)}),
+      Span::new(0..3, Attributes{bold:false, invert: false, color: None, background: None}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: Some(Color::Red), background: None}),
     ], merge(a, b));
   }
   
@@ -330,14 +341,14 @@ mod tests {
   fn render_attributes() {
     let t = "Hello, there.";
     
-    let a = vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None})];
+    let a = vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None, background: None})];
     assert_eq!("<b>Hello</b>, there.", render_with_mode(t, &a, Mode::Markup));
     
-    let a = vec![Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)})];
-    assert_eq!("<b><Blue>Hello</Blue></b>, there.", render_with_mode(t, &a, Mode::Markup));
+    let a = vec![Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue), background: None})];
+    assert_eq!("<b><fg:Blue>Hello</fg:Blue></b>, there.", render_with_mode(t, &a, Mode::Markup));
     
-    let a = vec![Span::new(7..12, Attributes{bold:false, invert: false, color: Some(Color::Green)}), Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)})];
-    assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", render_with_mode(t, &a, Mode::Markup));
+    let a = vec![Span::new(7..12, Attributes{bold:false, invert: false, color: Some(Color::Green), background: None}), Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue), background: None})];
+    assert_eq!("<b><fg:Blue>Hello</fg:Blue></b>, <fg:Green>there</fg:Green>.", render_with_mode(t, &a, Mode::Markup));
   }
   
   #[test]
@@ -346,28 +357,28 @@ mod tests {
     let x = 7;
     let p = &t[x..];
     
-    let a = vec![Span::new(7..12, Attributes{bold:false, invert: false, color: Some(Color::Green)}), Span::new(12..13, Attributes{bold:true, invert: false, color: None})];
-    assert_eq!("<Green>there</Green><b>.</b>", render_with_options(p, x, &a, Mode::Markup));
+    let a = vec![Span::new(7..12, Attributes{bold:false, invert: false, color: Some(Color::Green), background: None}), Span::new(12..13, Attributes{bold:true, invert: false, color: None, background: None})];
+    assert_eq!("<fg:Green>there</fg:Green><b>.</b>", render_with_options(p, x, &a, Mode::Markup));
   }
   
   #[test]
   fn render_attributed() {
     let t = "Hello, there.";
     
-    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None})]);
+    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None, background: None})]);
     assert_eq!("<b>Hello</b>, there.", a.render_with_mode(Mode::Markup));
     
-    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None})]);
+    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: None, background: None})]);
     assert_eq!("<b>Hello</b>, there.", a.render_with_mode(Mode::Markup));
     
-    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)})]);
-    assert_eq!("<b><Blue>Hello</Blue></b>, there.", a.render_with_mode(Mode::Markup));
+    let a = Attributed::new_with_str(t, vec![Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue), background: None})]);
+    assert_eq!("<b><fg:Blue>Hello</fg:Blue></b>, there.", a.render_with_mode(Mode::Markup));
     
     let a = Attributed::new_with_str(t, vec![
-      Span::new(7..12, Attributes{bold:false, invert: false, color: Some(Color::Green)}), // deliberately out of order
-      Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)})
+      Span::new(7..12, Attributes{bold:false, invert: false, color: Some(Color::Green), background: None}), // deliberately out of order
+      Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue), background: None})
     ]);
-    assert_eq!("<b><Blue>Hello</Blue></b>, <Green>there</Green>.", a.render_with_mode(Mode::Markup));
+    assert_eq!("<b><fg:Blue>Hello</fg:Blue></b>, <fg:Green>there</fg:Green>.", a.render_with_mode(Mode::Markup));
   }
   
 }

@@ -51,11 +51,11 @@ impl Writer {
     let mut cxt = exec::Context::new_with_stdlib();
     
     let style = vec![
-      attrs::Attributes{bold: true, invert: false, color: Some(Color::Yellow)},
-      attrs::Attributes{bold: true, invert: false, color: Some(Color::Magenta)},
-      attrs::Attributes{bold: true, invert: false, color: Some(Color::Cyan)},
-      attrs::Attributes{bold: true, invert: false, color: Some(Color::Green)},
-      attrs::Attributes{bold: true, invert: false, color: Some(Color::Blue)},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Yellow), background: None},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Magenta), background: None},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Cyan), background: None},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Green), background: None},
+      attrs::Attributes{bold: true, invert: false, color: Some(Color::Blue), background: None},
     ];
     
     let opts = rdl::Options{
@@ -89,7 +89,7 @@ impl Writer {
   }
   
   fn draw_gutter(&self, width: usize, height: usize, nlines: usize) -> Content {
-    let style = attrs::Attributes{bold: true, invert: false, color: None};
+    let style = attrs::Attributes{bold: true, invert: false, color: None, background: None};
     
     let mut text = String::new();
     let mut spns: Vec<attrs::Span> = Vec::new();

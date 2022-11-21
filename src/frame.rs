@@ -1,9 +1,11 @@
 use crossterm::queue;
+use crossterm::style;
 use crossterm::cursor;
 use crossterm::terminal;
 
 use crate::error;
 use crate::text::{Renderable, Pos};
+use crate::text::attrs;
 use crate::buffer::Buffer;
 use crate::options;
 
@@ -25,6 +27,7 @@ impl Frame {
   }
   
   pub fn write_cols(&self, cols: Vec<&dyn Renderable>, height: usize, buf: &mut Buffer, vpos: &Pos) -> Result<usize, error::Error> {
+    let highlight: attrs::Attributes = attrs::Attributes{bold: false, invert: false, color: None, background: Some(style::Color::Grey)};
     let lines: Vec<usize> = cols.iter().map(|t| { t.num_lines() }).collect();
     let lmax: usize = match lines.iter().reduce(|a, b| {
       if a > b { a } else { b }
@@ -43,13 +46,22 @@ impl Frame {
         }else{
           0
         };
-        let (n, b) = c.write_line(i, buf);
+        let (n, b) = if i == vpos.y {
+          c.write_line_with_attrs(i, buf, Some(&vec![attrs::Span::new(0..c.width(), highlight.clone())]))
+        }else{
+          c.write_line(i, buf)
+        };
         if self.opts.debug_editor {
           buf.push_str(&format!(" {} {} ({}, {})", n, b, vpos.x, vpos.y));
         }
         let w = c.width();
         if n < w - adj {
-          buf.push_str(&" ".repeat(w - adj - n));
+          let pad = " ".repeat(w - adj - n);
+          if i == vpos.y {
+            buf.push_str(&attrs::render(&pad, &vec![attrs::Span::new(0..c.width(), highlight.clone())]));
+          }else{
+            buf.push_str(&pad);
+          }
         }
       }
       if i < height - 1 {
