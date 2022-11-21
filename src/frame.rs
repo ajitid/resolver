@@ -27,7 +27,9 @@ impl Frame {
   }
   
   pub fn write_cols(&self, cols: Vec<&dyn Renderable>, height: usize, buf: &mut Buffer, vpos: &Pos) -> Result<usize, error::Error> {
-    let highlight: attrs::Attributes = attrs::Attributes{bold: false, invert: false, color: None, background: Some(style::Color::Grey)};
+    let highlight: attrs::Attributes = attrs::Attributes{
+      bold: false, invert: false, color: None, background: Some(style::Color::Rgb{r: 10, g: 10, b: 10}),
+    };
     let lines: Vec<usize> = cols.iter().map(|t| { t.num_lines() }).collect();
     let lmax: usize = match lines.iter().reduce(|a, b| {
       if a > b { a } else { b }
