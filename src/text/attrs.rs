@@ -278,10 +278,20 @@ mod tests {
   #[test]
   fn merge_spans() {
     let a = vec![
-      Span::new(0..5, Attributes{bold:true,  invert: false, color: None})
+      Span::new(0..5, Attributes{bold:true,  invert: false, color: None}),
     ];
     let b = vec![
-      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)})
+      Span::new(0..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
+    ];
+    assert_eq!(vec![
+      Span::new(0..5, Attributes{bold:true, invert: false, color: Some(Color::Blue)}),
+    ], merge(a, b));
+    
+    let a = vec![
+      Span::new(0..5, Attributes{bold:true,  invert: false, color: None}),
+    ];
+    let b = vec![
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
     ];
     assert_eq!(vec![
       Span::new(0..3, Attributes{bold:true, invert: false, color: None}),
@@ -289,15 +299,28 @@ mod tests {
     ], merge(a, b));
     
     let a = vec![
-      Span::new(0..5, Attributes{bold:false, invert: false, color: None})
+      Span::new(0..5, Attributes{bold:false, invert: false, color: None}),
     ];
     let b = vec![
       Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
-      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None})
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None}),
     ];
     assert_eq!(vec![
       Span::new(0..3, Attributes{bold:false, invert: false, color: None}),
       Span::new(3..5, Attributes{bold:true,  invert: true,  color: Some(Color::Blue)}),
+    ], merge(a, b));
+    
+    let a = vec![
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Red)}), // first non-null color prevails
+      Span::new(0..5, Attributes{bold:false, invert: false, color: None}),
+    ];
+    let b = vec![
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None}),
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
+    ];
+    assert_eq!(vec![
+      Span::new(0..3, Attributes{bold:false, invert: false, color: None}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: Some(Color::Red)}),
     ], merge(a, b));
   }
   
