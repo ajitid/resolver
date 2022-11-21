@@ -299,6 +299,8 @@ mod tests {
     ], merge(a, b));
     
     let a = vec![
+      Span::new(3..5, Attributes{bold:false, invert: false, color: Some(Color::Blue)}),
+      Span::new(3..5, Attributes{bold:true,  invert: true,  color: None}),
       Span::new(0..5, Attributes{bold:false, invert: false, color: None}),
     ];
     let b = vec![
