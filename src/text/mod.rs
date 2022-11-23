@@ -116,6 +116,7 @@ impl<'a> Iterator for Lines<'a> {
 
 pub trait Storage {
   fn width(&self) -> usize;
+  fn attributes<'a>(&'a self) -> Option<&'a Vec<attrs::Span>>;
   fn num_lines(&self) -> usize;
   fn line_metrics<'a>(&'a self, i: usize) -> Option<&'a Line>;
   fn line_text<'a>(&'a self, i: usize) -> Option<&'a str>;
@@ -162,6 +163,13 @@ impl Content {
 impl Storage for Content {
   fn width(&self) -> usize {
     self.width
+  }
+  
+  fn attributes<'a>(&'a self) -> Option<&'a Vec<attrs::Span>> {
+    match &self.spans {
+      Some(spans) => Some(spans),
+      None => None,
+    }
   }
   
   fn num_lines(&self) -> usize {
@@ -740,6 +748,13 @@ impl Text {
 impl Storage for Text {
   fn width(&self) -> usize {
     self.width
+  }
+  
+  fn attributes<'a>(&'a self) -> Option<&'a Vec<attrs::Span>> {
+    match &self.spans {
+      Some(spans) => Some(spans),
+      None => None,
+    }
   }
   
   fn num_lines(&self) -> usize {

@@ -49,7 +49,12 @@ impl Frame {
           0
         };
         let (n, b) = if i == vpos.y {
-          c.write_line_with_attrs(i, buf, Some(&vec![attrs::Span::new(0..c.width(), highlight.clone())]))
+          let hspan = vec![attrs::Span::new(0..c.width(), highlight.clone())];
+          let attrs = match c.attributes() {
+            Some(v) => attrs::merge(v.clone(), hspan),
+            None => hspan,
+          };
+          c.write_line_with_attrs(i, buf, Some(&attrs))
         }else{
           c.write_line(i, buf)
         };
