@@ -281,6 +281,10 @@ mod tests {
     assert_eq!(Node::new_number(1.0), n);
     assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
     
+    let n = parse_expr(r#"1.0"#).expect("Could not parse");
+    assert_eq!(Node::new_number(1.0), n);
+    assert_eq!(Ok(unit::Value::raw(1.0)), exec_node(n, &mut cxt));
+    
     let n = parse_expr(r#"123.456"#).expect("Could not parse");
     assert_eq!(Node::new_number(123.456), n);
     assert_eq!(Ok(unit::Value::raw(123.456)), exec_node(n, &mut cxt));

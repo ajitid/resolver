@@ -132,10 +132,10 @@ impl<'a> Scanner<'a> {
   }
   
   pub fn skip(&mut self) {
-    let n = self.peek.len();
     if let Some(c) = self.peek() {
       self.index += c.len_utf8();
     }
+    let n = self.peek.len();
     for i in 1..n {
       self.peek[i-1] = self.peek[i];
     }
@@ -529,8 +529,6 @@ impl<'a> Scanner<'a> {
           if c2.is_digit(10) {
             buf.push(c1);
             self.skip();
-            buf.push(c2);
-            self.skip();
             buf.push_str(&self.integer()?);
           }
         }
@@ -647,6 +645,14 @@ mod tests {
     let s = r#"100"#;
     let mut t = Scanner::new(s);
     assert_eq!(Ok(Token::new(TType::Number, "100", 0..3)), t.token());
+    
+    // let s = r#"100.0"#;
+    // let mut t = Scanner::new(s);
+    // assert_eq!(Ok(Token::new(TType::Number, "100.0", 0..5)), t.token());
+    
+    let s = r#"100.1"#;
+    let mut t = Scanner::new(s);
+    assert_eq!(Ok(Token::new(TType::Number, "100.1", 0..5)), t.token());
     
     let s = r#"100.987"#;
     let mut t = Scanner::new(s);
