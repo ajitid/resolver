@@ -53,7 +53,7 @@ impl Reader {
 
 fn main() -> Result<(), error::Error> {
   let opts = options::Options::parse();
-  let _ = Finalize{opts: opts.clone()};
+  let _cleanup = Finalize{opts: opts.clone()};
   execute!(stdout(), terminal::EnterAlternateScreen)?;
   terminal::enable_raw_mode()?;
   
