@@ -106,13 +106,22 @@ impl Writer {
     Content::new_with_attributed(text, spns, width)
   }
   
+  fn draw_status(&self, width: usize, height: usize, nlines: usize) -> Content {
+    let style = attrs::Attributes{bold: true, invert: true, color: None, background: None};
+    let text = format!("{}", "some_file.txt");
+    let tlen = text.len();
+    Content::new_with_attributed(text, vec![attrs::Span::new(0..tlen, style.clone())], width)
+  }
+  
   pub fn refresh(&mut self, pos: &Pos, text: &Text) -> Result<(), error::Error> {
     let tw = (self.term_size.0 / 3) - 6;
     let gw = if self.opts.debug_editor { 0 }else{ 5 };
     let ox = if self.opts.debug_editor { 0 }else{ gw + 1 };
     
-    let (edit, fmla) = self.draw_formula(tw, self.term_size.1 as usize, text);
-    let gutter = self.draw_gutter(gw, self.term_size.1 as usize, edit.num_lines());
+    let eh = self.term_size.1 - 1;
+    let (edit, fmla) = self.draw_formula(tw, eh as usize, text);
+    let gutter = self.draw_gutter(gw, eh as usize, edit.num_lines());
+    let status = self.draw_status(gw, 1, edit.num_lines());
     let cols: Vec<&dyn Renderable> = if self.opts.debug_editor {
       vec![&edit]
     }else{
@@ -121,6 +130,8 @@ impl Writer {
     
     queue!(self.buf, cursor::Hide)?;
     self.frame.write_cols(cols, self.term_size.1 as usize, &mut self.buf, pos)?;
+    queue!(self.buf, cursor::MoveTo(0, eh as u16), terminal::Clear(terminal::ClearType::CurrentLine))?;
+    status.write_line(0, &mut self.buf);
     queue!(self.buf, cursor::MoveTo((pos.x + ox) as u16, pos.y as u16), cursor::Show)?;
     self.buf.flush()?;
     

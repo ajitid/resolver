@@ -1,5 +1,7 @@
 pub mod writer;
 
+use std::path;
+
 use crossterm::event;
 
 use writer::Writer;
@@ -19,6 +21,7 @@ enum Mode {
 pub struct Editor {
   reader: Reader,
   writer: Writer,
+  file: Option<path::PathBuf>,
   text: Text,
   mode: Mode,
   pos: Pos,
@@ -29,6 +32,7 @@ impl Editor {
     Editor{
       reader: Reader,
       writer: Writer::new_with_size(size, opts),
+      file: None,
       text: Text::new((size.0 / 3) * 2),
       mode: Mode::Normal,
       pos: text::ZERO_POS,
